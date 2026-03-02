@@ -33,13 +33,19 @@ export interface UserProfile {
   };
 }
 
+export type AttendanceStatus = "PENDING" | "APPROVED" | "REJECTED";
+
 export interface Attendance {
     id: string;
     userId: string;
+    userName: string;
     orgId: string;
     date: string; // YYYY-MM-DD
     clockIn: string; // ISO String for timestamp
     clockOut?: string; // ISO String for timestamp
+    status: AttendanceStatus;
+    approvedBy?: string; // userId
+    approvedAt?: string; // ISO String
 }
 
 export type RequisitionStatus = "PENDING_HR" | "PENDING_FINANCE" | "PENDING_MD" | "APPROVED" | "PAID" | "REJECTED";

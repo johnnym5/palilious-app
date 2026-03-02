@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { format, differenceInSeconds } from 'date-fns';
-import { Clock, Loader2, LogIn, LogOut } from "lucide-react";
+import { Clock, Loader2, LogIn, LogOut, ShieldQuestion } from "lucide-react";
 import type { UserProfile, Attendance } from "@/lib/types";
 import type { Permissions } from "@/hooks/usePermissions";
 import { useFirestore, useCollection, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
@@ -31,6 +31,7 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
             collection(firestore, 'attendance'),
             where('userId', '==', userProfile.id),
             where('date', '==', today),
+            where('status', 'in', ['PENDING', 'APPROVED']),
             limit(1)
         ) : null
     , [firestore, userProfile?.id, today]);
@@ -45,9 +46,15 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
         }
     }, [attendanceData, isAttendanceLoading]);
 
+    // Derived states from the attendance record
+    const isClockedIn = !!attendanceRecord && !attendanceRecord.clockOut;
+    const isPending = isClockedIn && attendanceRecord.status === 'PENDING';
+    const isApproved = isClockedIn && attendanceRecord.status === 'APPROVED';
+
     useEffect(() => {
         let timer: NodeJS.Timeout | undefined;
-        if (userProfile?.status === 'ONLINE' && attendanceRecord?.clockIn) {
+        // Only run the timer if the user's clock-in is approved
+        if (isApproved && attendanceRecord?.clockIn) {
             timer = setInterval(() => {
                 const now = new Date();
                 const clockInTime = new Date(attendanceRecord.clockIn);
@@ -59,26 +66,25 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
             }, 1000);
         }
         return () => clearInterval(timer);
-    }, [userProfile?.status, attendanceRecord?.clockIn]);
+    }, [isApproved, attendanceRecord?.clockIn]);
 
     const handleClockIn = async () => {
         if (!userProfile) return;
         setIsSubmitting(true);
         
         try {
-            const userRef = doc(firestore, 'users', userProfile.id);
-            updateDocumentNonBlocking(userRef, { status: 'ONLINE' });
-
             const attendanceRef = collection(firestore, 'attendance');
             const newRecord: Omit<Attendance, 'id'> = {
                 userId: userProfile.id,
+                userName: userProfile.fullName,
                 orgId: userProfile.orgId,
                 date: today,
                 clockIn: new Date().toISOString(),
+                status: 'PENDING',
             };
             await addDocumentNonBlocking(attendanceRef, newRecord);
 
-            toast({ title: "Clocked In", description: "Your shift has started." });
+            toast({ title: "Clock-In Submitted", description: "Your request is pending HR approval." });
         } catch (error: any) {
             toast({ variant: "destructive", title: "Error", description: error.message });
         } finally {
@@ -91,6 +97,7 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
         setIsSubmitting(true);
 
         try {
+            // User status should always go to OFFLINE on clock-out
             const userRef = doc(firestore, 'users', userProfile.id);
             updateDocumentNonBlocking(userRef, { status: 'OFFLINE' });
             
@@ -105,10 +112,8 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
         }
     };
     
-    const isClockedIn = userProfile?.status === 'ONLINE';
-
     if (isLoading) {
-        return <Card><CardContent className="p-6"><Loader2 className="mx-auto animate-spin" /></CardContent></Card>
+        return <Card><CardContent className="p-6 flex justify-center"><Loader2 className="animate-spin" /></CardContent></Card>
     }
 
     if (!permissions.canClockIn) {
@@ -140,9 +145,14 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
                                {isSubmitting ? <Loader2 className="animate-spin"/> : <LogOut />}
                                 Clock Out
                             </div>
-                             <p className="font-mono text-xl tracking-widest">{shiftDuration}</p>
+                             {isApproved && <p className="font-mono text-xl tracking-widest">{shiftDuration}</p>}
                         </Button>
-                        <p className="text-xs text-muted-foreground">You are currently on the clock.</p>
+                        {isPending && 
+                            <div className="flex items-center justify-center gap-2 text-sm text-amber-500 animate-pulse">
+                                <ShieldQuestion className="h-4 w-4" />
+                                <span>Pending Approval</span>
+                            </div>
+                        }
                     </>
                 ) : (
                     <Button

@@ -62,6 +62,10 @@
           "type": "string",
           "description": "The ID of the user."
         },
+        "userName": {
+            "type": "string",
+            "description": "The name of the user who clocked in."
+        },
         "orgId": {
           "type": "string",
           "description": "The ID of the organization."
@@ -80,13 +84,29 @@
           "type": "string",
           "format": "date-time",
           "description": "The ISO timestamp when the user clocked out."
+        },
+        "status": {
+            "type": "string",
+            "enum": ["PENDING", "APPROVED", "REJECTED"],
+            "description": "The approval status of the clock-in record."
+        },
+        "approvedBy": {
+            "type": "string",
+            "description": "The ID of the user who approved or rejected the record."
+        },
+        "approvedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The timestamp of the approval or rejection."
         }
       },
       "required": [
         "userId",
+        "userName",
         "orgId",
         "date",
-        "clockIn"
+        "clockIn",
+        "status"
       ]
     },
     "Requisition": {

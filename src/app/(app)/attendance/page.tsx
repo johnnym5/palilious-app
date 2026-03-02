@@ -7,6 +7,7 @@ import { doc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
+import { PendingApprovals } from "@/components/attendance/PendingApprovals";
 
 export default function AttendancePage() {
   const { user: authUser } = useUser();
@@ -42,7 +43,8 @@ export default function AttendancePage() {
               <ClockControl userProfile={userProfile} permissions={permissions} />
               <StatusFeed userProfile={userProfile} permissions={permissions} />
           </div>
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-8">
+              {userProfile && permissions.canApproveHR && <PendingApprovals userProfile={userProfile} />}
               <AttendanceHistory userProfile={userProfile} />
           </div>
         </div>

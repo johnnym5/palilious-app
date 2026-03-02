@@ -14,23 +14,18 @@ export interface Permissions {
 }
 
 const positionPermissions: Record<UserPosition, Partial<Permissions>> = {
-  'Staff': {
-    canClockIn: true,
-  },
+  'Staff': {},
   'HR Manager': {
     canApproveHR: true,
     canManageStaff: true,
-    canClockIn: true,
   },
   'Finance Manager': {
     canApproveFinance: true,
     canDisburse: true,
-    canClockIn: true,
   },
   'Managing Director': {
     canApproveMD: true,
     canManageStaff: true,
-    canClockIn: true,
   },
   'Organization Administrator': {
     canApproveHR: true,
@@ -39,7 +34,6 @@ const positionPermissions: Record<UserPosition, Partial<Permissions>> = {
     canDisburse: true,
     canManageStaff: true,
     canManageCompany: true,
-    canClockIn: true,
   },
 };
 
@@ -50,7 +44,7 @@ const defaultPermissions: Permissions = {
   canDisburse: false,
   canManageStaff: false,
   canManageCompany: false,
-  canClockIn: false,
+  canClockIn: true,
 };
 
 export function usePermissions(userProfile: UserProfile | null) {
