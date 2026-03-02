@@ -76,10 +76,9 @@ function SettingsForm({ userProfile }: { userProfile: UserProfile }) {
                         <Label htmlFor="theme" className="flex flex-col space-y-1">
                             <span>Theme</span>
                             <span className="font-normal leading-snug text-muted-foreground">
-                                The application is currently in dark mode.
+                                Change the application theme in the top right corner.
                             </span>
                         </Label>
-                        <p className="text-sm text-muted-foreground">Dark</p>
                     </div>
                 </div>
             </div>

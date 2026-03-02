@@ -12,6 +12,7 @@ import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@
 import { usePermissions } from '@/hooks/usePermissions';
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { UserProfile, Task, Requisition } from '@/lib/types';
+import { ThemeToggle } from './ThemeToggle';
 
 
 export default function AppHeader() {
@@ -47,7 +48,7 @@ export default function AppHeader() {
       if (!userProfile || !permissions) return null;
       const inboxStatuses: string[] = [];
       if (permissions.canApproveHR) inboxStatuses.push('PENDING_HR');
-      if (permissions.canApproveFinance) inboxStatuses.push('APPROVED'); // For "Mark as Paid"
+      if (permissions.canApproveFinance) inboxStatuses.push('PENDING_FINANCE', 'APPROVED');
       if (permissions.canApproveMD) inboxStatuses.push('PENDING_MD');
       
       if (inboxStatuses.length > 0) {
@@ -117,6 +118,7 @@ export default function AppHeader() {
             <Clock className='h-4 w-4' />
             <p className="text-sm">{format(currentTime, 'PPP, p')}</p>
         </div>
+        <ThemeToggle />
         <UserNav />
       </div>
     </header>
