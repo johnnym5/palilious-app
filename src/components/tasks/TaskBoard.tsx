@@ -5,13 +5,14 @@ import type { Task, UserProfile, TaskStatus } from '@/lib/types';
 import type { Permissions } from '@/hooks/usePermissions';
 import { TaskCard } from './TaskCard';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { useMemo } from 'react';
 
 interface TaskBoardProps {
     userProfile: UserProfile;
     permissions: Permissions;
 }
 
-const statusColumns: TaskStatus[] = ["PENDING", "IN_PROGRESS", "COMPLETED"];
+const statusColumns: TaskStatus[] = ["QUEUED", "ACTIVE", "AWAITING_REVIEW", "ARCHIVED"];
 
 export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
     const firestore = useFirestore();
@@ -23,14 +24,12 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
         const tasksRef = collection(firestore, 'tasks');
 
         if (permissions.canManageStaff || isSuperAdmin) {
-            // Managers/Admins see all tasks in their org
             return query(
                 tasksRef, 
                 where('orgId', '==', userProfile.orgId), 
                 orderBy('dueDate', 'asc')
             );
         } else {
-            // Staff see only their own tasks
             return query(
                 tasksRef, 
                 where('assignedTo', '==', userProfile.id), 
@@ -41,22 +40,35 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
 
     const { data: tasks, isLoading } = useCollection<Task>(tasksQuery);
     
-    const groupedTasks = useMemoFirebase(() => {
+    const { groupedTasks, personnelLoad } = useMemo(() => {
         const initialGroups: Record<TaskStatus, Task[]> = {
-            PENDING: [],
-            IN_PROGRESS: [],
-            COMPLETED: [],
+            QUEUED: [],
+            ACTIVE: [],
+            AWAITING_REVIEW: [],
+            ARCHIVED: [],
         };
-        return tasks?.reduce((acc, task) => {
+        const load: Record<string, number> = {};
+
+        if (tasks) {
+            tasks.forEach(task => {
+                if (task.status === 'ACTIVE') {
+                    load[task.assignedTo] = (load[task.assignedTo] || 0) + 1;
+                }
+            });
+        }
+
+        const grouped = tasks?.reduce((acc, task) => {
             if (acc[task.status]) {
                 acc[task.status].push(task);
             }
             return acc;
         }, initialGroups) || initialGroups;
+        
+        return { groupedTasks: grouped, personnelLoad: load };
     }, [tasks]);
 
     return (
-        <div className="flex-1 grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
             {statusColumns.map(status => (
                 <div key={status} className="bg-secondary/30 rounded-xl">
                     <div className="p-4 border-b border-border">
@@ -73,7 +85,13 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
                             </div>
                         )}
                         {!isLoading && groupedTasks[status].map(task => (
-                            <TaskCard key={task.id} task={task} userProfile={userProfile} />
+                            <TaskCard 
+                                key={task.id} 
+                                task={task} 
+                                userProfile={userProfile} 
+                                permissions={permissions}
+                                personnelLoad={personnelLoad[task.assignedTo] || 0}
+                            />
                         ))}
                     </div>
                 </div>

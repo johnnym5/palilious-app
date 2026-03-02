@@ -4,22 +4,22 @@ import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebas
 import { collection, query, where, orderBy, limit } from "firebase/firestore";
 import type { Task, TaskStatus } from "@/lib/types";
 import { Skeleton } from "../ui/skeleton";
-import { CheckCircle, Circle, Clock, ArrowRight } from "lucide-react";
+import { CheckSquare, Circle, Clock, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { TaskPriorityBadge } from "../tasks/TaskPriorityBadge";
 
-const statusIcons: Record<TaskStatus, React.ElementType> = {
-    PENDING: Circle,
-    IN_PROGRESS: Clock,
-    COMPLETED: CheckCircle,
+const statusIcons: Record<Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>, React.ElementType> = {
+    QUEUED: Circle,
+    ACTIVE: Clock,
+    AWAITING_REVIEW: ShieldCheck,
 };
 
-const statusColors: Record<TaskStatus, string> = {
-    PENDING: "text-muted-foreground",
-    IN_PROGRESS: "text-primary",
-    COMPLETED: "text-emerald-500",
+const statusColors: Record<Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>, string> = {
+    QUEUED: "text-muted-foreground",
+    ACTIVE: "text-primary",
+    AWAITING_REVIEW: "text-amber-500",
 }
 
 export function ActiveTasks() {
@@ -31,8 +31,8 @@ export function ActiveTasks() {
         return query(
             collection(firestore, 'tasks'),
             where('assignedTo', '==', authUser.uid),
-            where('status', '!=', 'COMPLETED'),
-            orderBy('status', 'asc'),
+            where('status', 'in', ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW']),
+            orderBy('status', 'desc'),
             orderBy('dueDate', 'asc'),
             limit(5)
         );
@@ -44,8 +44,8 @@ export function ActiveTasks() {
     <Card className="h-full">
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
-            <CardTitle>My Active Tasks</CardTitle>
-            <CardDescription>Your most recent, non-completed tasks.</CardDescription>
+            <CardTitle>Mission Log</CardTitle>
+            <CardDescription>Your most recent, non-archived directives.</CardDescription>
         </div>
         <Link href="/tasks" passHref>
           <Button variant="ghost" size="sm">
@@ -57,11 +57,11 @@ export function ActiveTasks() {
         <div className="space-y-4">
             {isLoading && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
             {!isLoading && tasks?.length === 0 && (
-                 <p className="text-sm text-muted-foreground text-center pt-16">No active tasks. Enjoy the quiet!</p>
+                 <p className="text-sm text-muted-foreground text-center pt-16">No active missions. All clear!</p>
             )}
             {!isLoading && tasks?.map(task => {
-                const StatusIcon = statusIcons[task.status];
-                const colorClass = statusColors[task.status];
+                const StatusIcon = statusIcons[task.status as Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>];
+                const colorClass = statusColors[task.status as Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>];
                 return (
                     <div key={task.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-secondary/50">
                         <StatusIcon className={`h-5 w-5 ${colorClass}`} />

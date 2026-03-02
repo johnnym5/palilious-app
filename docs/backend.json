@@ -138,8 +138,8 @@
         "description": { "type": "string" },
         "assignedTo": { "type": "string", "description": "The user ID of the assignee." },
         "assignedToName": { "type": "string", "description": "The name of the assignee." },
-        "priority": { "type": "string", "enum": ["URGENT", "NORMAL", "LOW"] },
-        "status": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "COMPLETED"] },
+        "priority": { "type": "string", "enum": ["CRITICAL", "OPERATIONAL", "ROUTINE"] },
+        "status": { "type": "string", "enum": ["QUEUED", "ACTIVE", "AWAITING_REVIEW", "ARCHIVED"] },
         "dueDate": { "type": "string", "format": "date-time" },
         "createdBy": { "type": "string", "description": "The user ID of the creator." },
         "updates": {

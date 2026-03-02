@@ -63,11 +63,11 @@ export interface Requisition {
 }
 
 
-export type TaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
-export type TaskPriority = "URGENT" | "NORMAL" | "LOW";
+export type TaskStatus = "QUEUED" | "ACTIVE" | "AWAITING_REVIEW" | "ARCHIVED";
+export type TaskPriority = "CRITICAL" | "OPERATIONAL" | "ROUTINE";
 
 export interface TaskUpdate {
-  status: TaskStatus | 'CREATED';
+  status: TaskStatus | 'CREATED' | 'UPDATED';
   time: string; // ISO String
   updatedBy: string; // userId
   note?: string;
@@ -107,7 +107,7 @@ export interface Chat {
 }
 
 export interface ChatMessage {
-    id: string;
+    id:string;
     senderId: string;
     content: string;
     timestamp: string; // ISO String for timestamp

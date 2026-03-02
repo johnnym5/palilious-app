@@ -88,10 +88,17 @@ export default {
             height: '0',
           },
         },
+        'pulse-rose': {
+          '50%': { 
+             opacity: '.7',
+             boxShadow: '0 0 0 4px hsl(var(--destructive) / 0.1)'
+          },
+        }
       },
       animation: {
         'accordion-down': 'accordion-down 0.2s ease-out',
         'accordion-up': 'accordion-up 0.2s ease-out',
+        'pulse': 'pulse-rose 2s cubic-bezier(0.4, 0, 0.6, 1) infinite',
       },
     },
   },

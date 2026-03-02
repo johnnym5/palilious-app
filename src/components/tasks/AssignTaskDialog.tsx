@@ -24,7 +24,7 @@ const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
   description: z.string().optional(),
   assignedTo: z.string({ required_error: "Please select a staff member." }),
-  priority: z.enum(["LOW", "NORMAL", "URGENT"]),
+  priority: z.enum(["CRITICAL", "OPERATIONAL", "ROUTINE"]),
   dueDate: z.date({ required_error: "A due date is required." }),
 });
 
@@ -42,9 +42,14 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
   const { user: authUser } = useUser();
   const { toast } = useToast();
 
-  const usersQuery = useMemoFirebase(() => 
-    authUser ? query(collection(firestore, 'users'), where('orgId', '==', authUser.photoURL)) : null // A bit of a hack to get orgId from profile
+  const userProfileRef = useMemoFirebase(() => 
+    authUser ? doc(firestore, "users", authUser.uid) : null
   , [firestore, authUser]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+  const usersQuery = useMemoFirebase(() => 
+    userProfile ? query(collection(firestore, 'users'), where('orgId', '==', userProfile.orgId)) : null
+  , [firestore, userProfile]);
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const form = useForm<FormData>({
@@ -52,12 +57,12 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
     defaultValues: {
       title: "",
       description: "",
-      priority: "NORMAL",
+      priority: "ROUTINE",
     },
   });
 
   async function onSubmit(values: FormData) {
-    if (!firestore || !authUser) return;
+    if (!firestore || !authUser || !userProfile) return;
     
     const assignedUser = users?.find(u => u.id === values.assignedTo);
     if (!assignedUser) {
@@ -82,7 +87,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
             assignedTo: values.assignedTo,
             assignedToName: assignedUser.fullName,
             priority: values.priority,
-            status: 'PENDING',
+            status: 'QUEUED',
             dueDate: values.dueDate.toISOString(),
             createdBy: authUser.uid,
             updates: [firstUpdate],
@@ -106,9 +111,9 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Assign New Task</DialogTitle>
+          <DialogTitle>Assign New Directive</DialogTitle>
           <DialogDescription>
-            Delegate a new task to a member of your team.
+            Delegate a new mission to a member of your team.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -117,13 +122,13 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                     <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="e.g., Finalize Q3 Report" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="description" render={({ field }) => (
-                    <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Add more context about the task..." {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Add more context about the mission..." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="assignedTo" render={({ field }) => (
                         <FormItem><FormLabel>Assign To</FormLabel>
                         <Select onValueChange={field.onChange} defaultValue={field.value}>
-                            <FormControl><SelectTrigger disabled={areUsersLoading}><SelectValue placeholder="Select Staff" /></SelectTrigger></FormControl>
+                            <FormControl><SelectTrigger disabled={areUsersLoading}><SelectValue placeholder="Select Personnel" /></SelectTrigger></FormControl>
                             <SelectContent>{users?.map(user => <SelectItem key={user.id} value={user.id}>{user.fullName}</SelectItem>)}</SelectContent>
                         </Select>
                         <FormMessage /></FormItem>
@@ -133,9 +138,9 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Select Priority" /></SelectTrigger></FormControl>
                             <SelectContent>
-                                <SelectItem value="LOW">Low</SelectItem>
-                                <SelectItem value="NORMAL">Normal</SelectItem>
-                                <SelectItem value="URGENT">Urgent</SelectItem>
+                                <SelectItem value="ROUTINE">Routine</SelectItem>
+                                <SelectItem value="OPERATIONAL">Operational</SelectItem>
+                                <SelectItem value="CRITICAL">Critical</SelectItem>
                             </SelectContent>
                          </Select>
                          <FormMessage /></FormItem>
@@ -161,7 +166,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Assign Task
+                    Assign Mission
                 </Button>
             </form>
         </Form>
