@@ -6,10 +6,10 @@ import { collection, query, where, orderBy, Query, DocumentData } from "firebase
 import type { Requisition, UserProfile } from "@/lib/types";
 import type { Permissions } from "@/hooks/usePermissions";
 import { RequisitionStatusBadge } from './RequisitionStatusBadge';
-import { format } from 'date-fns';
+import { format, differenceInHours } from 'date-fns';
 import { Skeleton } from '../ui/skeleton';
 import { RequisitionDetailDialog } from './RequisitionDetailDialog';
-import { Inbox } from 'lucide-react';
+import { Inbox, ShieldAlert } from 'lucide-react';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
 
 interface RequisitionTableProps {
@@ -119,16 +119,23 @@ export function RequisitionTable({ filter, userProfile, isSuperAdmin, permission
                                 </TableCell>
                             </TableRow>
                         )}
-                        {!isLoading && requisitions?.map(req => (
+                        {!isLoading && requisitions?.map(req => {
+                            const isUrgent = req.status === 'PENDING_HR' && differenceInHours(new Date(), new Date(req.createdAt)) > 24;
+                            return (
                             <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer hover:bg-secondary/50">
-                                <TableCell className="font-mono text-xs text-muted-foreground">{req.serialNo}</TableCell>
+                                <TableCell className="font-mono text-xs text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                        {isUrgent && <ShieldAlert className="h-4 w-4 text-destructive animate-pulse" title="This request is overdue for HR approval" />}
+                                        {req.serialNo}
+                                    </div>
+                                </TableCell>
                                 <TableCell className="font-medium">{req.title}</TableCell>
                                 <TableCell className="text-muted-foreground">{req.creatorName}</TableCell>
                                 <TableCell className="text-right font-semibold text-primary">{currencySymbol}{req.amount.toFixed(2)}</TableCell>
                                 <TableCell className="text-muted-foreground">{format(new Date(req.createdAt), "dd MMM, yyyy")}</TableCell>
                                 <TableCell><RequisitionStatusBadge status={req.status} /></TableCell>
                             </TableRow>
-                        ))}
+                        )})}
                     </TableBody>
                 </Table>
             </div>

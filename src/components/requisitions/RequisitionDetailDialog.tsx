@@ -16,7 +16,7 @@ import {
 } from '@/lib/types'
 import { Permissions } from '@/hooks/usePermissions'
 import { RequisitionStatusBadge } from './RequisitionStatusBadge'
-import { format } from 'date-fns'
+import { format, differenceInHours } from 'date-fns'
 import {
   Banknote,
   Calendar,
@@ -25,7 +25,8 @@ import {
   Info,
   User,
   X,
-  Loader2
+  Loader2,
+  ShieldAlert,
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { doc, arrayUnion } from 'firebase/firestore'
@@ -45,6 +46,7 @@ import {
 import { Textarea } from '../ui/textarea'
 import { useState } from 'react'
 import { ActivityFeed } from '../shared/ActivityFeed'
+import { Badge } from '../ui/badge'
 
 interface RequisitionDetailDialogProps {
   requisition: Requisition
@@ -81,6 +83,10 @@ export function RequisitionDetailDialog({
   const { toast } = useToast()
   const [rejectionReason, setRejectionReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const isUrgent =
+    requisition.status === 'PENDING_HR' &&
+    differenceInHours(new Date(), new Date(requisition.createdAt)) > 24
 
   const canTakeAction = () => {
     if (!currentUserProfile || !permissions) return false
@@ -173,8 +179,15 @@ export function RequisitionDetailDialog({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[90vh]">
         <DialogHeader>
-          <DialogTitle>
-            {requisition.serialNo}: {requisition.title}
+          <DialogTitle className="flex items-center gap-2">
+            <span>
+              {requisition.serialNo}: {requisition.title}
+            </span>
+            {isUrgent && (
+              <Badge variant="destructive" className="gap-1.5 text-xs animate-pulse">
+                <ShieldAlert className="h-3 w-3" /> URGENT
+              </Badge>
+            )}
           </DialogTitle>
           <DialogDescription className="flex items-center gap-4 pt-1">
             <RequisitionStatusBadge status={requisition.status} />

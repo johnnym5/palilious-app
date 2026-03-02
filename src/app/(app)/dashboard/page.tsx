@@ -8,6 +8,7 @@ import { doc, collection, query, where } from "firebase/firestore";
 import type { UserProfile, Task, Requisition, TaskStatus, RequisitionStatus } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo } from "react";
+import { RecentConversations } from "@/components/dashboard/RecentConversations";
 
 export default function DashboardPage() {
     const { user: authUser } = useUser();
@@ -98,6 +99,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-6">
                     <Announcements />
+                    <RecentConversations />
                 </div>
             </div>
         </div>
