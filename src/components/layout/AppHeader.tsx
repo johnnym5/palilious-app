@@ -1,5 +1,5 @@
 import { UserNav } from "@/components/layout/UserNav";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import AppSidebar from "./AppSidebar";
@@ -15,6 +15,10 @@ export default function AppHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col p-0">
+          <SheetHeader className="sr-only">
+            <SheetTitle>Navigation Menu</SheetTitle>
+            <SheetDescription>Main navigation links for the application.</SheetDescription>
+          </SheetHeader>
           <AppSidebar isMobile />
         </SheetContent>
       </Sheet>
