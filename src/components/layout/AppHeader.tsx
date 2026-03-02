@@ -6,14 +6,62 @@ import { Menu, Clock } from "lucide-react";
 import AppSidebar from "./AppSidebar";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { usePathname } from 'next/navigation';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { format } from 'date-fns';
-import { useUser } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { usePermissions } from '@/hooks/usePermissions';
+import { doc, collection, query, where } from 'firebase/firestore';
+import type { UserProfile, Task, Requisition } from '@/lib/types';
+
 
 export default function AppHeader() {
   const pathname = usePathname();
   const { user } = useUser();
+  const firestore = useFirestore();
   const [currentTime, setCurrentTime] = useState(new Date());
+
+  // Get user profile and permissions
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const permissions = usePermissions(userProfile);
+
+  // --- Data Fetching for Tactical Brief ---
+  const overdueTasksQuery = useMemoFirebase(() => {
+      if (!user) return null;
+      return query(
+          collection(firestore, 'tasks'),
+          where('assignedTo', '==', user.uid),
+          where('status', 'in', ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW'])
+      );
+  }, [firestore, user]);
+  const { data: activeTasks } = useCollection<Task>(overdueTasksQuery);
+  const overdueTaskCount = useMemo(() => {
+      if (!activeTasks) return 0;
+      const now = new Date();
+      return activeTasks.filter(task => task.dueDate && new Date(task.dueDate) < now).length;
+  }, [activeTasks]);
+
+  const inboxReqsQuery = useMemoFirebase(() => {
+      if (!userProfile || !permissions) return null;
+      const inboxStatuses: string[] = [];
+      if (permissions.canApproveHR) inboxStatuses.push('PENDING_HR');
+      if (permissions.canApproveFinance) inboxStatuses.push('APPROVED'); // For "Mark as Paid"
+      if (permissions.canApproveMD) inboxStatuses.push('PENDING_MD');
+      
+      if (inboxStatuses.length > 0) {
+          return query(
+              collection(firestore, 'requisitions'),
+              where('orgId', '==', userProfile.orgId),
+              where('status', 'in', [...new Set(inboxStatuses)])
+          );
+      }
+      return null;
+  }, [firestore, userProfile, permissions]);
+  const { data: inboxReqs } = useCollection<Requisition>(inboxReqsQuery);
+  const pendingReqsCount = useMemo(() => inboxReqs?.length || 0, [inboxReqs]);
+
 
   useEffect(() => {
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
@@ -21,10 +69,21 @@ export default function AppHeader() {
   }, []);
 
   const getTitle = () => {
-    const userFirstName = user?.displayName?.split(' ')[0];
-
     if (pathname.includes('/dashboard')) {
-        return userFirstName ? `Good Morning, ${userFirstName}!` : 'Dashboard';
+        const briefParts = [];
+        if (overdueTaskCount > 0) {
+            briefParts.push(`${overdueTaskCount} task${overdueTaskCount > 1 ? 's' : ''} overdue`);
+        }
+        if (pendingReqsCount > 0) {
+            briefParts.push(`${pendingReqsCount} requisition${pendingReqsCount > 1 ? 's' : ''} await${pendingReqsCount === 1 ? 's' : ''} your action`);
+        }
+
+        if (briefParts.length > 0) {
+            return `Tactical Brief: ${briefParts.join(' & ')}.`;
+        }
+        
+        const userFirstName = user?.displayName?.split(' ')[0];
+        return userFirstName ? `Welcome back, ${userFirstName}!` : 'Dashboard';
     }
     // Capitalize the first letter of the route segment
     const segment = pathname.split('/').pop()?.replace('-', ' ') || '';
