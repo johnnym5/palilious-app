@@ -1,437 +1,72 @@
 {
   "entities": {
-    "Organization": {
-      "title": "Organization",
-      "type": "object",
-      "description": "Represents a company or a tenant in the system.",
-      "properties": {
-        "name": {
-          "type": "string",
-          "description": "The name of the organization."
-        },
-        "ownerId": {
-          "type": "string",
-          "description": "The UID of the user who created the organization."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date the organization was created."
-        }
-      },
-      "required": ["name", "ownerId", "createdAt"]
-    },
     "UserProfile": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile, holding personal and role-based information within an organization.",
+      "description": "Represents a user's profile for the ControlFlow app.",
       "properties": {
-        "id": {
-          "type": "string",
-          "description": "User's unique identifier (UID)."
-        },
         "orgId": {
           "type": "string",
           "description": "The ID of the organization the user belongs to."
-        },
-        "email": {
-          "type": "string",
-          "format": "email",
-          "description": "User's email address."
         },
         "username": {
           "type": "string",
           "description": "User's unique username."
         },
-        "fullName": {
+        "password": {
           "type": "string",
-          "description": "User's full name."
+          "description": "User's password (stored in plaintext - NOT SECURE)."
+        },
+        "displayName": {
+          "type": "string",
+          "description": "User's display name."
         },
         "role": {
           "type": "string",
-          "enum": ["ORG_ADMIN", "STAFF", "HR", "FINANCE", "MD"]
-        },
-        "avatarURL": {
-          "type": "string",
-          "format": "uri",
-          "description": "URL for user's avatar."
-        },
-        "joinedDate": {
-          "type": "string",
-          "format": "date-time",
-          "description": "The date the user joined."
-        },
-        "birthday": {
-          "type": "string",
-          "format": "date-time",
-          "description": "User's birthday."
-        },
-        "status": {
-          "type": "string",
-          "enum": ["ONLINE", "OFFLINE", "ON_LEAVE"],
-          "description": "User's current status."
-        }
-      },
-      "required": ["id", "orgId", "email", "username", "fullName", "role", "joinedDate"]
-    },
-    "Attendance": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Attendance",
-      "type": "object",
-      "description": "Represents a user's attendance record for a day.",
-      "properties": {
-        "userId": {
-          "type": "string",
-          "description": "ID of the user."
-        },
-        "orgId": {
-            "type": "string",
-            "description": "The ID of the organization the record belongs to."
-        },
-        "date": {
-          "type": "string",
-          "format": "date",
-          "description": "Date of the record in YYYY-MM-DD format."
-        },
-        "clockIn": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "clockOut": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": ["userId", "orgId", "date", "clockIn"]
-    },
-    "Requisition": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Requisition",
-      "type": "object",
-      "description": "A financial requisition.",
-      "properties": {
-        "serialNo": {
-          "type": "string",
-          "description": "e.g., REQ-00001"
-        },
-         "orgId": {
-            "type": "string",
-            "description": "The ID of the organization the record belongs to."
-        },
-        "createdBy": {
-          "type": "string",
-          "description": "User ID of the creator."
-        },
-        "amount": {
-          "type": "number"
-        },
-        "description": {
-          "type": "string"
-        },
-        "attachmentUrl": {
-          "type": "string",
-          "format": "uri"
+          "enum": [
+            "ORG_ADMIN",
+            "STAFF"
+          ]
         },
         "status": {
           "type": "string",
           "enum": [
-            "PENDING_HR",
-            "PENDING_FINANCE",
-            "PENDING_MD",
-            "APPROVED",
-            "PAID",
-            "REJECTED"
-          ]
-        },
-        "approvalHistory": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "actor": {
-                "type": "string",
-                "description": "User ID of the approver/rejector."
-              },
-              "action": {
-                "type": "string"
-              },
-              "time": {
-                "type": "string",
-                "format": "date-time"
-              }
-            },
-            "required": ["actor", "action", "time"]
-          }
+            "ONLINE",
+            "OFFLINE"
+          ],
+          "description": "User's current status."
         }
       },
-      "required": ["serialNo", "orgId", "createdBy", "amount", "description", "status"]
-    },
-    "Task": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Task",
-      "type": "object",
-      "description": "An assigned task.",
-      "properties": {
-         "orgId": {
-            "type": "string",
-            "description": "The ID of the organization the record belongs to."
-        },
-        "assignedTo": {
-          "type": "string",
-          "description": "User ID of the assignee."
-        },
-        "title": {
-          "type": "string"
-        },
-        "description": {
-          "type": "string"
-        },
-        "deadline": {
-          "type": "string",
-          "format": "date-time"
-        },
-        "aiFields": {
-          "type": "object",
-          "properties": {
-            "phone": {
-              "type": "string"
-            },
-            "email": {
-              "type": "string",
-              "format": "email"
-            },
-            "location": {
-              "type": "string"
-            }
-          }
-        },
-        "isCompleted": {
-          "type": "boolean"
-        },
-        "timeline": {
-          "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "update": {
-                "type": "string"
-              },
-              "timestamp": {
-                "type": "string",
-                "format": "date-time"
-              }
-            }
-          }
-        }
-      },
-      "required": ["orgId", "assignedTo", "title", "deadline", "isCompleted"]
-    },
-    "Announcement": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Announcement",
-      "type": "object",
-      "description": "A company-wide announcement.",
-      "properties": {
-        "orgId": {
-            "type": "string",
-            "description": "The ID of the organization the record belongs to."
-        },
-        "title": {
-          "type": "string"
-        },
-        "content": {
-          "type": "string"
-        },
-        "isPinned": {
-          "type": "boolean"
-        },
-        "author": {
-          "type": "string",
-          "description": "User ID of the author."
-        },
-        "createdAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": ["orgId", "title", "content", "author", "createdAt"]
-    },
-    "Chat": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "Chat",
-      "type": "object",
-      "description": "A chat conversation.",
-      "properties": {
-        "participants": {
-          "type": "array",
-          "items": {
-            "type": "string"
-          }
-        },
-        "lastMessage": {
-          "type": "string"
-        },
-        "updatedAt": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": ["participants", "updatedAt"]
-    },
-    "ChatMessage": {
-      "$schema": "http://json-schema.org/draft-07/schema#",
-      "title": "ChatMessage",
-      "type": "object",
-      "description": "A message in a chat.",
-      "properties": {
-        "senderId": {
-          "type": "string"
-        },
-        "content": {
-          "type": "string"
-        },
-        "timestamp": {
-          "type": "string",
-          "format": "date-time"
-        }
-      },
-      "required": ["senderId", "content", "timestamp"]
+      "required": [
+        "orgId",
+        "username",
+        "password",
+        "displayName",
+        "role"
+      ]
     }
   },
   "auth": {
-    "providers": ["password"]
+    "providers": []
   },
   "firestore": {
     "structure": [
-       {
-        "path": "/organizations/{orgId}",
-        "definition": {
-          "entityName": "Organization",
-          "schema": {
-            "$ref": "#/entities/Organization"
-          },
-          "description": "Stores organization details.",
-          "params": [
-            {
-              "name": "orgId",
-              "description": "The organization's unique ID."
-            }
-          ]
-        }
-      },
       {
-        "path": "/users/{userId}",
+        "path": "/artifacts/{appId}/public/data/users/{userId}",
         "definition": {
           "entityName": "UserProfile",
           "schema": {
             "$ref": "#/entities/UserProfile"
           },
-          "description": "Stores individual staff member profiles, partitioned by orgId.",
+          "description": "Stores user profiles for the ControlFlow app.",
           "params": [
             {
-              "name": "userId",
-              "description": "The user's UID."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/attendance/{attendanceId}",
-        "definition": {
-          "entityName": "Attendance",
-          "schema": {
-            "$ref": "#/entities/Attendance"
-          },
-          "description": "User attendance records, partitioned by orgId.",
-          "params": [
-            {
-              "name": "attendanceId",
-              "description": "Unique ID for the attendance record."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/requisitions/{reqId}",
-        "definition": {
-          "entityName": "Requisition",
-          "schema": {
-            "$ref": "#/entities/Requisition"
-          },
-          "description": "Financial requisitions, partitioned by orgId.",
-          "params": [
-            {
-              "name": "reqId",
-              "description": "Unique ID for the requisition."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/tasks/{taskId}",
-        "definition": {
-          "entityName": "Task",
-          "schema": {
-            "$ref": "#/entities/Task"
-          },
-          "description": "Assigned tasks, partitioned by orgId.",
-          "params": [
-            {
-              "name": "taskId",
-              "description": "Unique ID for the task."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/announcements/{postId}",
-        "definition": {
-          "entityName": "Announcement",
-          "schema": {
-            "$ref": "#/entities/Announcement"
-          },
-          "description": "Company-wide announcements, partitioned by orgId.",
-          "params": [
-            {
-              "name": "postId",
-              "description": "Unique ID for the announcement."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/chats/{chatId}",
-        "definition": {
-          "entityName": "Chat",
-          "schema": {
-            "$ref": "#/entities/Chat"
-          },
-          "description": "1-on-1 chat conversations.",
-          "params": [
-            {
-              "name": "chatId",
-              "description": "Unique ID for the chat, often a composite of participant IDs."
-            }
-          ]
-        }
-      },
-      {
-        "path": "/chats/{chatId}/messages/{messageId}",
-        "definition": {
-          "entityName": "ChatMessage",
-          "schema": {
-            "$ref": "#/entities/ChatMessage"
-          },
-          "description": "Messages within a chat conversation.",
-          "params": [
-            {
-              "name": "chatId",
-              "description": "The parent chat ID."
+              "name": "appId",
+              "description": "The application identifier."
             },
             {
-              "name": "messageId",
-              "description": "Unique ID for the message."
+              "name": "userId",
+              "description": "The user's unique ID."
             }
           ]
         }
