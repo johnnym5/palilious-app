@@ -96,11 +96,16 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const userData: Omit<UserProfile, 'id' | 'username'> = {
         orgId: orgId,
         fullName: values.fullName,
-        email: values.email,
+        email: values.email.toLowerCase(),
         position: values.position,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
         avatarURL: `https://picsum.photos/seed/${newUser.uid}/48/48`,
+        notificationPreferences: {
+          requisitionUpdates: true,
+          taskAssignments: true,
+          announcements: true,
+        }
       };
 
       await updateProfile(newUser, { 
@@ -111,7 +116,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const userRef = doc(firestore, "users", newUser.uid);
       const profileData: UserProfile = {
           id: newUser.uid,
-          username: values.email.split('@')[0], // Generate a default username
+          username: values.email.split('@')[0].toLowerCase(), // Generate a default username
           ...userData,
       }
       setDocumentNonBlocking(userRef, profileData, { merge: false });
@@ -132,7 +137,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       });
     } finally {
       setIsLoading(false);
-      deleteApp(tempApp);
+      await deleteApp(tempApp);
     }
   }
 

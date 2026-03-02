@@ -69,6 +69,7 @@ export function NewRequisitionDialog({ children, open, onOpenChange }: NewRequis
         const historyEntry: ApprovalHistoryEntry = {
             actorId: userProfile.id,
             actorName: userProfile.fullName,
+            actorPosition: userProfile.position,
             action: 'CREATED',
             timestamp: now,
             fromStatus: 'N/A',
@@ -99,11 +100,15 @@ export function NewRequisitionDialog({ children, open, onOpenChange }: NewRequis
         onOpenChange(false);
     } catch (error: any) {
         console.error("Error creating requisition:", error);
-        toast({
-            variant: "destructive",
-            title: "Submission Failed",
-            description: error.message || "An unexpected error occurred.",
-        });
+        // The global error listener will handle permission errors.
+        // For other errors, we can show a generic toast.
+        if (error.code !== 'permission-denied') {
+            toast({
+                variant: "destructive",
+                title: "Submission Failed",
+                description: error.message || "An unexpected error occurred.",
+            });
+        }
     } finally {
         setIsLoading(false);
     }
