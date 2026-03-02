@@ -12,7 +12,7 @@ import { useState } from "react";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { firebaseConfig } from "@/firebase/config";
-import { doc, getFirestore } from "firebase/firestore";
+import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -26,7 +26,6 @@ const roles: Exclude<UserRole, 'ORG_ADMIN'>[] = ['STAFF', 'HR', 'FINANCE', 'MD']
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
-  username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   role: z.enum(roles, { required_error: "Role is required." }),
@@ -56,7 +55,6 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
-      username: "",
       email: "",
       password: "",
       role: "STAFF",
@@ -82,10 +80,9 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
       const newUser = userCredential.user;
 
-      const userData: Omit<UserProfile, 'id'> = {
+      const userData: Omit<UserProfile, 'id' | 'username'> = {
         orgId: adminProfile.orgId,
         fullName: values.fullName,
-        username: values.username,
         email: values.email,
         role: values.role,
         joinedDate: new Date().toISOString(),
@@ -100,7 +97,12 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       });
 
       const userRef = doc(firestore, "users", newUser.uid);
-      setDocumentNonBlocking(userRef, {id: newUser.uid, ...userData}, { merge: false });
+      const profileData: UserProfile = {
+          id: newUser.uid,
+          username: values.email.split('@')[0], // Generate a default username
+          ...userData,
+      }
+      setDocumentNonBlocking(userRef, profileData, { merge: false });
 
       toast({
         title: "User Created Successfully",
@@ -142,19 +144,6 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
                       <Input placeholder="John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="username"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl>
-                      <Input placeholder="johndoe" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

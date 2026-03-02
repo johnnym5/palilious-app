@@ -16,8 +16,8 @@ import {
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useAuth, useDoc, useMemoFirebase } from "@/firebase";
-import { doc, getFirestore } from "firebase/firestore";
+import { useAuth, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
+import { doc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/types";
 import { useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
@@ -40,7 +40,7 @@ export default function AppSidebar({ isMobile = false }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
-  const firestore = getFirestore(auth.app);
+  const firestore = useFirestore();
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null,

@@ -4,9 +4,9 @@ import { Button } from '@/components/ui/button';
 import { PlusCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useUser, useDoc, useCollection, useMemoFirebase } from '@/hooks/use-firebase';
+import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import type { UserProfile } from '@/lib/types';
-import { collection, doc, getFirestore, query, where } from 'firebase/firestore';
+import { collection, doc, query, where } from 'firebase/firestore';
 import { AddUserDialog } from '@/components/team/AddUserDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,7 +16,7 @@ import { Badge } from '@/components/ui/badge';
 
 export default function TeamPage() {
   const { user: authUser } = useUser();
-  const firestore = getFirestore();
+  const firestore = useFirestore();
   const [isAddUserOpen, setAddUserOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(
@@ -25,7 +25,7 @@ export default function TeamPage() {
   );
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   
-  const canManageUsers = userProfile?.role === 'HR' || userProfile?.role === 'ORG_ADMIN';
+  const canManageUsers = userProfile?.role === 'HR' || userProfile?.role === 'ORG_ADMIN' || userProfile?.role === 'MD';
 
   const usersQuery = useMemoFirebase(
     () => userProfile?.orgId ? query(collection(firestore, 'users'), where('orgId', '==', userProfile.orgId)) : null,
