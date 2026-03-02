@@ -44,6 +44,42 @@
         "displayName",
         "role"
       ]
+    },
+    "Attendance": {
+      "title": "Attendance",
+      "type": "object",
+      "description": "Represents a single attendance record for a user.",
+      "properties": {
+        "userId": {
+          "type": "string",
+          "description": "The ID of the user."
+        },
+        "orgId": {
+          "type": "string",
+          "description": "The ID of the organization."
+        },
+        "date": {
+          "type": "string",
+          "format": "date",
+          "description": "The date of the attendance record in YYYY-MM-DD format."
+        },
+        "clockIn": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The ISO timestamp when the user clocked in."
+        },
+        "clockOut": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The ISO timestamp when the user clocked out."
+        }
+      },
+      "required": [
+        "userId",
+        "orgId",
+        "date",
+        "clockIn"
+      ]
     }
   },
   "auth": {
@@ -67,6 +103,26 @@
             {
               "name": "userId",
               "description": "The user's unique ID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/artifacts/{appId}/public/data/attendance/{attendanceId}",
+        "definition": {
+          "entityName": "Attendance",
+          "schema": {
+            "$ref": "#/entities/Attendance"
+          },
+          "description": "Stores user attendance records.",
+          "params": [
+            {
+              "name": "appId",
+              "description": "The application identifier."
+            },
+            {
+              "name": "attendanceId",
+              "description": "The attendance record's unique ID."
             }
           ]
         }

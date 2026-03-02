@@ -13,7 +13,8 @@ import {
   Bell,
   Search,
   ChevronRight,
-  Loader2
+  Loader2,
+  UserCheck
 } from 'lucide-react';
 import { initializeApp, getApps, getApp } from 'firebase/app';
 import { 
@@ -22,8 +23,13 @@ import {
   query, 
   where, 
   getDocs,
+  onSnapshot,
+  addDoc,
+  doc,
+  updateDoc,
 } from 'firebase/firestore';
 import { firebaseConfig } from '@/firebase/config';
+import { format, differenceInSeconds } from 'date-fns';
 
 // --- CONFIGURATION & INITIALIZATION ---
 const app = getApps().length > 0 ? getApp() : initializeApp(firebaseConfig);
@@ -200,6 +206,183 @@ const Sidebar = ({ activePage, setActivePage, user, onLogout }) => {
   );
 };
 
+
+const ClockControl = ({ user, onUserUpdate }) => {
+  const { db, appId } = useAuth();
+  const [loading, setLoading] = useState(false);
+  const [attendance, setAttendance] = useState(null);
+  const [shiftDuration, setShiftDuration] = useState("00:00:00");
+  const todayStr = format(new Date(), 'yyyy-MM-dd');
+  const isOnline = user.status === 'ONLINE';
+
+  useEffect(() => {
+    let timerId;
+    if (isOnline && attendance?.clockIn) {
+      timerId = setInterval(() => {
+        const now = new Date();
+        const start = new Date(attendance.clockIn);
+        const diff = differenceInSeconds(now, start);
+
+        const hours = String(Math.floor(diff / 3600)).padStart(2, '0');
+        const minutes = String(Math.floor((diff % 3600) / 60)).padStart(2, '0');
+        const seconds = String(Math.floor(diff % 60)).padStart(2, '0');
+        setShiftDuration(`${hours}:${minutes}:${seconds}`);
+      }, 1000);
+    } else {
+        setShiftDuration("00:00:00");
+    }
+    return () => clearInterval(timerId);
+  }, [isOnline, attendance]);
+
+  useEffect(() => {
+    if (!user) return;
+    setLoading(true);
+    const attendanceRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
+    const q = query(
+      attendanceRef,
+      where('userId', '==', user.id),
+      where('date', '==', todayStr),
+      where('orgId', '==', user.orgId)
+    );
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!snapshot.empty) {
+        const doc = snapshot.docs[0];
+        setAttendance({ id: doc.id, ...doc.data() });
+      } else {
+        setAttendance(null);
+      }
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, [db, appId, user, todayStr]);
+
+  const handleClockIn = async () => {
+    if (attendance) return;
+    setLoading(true);
+    const attendanceRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
+    const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.id);
+    try {
+      await addDoc(attendanceRef, {
+        userId: user.id,
+        orgId: user.orgId,
+        clockIn: new Date().toISOString(),
+        date: todayStr,
+      });
+      await updateDoc(userRef, { status: 'ONLINE' });
+      onUserUpdate({ status: 'ONLINE' });
+    } catch (e) { console.error("Clock-in error:", e); }
+    // No need to setLoading(false) here, onSnapshot will handle it.
+  };
+
+  const handleClockOut = async () => {
+    if (!attendance) return;
+    setLoading(true);
+    const attendanceDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'attendance', attendance.id);
+    const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.id);
+    try {
+      await updateDoc(attendanceDocRef, { clockOut: new Date().toISOString() });
+      await updateDoc(userRef, { status: 'OFFLINE' });
+      onUserUpdate({ status: 'OFFLINE' });
+    } catch (e) { console.error("Clock-out error:", e); }
+    // No need to setLoading(false) here, onSnapshot will handle it.
+  };
+
+  return (
+      <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-6 rounded-2xl flex flex-col items-center justify-center text-center">
+          <div className="w-full">
+              <p className="text-slate-400 text-sm">{format(new Date(), 'PPPP')}</p>
+              <h2 className="text-4xl font-bold text-white my-2">{format(new Date(), 'p')}</h2>
+              
+              {isOnline && (
+                  <div className="my-4">
+                      <p className="text-xs text-indigo-400 font-bold uppercase tracking-widest">Shift Duration</p>
+                      <p className="text-2xl font-mono text-white tracking-widest">{shiftDuration}</p>
+                  </div>
+              )}
+
+              {isOnline ? (
+                  <button onClick={handleClockOut} disabled={loading || !attendance} className="w-full mt-4 bg-red-600 hover:bg-red-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50">
+                      {loading ? <Loader2 className="animate-spin" /> : <><LogOut size={20}/> Clock Out</>}
+                  </button>
+              ) : (
+                  <button onClick={handleClockIn} disabled={loading || !!attendance} className="w-full mt-4 bg-green-600 hover:bg-green-500 text-white font-bold py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all disabled:opacity-50">
+                      {loading ? <Loader2 className="animate-spin" /> : <><UserCheck size={20}/> Clock In</>}
+                  </button>
+              )}
+          </div>
+      </div>
+  )
+}
+
+const StatusFeed = () => {
+    const { db, appId, user } = useAuth();
+    const [colleagues, setColleagues] = useState([]);
+    
+    useEffect(() => {
+        if (!user?.orgId) return;
+        const usersRef = collection(db, 'artifacts', appId, 'public', 'data', 'users');
+        const q = query(usersRef, where('orgId', '==', user.orgId));
+
+        const unsubscribe = onSnapshot(q, (snapshot) => {
+            const usersList = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            setColleagues(usersList);
+        });
+        
+        return () => unsubscribe();
+    }, [db, appId, user?.orgId]);
+
+    return (
+        <div className="lg:col-span-2 bg-slate-900/50 backdrop-blur-md border border-slate-800 p-8 rounded-2xl">
+            <h2 className="text-white font-bold text-xl mb-4">Colleague Status</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+                {colleagues.map(colleague => (
+                    <div key={colleague.id} className="flex flex-col items-center text-center">
+                        <div className="relative">
+                            <img 
+                                src={`https://i.pravatar.cc/150?u=${colleague.id}`} 
+                                alt={colleague.displayName}
+                                className="w-20 h-20 rounded-full"
+                            />
+                            {colleague.status === 'ONLINE' && (
+                                <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full border-4 border-slate-800 animate-pulse"></div>
+                            )}
+                        </div>
+                        <p className="text-white font-semibold mt-2 text-sm truncate w-full">{colleague.displayName}</p>
+                        <p className={`text-xs font-bold uppercase ${colleague.status === 'ONLINE' ? 'text-green-400' : 'text-slate-500'}`}>
+                            {colleague.status}
+                        </p>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )
+}
+
+const AttendanceHistory = () => {
+    return (
+        <div className="bg-slate-900/50 backdrop-blur-md border border-slate-800 p-8 rounded-2xl">
+             <h2 className="text-white font-bold text-xl mb-4">My History</h2>
+             <div className="flex flex-col items-center justify-center text-center h-48 text-slate-500">
+                <Clock size={40} className="mb-2"/>
+                <p>Full attendance history is coming soon.</p>
+             </div>
+        </div>
+    )
+}
+
+const AttendancePage = ({ user, onUserUpdate }) => {
+    return (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-1 space-y-6">
+                <ClockControl user={user} onUserUpdate={onUserUpdate} />
+                <AttendanceHistory />
+            </div>
+            <StatusFeed />
+        </div>
+    )
+}
+
+
 // --- MAIN APP ---
 
 export default function Page() {
@@ -209,8 +392,22 @@ export default function Page() {
 
   useEffect(() => {
     const savedUser = localStorage.getItem('controlflow_session');
-    if (savedUser) setUser(JSON.parse(savedUser));
-    setInitializing(false);
+    if (savedUser) {
+      const parsedUser = JSON.parse(savedUser);
+      // Check user status on load
+      const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', parsedUser.id);
+      const unsub = onSnapshot(userRef, (docSnap) => {
+        if (docSnap.exists()) {
+          const updatedUserData = { id: docSnap.id, ...docSnap.data() };
+          setUser(updatedUserData);
+          localStorage.setItem('controlflow_session', JSON.stringify(updatedUserData));
+        }
+      });
+      setInitializing(false);
+      return () => unsub();
+    } else {
+        setInitializing(false);
+    }
   }, []);
 
   const handleLogin = (userData) => {
@@ -219,8 +416,34 @@ export default function Page() {
   };
 
   const handleLogout = () => {
+    // Attempt to clock out user if they are online
+    if(user && user.status === 'ONLINE') {
+        const todayStr = format(new Date(), 'yyyy-MM-dd');
+        const attendanceRef = collection(db, 'artifacts', appId, 'public', 'data', 'attendance');
+        const q = query(
+            attendanceRef,
+            where('userId', '==', user.id),
+            where('date', '==', todayStr),
+            where('orgId', '==', user.orgId),
+            where('clockOut', '==', null)
+        );
+        getDocs(q).then(snapshot => {
+            if(!snapshot.empty) {
+                const attendanceDocRef = snapshot.docs[0].ref;
+                updateDoc(attendanceDocRef, { clockOut: new Date().toISOString() });
+            }
+        });
+        const userRef = doc(db, 'artifacts', appId, 'public', 'data', 'users', user.id);
+        updateDoc(userRef, { status: 'OFFLINE' });
+    }
     setUser(null);
     localStorage.removeItem('controlflow_session');
+  };
+  
+  const handleUserUpdate = (updates) => {
+      const updatedUser = { ...user, ...updates };
+      setUser(updatedUser);
+      localStorage.setItem('controlflow_session', JSON.stringify(updatedUser));
   };
 
   if (initializing) return (
@@ -270,7 +493,7 @@ export default function Page() {
             {activePage === 'dashboard' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                 {[
-                  { label: 'Clock-in Status', value: user.status || 'Offline', icon: Clock, color: 'text-emerald-400' },
+                  { label: 'Clock-in Status', value: user.status || 'Offline', icon: Clock, color: user.status === 'ONLINE' ? 'text-emerald-400' : 'text-slate-500' },
                   { label: 'Active Tasks', value: '0', icon: CheckSquare, color: 'text-indigo-400' },
                   { label: 'Pending Reqs', value: '0', icon: FileText, color: 'text-amber-400' },
                   { label: 'Colleagues Online', value: '1', icon: MessageSquare, color: 'text-purple-400' },
@@ -308,8 +531,10 @@ export default function Page() {
                 </div>
               </div>
             )}
+            
+            {activePage === 'attendance' && <AttendancePage user={user} onUserUpdate={handleUserUpdate} />}
 
-            {activePage !== 'dashboard' && (
+            {activePage !== 'dashboard' && activePage !== 'attendance' && (
               <div className="flex flex-col items-center justify-center py-20 bg-slate-900/20 border border-dashed border-slate-800 rounded-3xl text-center">
                  <h2 className="text-white font-bold text-xl uppercase tracking-widest">Module Offline</h2>
                  <p className="text-slate-500 mt-2">This specific feature ({activePage}) is scheduled for the next deployment turn.</p>
