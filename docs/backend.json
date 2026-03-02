@@ -1,5 +1,21 @@
 {
   "entities": {
+    "ActivityEntry": {
+      "title": "Activity Entry",
+      "type": "object",
+      "description": "A single entry in an activity log, can be a system log or a user comment.",
+      "properties": {
+        "type": { "type": "string", "enum": ["LOG", "COMMENT"] },
+        "actorId": { "type": "string" },
+        "actorName": { "type": "string" },
+        "actorAvatarUrl": { "type": "string", "format": "uri" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "fromStatus": { "type": "string" },
+        "toStatus": { "type": "string" }
+      },
+      "required": ["type", "actorId", "actorName", "text", "timestamp"]
+    },
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
@@ -113,26 +129,13 @@
             "description": "The current status of the requisition."
         },
         "createdAt": { "type": "string", "format": "date-time" },
-        "approvalHistory": {
-            "type": "array",
-            "description": "A log of all status changes.",
-            "items": {
-                "type": "object",
-                "properties": {
-                    "actorId": { "type": "string", "description": "The user ID of the person who made the change." },
-                    "actorName": { "type": "string", "description": "The name of the person who made the change." },
-                    "actorPosition": { "type": "string", "description": "The position of the user who made the change." },
-                    "action": { "type": "string", "enum": ["CREATED", "APPROVED", "REJECTED", "PAID"]},
-                    "timestamp": { "type": "string", "format": "date-time" },
-                    "fromStatus": { "type": "string" },
-                    "toStatus": { "type": "string" },
-                    "reason": { "type": "string", "description": "Reason for rejection, if applicable." }
-                },
-                "required": ["actorId", "actorName", "actorPosition", "action", "timestamp", "fromStatus", "toStatus"]
-            }
+        "activity": {
+          "type": "array",
+          "description": "A log of all status changes and comments.",
+          "items": { "$ref": "#/entities/ActivityEntry" }
         }
       },
-      "required": ["serialNo", "orgId", "createdBy", "creatorName", "title", "amount", "description", "status", "createdAt", "approvalHistory"]
+      "required": ["serialNo", "orgId", "createdBy", "creatorName", "title", "amount", "description", "status", "createdAt", "activity"]
     },
      "Task": {
       "title": "Task",
@@ -155,18 +158,10 @@
             "description": "A list of user IDs this task is shared with.",
             "items": { "type": "string" }
         },
-        "updates": {
+        "activity": {
           "type": "array",
-          "items": {
-            "type": "object",
-            "properties": {
-              "status": { "type": "string" },
-              "time": { "type": "string", "format": "date-time" },
-              "updatedBy": { "type": "string" },
-              "note": { "type": "string" }
-            },
-            "required": ["status", "time", "updatedBy"]
-          }
+          "description": "A log of all status changes and comments.",
+          "items": { "$ref": "#/entities/ActivityEntry" }
         },
         "subTasks": {
             "type": "array",
@@ -191,7 +186,7 @@
         "status",
         "dueDate",
         "createdBy",
-        "updates",
+        "activity",
         "createdAt"
       ]
     },
@@ -283,7 +278,12 @@
         "isPinned": { "type": "boolean" },
         "authorId": { "type": "string", "description": "The user ID of the author." },
         "authorName": { "type": "string", "description": "The name of the author." },
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "viewedBy": {
+            "type": "array",
+            "description": "List of user IDs who have viewed this announcement.",
+            "items": { "type": "string" }
+        }
       },
       "required": ["orgId", "title", "content", "isPinned", "authorId", "authorName", "createdAt"]
     }

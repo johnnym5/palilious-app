@@ -9,7 +9,7 @@ export interface Organization {
 }
 
 export interface SystemConfig {
-  id: string;
+  id:string;
   orgId: string;
   finance_access: boolean;
   admin_tools: boolean;
@@ -61,17 +61,22 @@ export interface Attendance {
 }
 
 export type RequisitionStatus = "PENDING_HR" | "PENDING_FINANCE" | "PENDING_MD" | "APPROVED" | "PAID" | "REJECTED";
+export type TaskStatus = "QUEUED" | "ACTIVE" | "AWAITING_REVIEW" | "ARCHIVED";
+export type ActivityType = 'LOG' | 'COMMENT';
 
-export interface ApprovalHistoryEntry {
-    actorId: string;
+export interface ActivityEntry {
+    type: ActivityType;
+    actorId: string; // userId
     actorName: string;
-    actorPosition: string;
-    action: 'CREATED' | 'APPROVED' | 'REJECTED' | 'PAID';
+    actorAvatarUrl?: string;
     timestamp: string; // ISO String for timestamp
-    fromStatus: RequisitionStatus | 'N/A';
-    toStatus: RequisitionStatus;
-    reason?: string; // For rejections
+    text: string; // The content of the log or comment
+    
+    // Optional fields for LOG entries
+    fromStatus?: RequisitionStatus | TaskStatus | 'N/A';
+    toStatus?: RequisitionStatus | TaskStatus;
 }
+
 
 export interface Requisition {
   id: string;
@@ -84,20 +89,11 @@ export interface Requisition {
   description: string;
   attachmentUrl?: string;
   status: RequisitionStatus;
-  approvalHistory: ApprovalHistoryEntry[];
+  activity: ActivityEntry[];
   createdAt: string; // ISO String for timestamp
 }
 
-
-export type TaskStatus = "QUEUED" | "ACTIVE" | "AWAITING_REVIEW" | "ARCHIVED";
 export type TaskPriority = "CRITICAL" | "OPERATIONAL" | "ROUTINE";
-
-export interface TaskUpdate {
-  status: TaskStatus | 'CREATED' | 'UPDATED';
-  time: string; // ISO String
-  updatedBy: string; // userId
-  note?: string;
-}
 
 export interface SubTask {
   id: string;
@@ -116,7 +112,7 @@ export interface Task {
   status: TaskStatus;
   dueDate?: string; // ISO String
   createdBy: string; // userId
-  updates: TaskUpdate[];
+  activity: ActivityEntry[];
   createdAt: string; // ISO string
   attachmentUrl?: string;
   sharedWith?: string[];
@@ -133,6 +129,7 @@ export interface Announcement {
   authorId: string; // userId
   authorName: string;
   createdAt: string; // ISO String for timestamp
+  viewedBy?: string[]; // Array of userIds
 }
 
 export interface Chat {

@@ -1,14 +1,14 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "../ui/button";
-import { Megaphone, Pin, PlusCircle } from "lucide-react";
-import { useUser, useDoc, useMemoFirebase, useCollection, useFirestore } from "@/firebase";
+import { Megaphone, Pin, PlusCircle, Eye } from "lucide-react";
+import { useUser, useDoc, useMemoFirebase, useCollection, useFirestore, updateDocumentNonBlocking } from "@/firebase";
 import { UserProfile, Announcement } from "@/lib/types";
-import { collection, doc, query, where, orderBy } from "firebase/firestore";
+import { collection, doc, query, where, orderBy, arrayUnion } from "firebase/firestore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Skeleton } from "../ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
-import { useMemo } from "react";
+import { useMemo, useEffect } from "react";
 
 export function Announcements() {
     const { user: authUser } = useUser();
@@ -40,6 +40,19 @@ export function Announcements() {
             return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
         });
     }, [announcements]);
+
+    useEffect(() => {
+        if (sortedAnnouncements && authUser && firestore) {
+            sortedAnnouncements.forEach(ann => {
+                if (ann.isPinned && !ann.viewedBy?.includes(authUser.uid)) {
+                    const annRef = doc(firestore, 'announcements', ann.id);
+                    updateDocumentNonBlocking(annRef, {
+                        viewedBy: arrayUnion(authUser.uid)
+                    });
+                }
+            });
+        }
+    }, [sortedAnnouncements, authUser, firestore]);
 
     return (
         <Card>
@@ -81,9 +94,17 @@ export function Announcements() {
                                             {announcement.isPinned && <Pin className="h-4 w-4 text-primary" />}
                                         </div>
                                         <p className="text-sm text-muted-foreground">{announcement.content}</p>
-                                        <p className="text-xs text-muted-foreground/70 mt-1">
-                                            {announcement.authorName} - {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
-                                        </p>
+                                        <div className="text-xs text-muted-foreground/70 mt-2 flex items-center justify-between">
+                                            <span>
+                                                {announcement.authorName} - {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
+                                            </span>
+                                            {announcement.isPinned && permissions.canManageStaff && (
+                                                <span className="flex items-center gap-1 text-primary/80">
+                                                    <Eye className="h-3 w-3" />
+                                                    {announcement.viewedBy?.length || 0}
+                                                </span>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                             </li>

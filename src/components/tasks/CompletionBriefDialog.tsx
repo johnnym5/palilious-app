@@ -12,7 +12,7 @@ import { useState } from "react";
 import { useFirestore, useUser, updateDocumentNonBlocking } from "@/firebase";
 import { doc, arrayUnion } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, UserProfile, TaskUpdate } from "@/lib/types";
+import type { Task, UserProfile, ActivityEntry } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const formSchema = z.object({
@@ -44,16 +44,32 @@ export function CompletionBriefDialog({ isOpen, onOpenChange, task, userProfile 
 
     try {
         const taskRef = doc(firestore, 'tasks', task.id);
-        const updateEntry: TaskUpdate = {
-            status: 'AWAITING_REVIEW',
-            time: new Date().toISOString(),
-            updatedBy: userProfile.id,
-            note: values.brief,
+        const now = new Date().toISOString();
+        const nextStatus = 'AWAITING_REVIEW';
+        
+        const commentEntry: ActivityEntry = {
+            type: 'COMMENT',
+            actorId: userProfile.id,
+            actorName: userProfile.fullName,
+            actorAvatarUrl: userProfile.avatarURL,
+            timestamp: now,
+            text: values.brief,
+        };
+        
+        const logEntry: ActivityEntry = {
+            type: 'LOG',
+            actorId: userProfile.id,
+            actorName: userProfile.fullName,
+            actorAvatarUrl: userProfile.avatarURL,
+            timestamp: now,
+            text: `submitted the mission for review.`,
+            fromStatus: task.status,
+            toStatus: nextStatus,
         };
 
         updateDocumentNonBlocking(taskRef, {
-            status: 'AWAITING_REVIEW',
-            updates: arrayUnion(updateEntry)
+            status: nextStatus,
+            activity: arrayUnion(commentEntry, logEntry)
         });
 
       toast({ title: "Task Submitted for Review", description: "Your completion brief has been logged." });

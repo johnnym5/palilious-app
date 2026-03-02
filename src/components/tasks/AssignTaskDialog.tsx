@@ -15,7 +15,7 @@ import { useState } from "react";
 import { useFirestore, useUser, useCollection, addDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase";
 import { collection, query, where, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, UserProfile, TaskUpdate } from "@/lib/types";
+import type { Task, UserProfile, ActivityEntry } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -76,10 +76,15 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
 
     try {
         const now = new Date().toISOString();
-        const firstUpdate: TaskUpdate = {
-            status: 'CREATED',
-            time: now,
-            updatedBy: authUser.uid,
+        const initialActivity: ActivityEntry = {
+            type: 'LOG',
+            actorId: authUser.uid,
+            actorName: userProfile.fullName,
+            actorAvatarUrl: userProfile.avatarURL,
+            timestamp: now,
+            text: `created the mission and assigned it to ${assignedUser.fullName}.`,
+            fromStatus: 'N/A',
+            toStatus: 'QUEUED',
         };
         
         const newTask: Omit<Task, 'id'> = {
@@ -92,7 +97,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
             status: 'QUEUED',
             dueDate: values.dueDate?.toISOString(),
             createdBy: authUser.uid,
-            updates: [firstUpdate],
+            activity: [initialActivity],
             createdAt: now,
             attachmentUrl: values.attachmentUrl,
             sharedWith: [],
@@ -112,7 +117,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>

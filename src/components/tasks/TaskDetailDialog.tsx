@@ -8,18 +8,16 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Task, UserProfile, TaskUpdate, SubTask } from '@/lib/types';
+import type { Task, UserProfile, ActivityEntry, SubTask } from '@/lib/types';
 import type { Permissions } from '@/hooks/usePermissions';
-import { format, formatDistanceToNow } from 'date-fns';
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
-import { ScrollArea } from '../ui/scroll-area';
-import { Calendar, CheckSquare, Clock, HardDriveDownload, History, Info, Link as LinkIcon, User, Zap, Target, Plus, Trash2 } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar, CheckSquare, HardDriveDownload, History, Info, Link as LinkIcon, User, Zap, Target, Plus, Trash2, Loader2 } from 'lucide-react';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { doc, arrayUnion } from 'firebase/firestore';
 import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
@@ -35,6 +33,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
+import { ActivityFeed } from '../shared/ActivityFeed';
 
 interface TaskDetailDialogProps {
   task: Task;
@@ -44,20 +43,12 @@ interface TaskDetailDialogProps {
   permissions: Permissions;
 }
 
-const statusIcons: Record<TaskUpdate['status'], React.ElementType> = {
-    CREATED: CheckSquare,
-    UPDATED: CheckSquare,
-    QUEUED: Clock,
-    ACTIVE: Clock,
-    AWAITING_REVIEW: History,
-    ARCHIVED: HardDriveDownload,
-};
-
 export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfile, permissions }: TaskDetailDialogProps) {
   const firestore = useFirestore();
   const [subTasks, setSubTasks] = useState<SubTask[]>(task.subTasks || []);
   const [newSubTask, setNewSubTask] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleSubTaskToggle = (subTaskId: string) => {
     const updatedSubTasks = subTasks.map(st => 
@@ -88,20 +79,28 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
     onOpenChange(false); // Close the main dialog
   }
 
-  const getStatusText = (entry: TaskUpdate) => {
-    switch (entry.status) {
-        case 'CREATED': return `created the mission.`;
-        case 'QUEUED': return `queued the mission.`;
-        case 'ACTIVE': return `started the mission.`;
-        case 'AWAITING_REVIEW': return `submitted for review.`;
-        case 'ARCHIVED': return `approved and archived the mission.`;
-        default: return `updated the mission.`;
-    }
+  const handleAddComment = (commentText: string) => {
+    if (!firestore || !currentUserProfile) return;
+    
+    const commentEntry: ActivityEntry = {
+        type: 'COMMENT',
+        actorId: currentUserProfile.id,
+        actorName: currentUserProfile.fullName,
+        actorAvatarUrl: currentUserProfile.avatarURL,
+        timestamp: new Date().toISOString(),
+        text: commentText,
+    };
+    
+    const taskRef = doc(firestore, 'tasks', task.id);
+    updateDocumentNonBlocking(taskRef, {
+        activity: arrayUnion(commentEntry),
+    });
   }
+
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-4xl h-[90vh]">
         <DialogHeader>
           <div className="flex items-start justify-between">
              <DialogTitle className='max-w-md'>{task.title}</DialogTitle>
@@ -115,8 +114,8 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
           </div>
         </DialogHeader>
 
-        <div className="grid md:grid-cols-3 gap-6 py-4">
-          <div className="md:col-span-2 space-y-6">
+        <div className="grid md:grid-cols-3 gap-6 py-4 flex-1 overflow-hidden">
+          <div className="md:col-span-2 space-y-6 flex flex-col">
             <div className="space-y-2">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                 <Info className="h-4 w-4" /> Details
@@ -142,54 +141,33 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                         </div>
                     ))}
                     {subTasks.length === 0 && <p className="text-xs text-muted-foreground text-center py-2">No checklist items yet.</p>}
-                </div>
-                 <div className="flex items-center gap-2">
-                    <Input 
-                        placeholder="Add a checklist item..."
-                        value={newSubTask}
-                        onChange={(e) => setNewSubTask(e.target.value)}
-                        onKeyDown={(e) => { if (e.key === 'Enter') handleAddSubTask(e) }}
-                        className="h-9"
-                    />
-                    <Button size="sm" onClick={handleAddSubTask}>
-                        <Plus className="mr-2 h-4 w-4" /> Add
-                    </Button>
+                     <div className="flex items-center gap-2 pt-2 border-t">
+                        <Input 
+                            placeholder="Add a checklist item..."
+                            value={newSubTask}
+                            onChange={(e) => setNewSubTask(e.target.value)}
+                            onKeyDown={(e) => { if (e.key === 'Enter') handleAddSubTask(e) }}
+                            className="h-9"
+                        />
+                        <Button size="icon" variant="ghost" onClick={handleAddSubTask}>
+                            <Plus className="h-4 w-4" />
+                        </Button>
+                    </div>
                 </div>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1 flex flex-col min-h-0">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                <History className="h-4 w-4" /> Mission Log
+                <History className="h-4 w-4" /> Activity Feed
               </h4>
-              <ScrollArea className="h-40 rounded-md border">
-                <div className="p-3 space-y-4">
-                  {task.updates.slice().reverse().map((entry, index) => {
-                      const Icon = statusIcons[entry.status];
-                      const isLast = index === task.updates.length - 1;
-                      return (
-                        <div key={index} className="flex items-start gap-3 relative">
-                           {!isLast && <div className="absolute left-[15px] top-[14px] h-full w-px bg-border -z-10" />}
-                           <div className="h-8 w-8 rounded-full bg-secondary flex items-center justify-center border shrink-0">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                           </div>
-                           <div className='pt-1'>
-                             <p className="text-sm font-medium">
-                               <span className="text-muted-foreground">
-                                 Update from {formatDistanceToNow(new Date(entry.time), { addSuffix: true })}
-                               </span>
-                             </p>
-                             {entry.note && (
-                                <div className="text-sm text-foreground mt-1 border-l-2 pl-3 py-1 bg-background/50 rounded-r-md">
-                                   <p className="font-semibold">Completion Brief:</p>
-                                   <blockquote className='italic'>{entry.note}</blockquote>
-                                </div>
-                             )}
-                           </div>
-                        </div>
-                      )
-                    })}
-                </div>
-              </ScrollArea>
+              <div className="flex-1 rounded-md border p-4">
+                  <ActivityFeed
+                    activity={task.activity}
+                    currentUserProfile={currentUserProfile}
+                    onAddComment={handleAddComment}
+                    isLoading={isSubmitting}
+                  />
+              </div>
             </div>
           </div>
           <div className="md:col-span-1 space-y-4 rounded-lg border bg-secondary/30 p-4 h-fit">

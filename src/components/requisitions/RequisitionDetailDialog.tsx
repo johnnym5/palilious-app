@@ -11,14 +11,12 @@ import {
 import {
   Requisition,
   UserProfile,
-  ApprovalHistoryEntry,
+  ActivityEntry,
   RequisitionStatus,
 } from '@/lib/types'
 import { Permissions } from '@/hooks/usePermissions'
 import { RequisitionStatusBadge } from './RequisitionStatusBadge'
-import { format, formatDistanceToNow } from 'date-fns'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
-import { ScrollArea } from '../ui/scroll-area'
+import { format } from 'date-fns'
 import {
   Banknote,
   Calendar,
@@ -27,6 +25,7 @@ import {
   Info,
   User,
   X,
+  Loader2
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { doc, arrayUnion } from 'firebase/firestore'
@@ -45,6 +44,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { Textarea } from '../ui/textarea'
 import { useState } from 'react'
+import { ActivityFeed } from '../shared/ActivityFeed'
 
 interface RequisitionDetailDialogProps {
   requisition: Requisition
@@ -80,6 +80,7 @@ export function RequisitionDetailDialog({
   const firestore = useFirestore()
   const { toast } = useToast()
   const [rejectionReason, setRejectionReason] = useState('')
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const canTakeAction = () => {
     if (!currentUserProfile || !permissions) return false
@@ -94,16 +95,34 @@ export function RequisitionDetailDialog({
     if (!permissions) return false;
     return permissions.canApproveHR || permissions.canApproveFinance || permissions.canApproveMD;
   }
+  
+  const handleAddComment = (commentText: string) => {
+    if (!firestore || !currentUserProfile) return;
+    
+    const commentEntry: ActivityEntry = {
+        type: 'COMMENT',
+        actorId: currentUserProfile.id,
+        actorName: currentUserProfile.fullName,
+        actorAvatarUrl: currentUserProfile.avatarURL,
+        timestamp: new Date().toISOString(),
+        text: commentText,
+    };
+    
+    const requisitionRef = doc(firestore, 'requisitions', requisition.id);
+    updateDocumentNonBlocking(requisitionRef, {
+        activity: arrayUnion(commentEntry),
+    });
+  }
 
   const handleAction = async (
     action: 'APPROVE' | 'REJECT' | 'MARK_AS_PAID'
   ) => {
     if (!firestore || !currentUserProfile) return
+    setIsSubmitting(true);
 
     let nextStatus: RequisitionStatus
-    let successMessage = ''
-    let actionVerb: ApprovalHistoryEntry['action']
-
+    let logText = ''
+    
     if (action === 'REJECT') {
       if (!rejectionReason) {
         toast({
@@ -111,39 +130,38 @@ export function RequisitionDetailDialog({
           title: 'Reason Required',
           description: 'Please provide a reason for rejection.',
         })
+        setIsSubmitting(false);
         return
       }
       nextStatus = 'REJECTED'
-      successMessage = `Requisition ${requisition.serialNo} has been rejected.`
-      actionVerb = 'REJECTED'
+      logText = `rejected the requisition. Reason: ${rejectionReason}`
     } else if (action === 'MARK_AS_PAID') {
       nextStatus = 'PAID'
-      successMessage = `Requisition ${requisition.serialNo} marked as Paid.`
-      actionVerb = 'PAID'
+      logText = 'marked the requisition as paid.'
     } else {
       nextStatus = WORKFLOW[requisition.status].next
-      successMessage = `Requisition ${requisition.serialNo} approved and moved to ${nextStatus}.`
-      actionVerb = 'APPROVED'
+      logText = `approved the requisition, advancing it to ${nextStatus.replace('_', ' ')}.`
     }
 
-    const historyEntry: ApprovalHistoryEntry = {
+    const activityEntry: ActivityEntry = {
+      type: 'LOG',
       actorId: currentUserProfile.id,
       actorName: currentUserProfile.fullName,
-      actorPosition: currentUserProfile.position,
-      action: actionVerb,
+      actorAvatarUrl: currentUserProfile.avatarURL,
       timestamp: new Date().toISOString(),
+      text: logText,
       fromStatus: requisition.status,
       toStatus: nextStatus,
-      reason: action === 'REJECT' ? rejectionReason : undefined,
     }
 
     const requisitionRef = doc(firestore, 'requisitions', requisition.id)
     updateDocumentNonBlocking(requisitionRef, {
       status: nextStatus,
-      approvalHistory: arrayUnion(historyEntry),
+      activity: arrayUnion(activityEntry),
     })
 
-    toast({ title: 'Success', description: successMessage })
+    toast({ title: 'Success', description: 'Requisition status has been updated.' })
+    setIsSubmitting(false);
     onOpenChange(false)
     setRejectionReason('');
   }
@@ -153,7 +171,7 @@ export function RequisitionDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl">
+      <DialogContent className="max-w-4xl h-[90vh]">
         <DialogHeader>
           <DialogTitle>
             {requisition.serialNo}: {requisition.title}
@@ -167,8 +185,8 @@ export function RequisitionDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-6 py-4">
-          <div className="col-span-2 space-y-6">
+        <div className="grid grid-cols-3 gap-6 py-4 flex-1 overflow-hidden">
+          <div className="col-span-2 space-y-6 flex flex-col">
             <div className="space-y-2">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                 <Info className="h-4 w-4" /> Details
@@ -176,47 +194,21 @@ export function RequisitionDetailDialog({
               <p className="text-foreground">{requisition.description}</p>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2 flex-1 flex flex-col min-h-0">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
-                <History className="h-4 w-4" /> Approval History
+                <History className="h-4 w-4" /> Activity Feed
               </h4>
-              <ScrollArea className="h-32 rounded-md border p-2">
-                <div className="space-y-3">
-                  {requisition.approvalHistory
-                    .slice()
-                    .reverse()
-                    .map((entry, index) => (
-                      <div key={index} className="flex items-start gap-3">
-                        <Avatar className="h-8 w-8 border">
-                          <AvatarImage />
-                          <AvatarFallback>
-                            {entry.actorName
-                              .split(' ')
-                              .map(n => n[0])
-                              .join('')}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div>
-                          <p className="text-sm font-medium">
-                            {entry.actorName}{' '}
-                            <span className="text-muted-foreground">
-                              ({entry.actorPosition}) {entry.action.toLowerCase()} the request.
-                            </span>
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatDistanceToNow(new Date(entry.timestamp), {
-                              addSuffix: true,
-                            })}
-                          </p>
-                           {entry.reason && <p className='text-xs text-destructive/80 mt-1'>Reason: {entry.reason}</p>}
-                        </div>
-                      </div>
-                    ))}
-                </div>
-              </ScrollArea>
+              <div className="flex-1 rounded-md border p-4">
+                  <ActivityFeed
+                    activity={requisition.activity}
+                    currentUserProfile={currentUserProfile}
+                    onAddComment={handleAddComment}
+                    isLoading={isSubmitting}
+                  />
+              </div>
             </div>
           </div>
-          <div className="col-span-1 space-y-4 rounded-lg border bg-secondary/30 p-4">
+          <div className="col-span-1 space-y-4 rounded-lg border bg-secondary/30 p-4 h-fit">
             <div className="flex items-start justify-between">
               <h4 className="font-semibold">Summary</h4>
             </div>
@@ -252,7 +244,7 @@ export function RequisitionDetailDialog({
             {canReject() && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
-                  <Button variant="destructive">
+                  <Button variant="destructive" disabled={isSubmitting}>
                     <X className="mr-2 h-4 w-4" /> Reject
                   </Button>
                 </AlertDialogTrigger>
@@ -273,8 +265,9 @@ export function RequisitionDetailDialog({
                     <AlertDialogCancel>Cancel</AlertDialogCancel>
                     <AlertDialogAction
                       onClick={() => handleAction('REJECT')}
-                      disabled={!rejectionReason}
+                      disabled={!rejectionReason || isSubmitting}
                     >
+                      {isSubmitting && <Loader2 className="animate-spin" />}
                       Confirm Rejection
                     </AlertDialogAction>
                   </AlertDialogFooter>
@@ -292,7 +285,9 @@ export function RequisitionDetailDialog({
                 )
               }
               className="bg-emerald-600 hover:bg-emerald-700"
+              disabled={isSubmitting}
             >
+              {isSubmitting && <Loader2 className="animate-spin" />}
               <Check className="mr-2 h-4 w-4" /> {approvalActionText}
             </Button>
           </DialogFooter>

@@ -12,7 +12,7 @@ import { useState } from "react";
 import { useFirestore, useUser, useDoc, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { Requisition, UserProfile, ApprovalHistoryEntry } from "@/lib/types";
+import type { Requisition, UserProfile, ActivityEntry } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 
@@ -62,15 +62,17 @@ export function NewRequisitionDialog({ children, open, onOpenChange, userProfile
         const newSerialNo = `REQ-${String(orgReqsSnapshot.size + 1).padStart(4, '0')}`;
 
         const now = new Date().toISOString();
+        const nextStatus = 'PENDING_HR';
 
-        const historyEntry: ApprovalHistoryEntry = {
+        const initialActivity: ActivityEntry = {
+            type: 'LOG',
             actorId: userProfile.id,
             actorName: userProfile.fullName,
-            actorPosition: userProfile.position,
-            action: 'CREATED',
+            actorAvatarUrl: userProfile.avatarURL,
             timestamp: now,
+            text: `created the requisition and sent for HR approval.`,
             fromStatus: 'N/A',
-            toStatus: 'PENDING_HR',
+            toStatus: nextStatus,
         };
 
         const newRequisition: Omit<Requisition, 'id'> = {
@@ -81,9 +83,9 @@ export function NewRequisitionDialog({ children, open, onOpenChange, userProfile
             title: values.title,
             amount: values.amount,
             description: values.description,
-            status: 'PENDING_HR',
+            status: nextStatus,
             createdAt: now,
-            approvalHistory: [historyEntry],
+            activity: [initialActivity],
         };
 
         await addDocumentNonBlocking(reqsCollection, newRequisition);

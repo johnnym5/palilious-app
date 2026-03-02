@@ -1,6 +1,6 @@
 'use client';
 import { useState } from 'react';
-import type { Task, UserProfile, TaskUpdate, TaskStatus } from '@/lib/types';
+import type { Task, UserProfile, ActivityEntry, TaskStatus } from '@/lib/types';
 import type { Permissions } from '@/hooks/usePermissions';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '../ui/card';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
@@ -37,15 +37,25 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad }: Task
         if (!firestore) return;
 
         const taskRef = doc(firestore, 'tasks', task.id);
-        const updateEntry: Omit<TaskUpdate, 'note'> = {
-            status: newStatus,
-            time: new Date().toISOString(),
-            updatedBy: userProfile.id
+        
+        let logText = '';
+        if (newStatus === 'ACTIVE') logText = `started the mission.`;
+        if (newStatus === 'ARCHIVED') logText = `approved and archived the mission.`;
+
+        const activityEntry: ActivityEntry = {
+            type: 'LOG',
+            actorId: userProfile.id,
+            actorName: userProfile.fullName,
+            actorAvatarUrl: userProfile.avatarURL,
+            timestamp: new Date().toISOString(),
+            text: logText,
+            fromStatus: task.status,
+            toStatus: newStatus,
         };
 
         updateDocumentNonBlocking(taskRef, {
             status: newStatus,
-            updates: arrayUnion(updateEntry)
+            activity: arrayUnion(activityEntry)
         });
     };
     
