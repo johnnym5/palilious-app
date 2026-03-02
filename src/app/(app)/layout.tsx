@@ -3,16 +3,16 @@ import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import AppSidebar from "@/components/layout/AppSidebar";
 import AppHeader from "@/components/layout/AppHeader";
-import { useSimpleAuth } from '@/hooks/use-simple-auth';
+import { useUser } from '@/firebase';
 import { Loader2 } from 'lucide-react';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
-  const { user, isUserLoading } = useSimpleAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
 
   useEffect(() => {
     // If auth state is not loading and there is no user, redirect to login.
-    if (!isUserLoading && !user?.isLoggedIn) {
+    if (!isUserLoading && !user) {
       router.push('/login');
     }
   }, [user, isUserLoading, router]);
@@ -27,7 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
   
   // If user is authenticated, render the app layout
-  if(user?.isLoggedIn) {
+  if(user) {
     return (
       <div className="flex min-h-screen w-full">
         <AppSidebar />

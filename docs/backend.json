@@ -1,14 +1,39 @@
 {
   "entities": {
+    "Organization": {
+      "title": "Organization",
+      "type": "object",
+      "description": "Represents a company or a tenant in the system.",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "The name of the organization."
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "The UID of the user who created the organization."
+        },
+        "createdAt": {
+          "type": "string",
+          "format": "date-time",
+          "description": "The date the organization was created."
+        }
+      },
+      "required": ["name", "ownerId", "createdAt"]
+    },
     "UserProfile": {
       "$schema": "http://json-schema.org/draft-07/schema#",
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile, holding essential personal and role-based information.",
+      "description": "Represents a user's profile, holding personal and role-based information within an organization.",
       "properties": {
         "id": {
           "type": "string",
           "description": "User's unique identifier (UID)."
+        },
+        "orgId": {
+          "type": "string",
+          "description": "The ID of the organization the user belongs to."
         },
         "email": {
           "type": "string",
@@ -25,12 +50,7 @@
         },
         "role": {
           "type": "string",
-          "enum": [
-            "STAFF",
-            "HR",
-            "FINANCE",
-            "MD"
-          ]
+          "enum": ["ORG_ADMIN", "STAFF", "HR", "FINANCE", "MD"]
         },
         "avatarURL": {
           "type": "string",
@@ -49,22 +69,11 @@
         },
         "status": {
           "type": "string",
-          "enum": [
-            "ONLINE",
-            "OFFLINE",
-            "ON_LEAVE"
-          ],
+          "enum": ["ONLINE", "OFFLINE", "ON_LEAVE"],
           "description": "User's current status."
         }
       },
-      "required": [
-        "id",
-        "email",
-        "username",
-        "fullName",
-        "role",
-        "joinedDate"
-      ]
+      "required": ["id", "orgId", "email", "username", "fullName", "role", "joinedDate"]
     },
     "Attendance": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -75,6 +84,10 @@
         "userId": {
           "type": "string",
           "description": "ID of the user."
+        },
+        "orgId": {
+            "type": "string",
+            "description": "The ID of the organization the record belongs to."
         },
         "date": {
           "type": "string",
@@ -90,11 +103,7 @@
           "format": "date-time"
         }
       },
-      "required": [
-        "userId",
-        "date",
-        "clockIn"
-      ]
+      "required": ["userId", "orgId", "date", "clockIn"]
     },
     "Requisition": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -105,6 +114,10 @@
         "serialNo": {
           "type": "string",
           "description": "e.g., REQ-00001"
+        },
+         "orgId": {
+            "type": "string",
+            "description": "The ID of the organization the record belongs to."
         },
         "createdBy": {
           "type": "string",
@@ -148,21 +161,11 @@
                 "format": "date-time"
               }
             },
-            "required": [
-              "actor",
-              "action",
-              "time"
-            ]
+            "required": ["actor", "action", "time"]
           }
         }
       },
-      "required": [
-        "serialNo",
-        "createdBy",
-        "amount",
-        "description",
-        "status"
-      ]
+      "required": ["serialNo", "orgId", "createdBy", "amount", "description", "status"]
     },
     "Task": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -170,6 +173,10 @@
       "type": "object",
       "description": "An assigned task.",
       "properties": {
+         "orgId": {
+            "type": "string",
+            "description": "The ID of the organization the record belongs to."
+        },
         "assignedTo": {
           "type": "string",
           "description": "User ID of the assignee."
@@ -218,12 +225,7 @@
           }
         }
       },
-      "required": [
-        "assignedTo",
-        "title",
-        "deadline",
-        "isCompleted"
-      ]
+      "required": ["orgId", "assignedTo", "title", "deadline", "isCompleted"]
     },
     "Announcement": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -231,6 +233,10 @@
       "type": "object",
       "description": "A company-wide announcement.",
       "properties": {
+        "orgId": {
+            "type": "string",
+            "description": "The ID of the organization the record belongs to."
+        },
         "title": {
           "type": "string"
         },
@@ -249,12 +255,7 @@
           "format": "date-time"
         }
       },
-      "required": [
-        "title",
-        "content",
-        "author",
-        "createdAt"
-      ]
+      "required": ["orgId", "title", "content", "author", "createdAt"]
     },
     "Chat": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -276,10 +277,7 @@
           "format": "date-time"
         }
       },
-      "required": [
-        "participants",
-        "updatedAt"
-      ]
+      "required": ["participants", "updatedAt"]
     },
     "ChatMessage": {
       "$schema": "http://json-schema.org/draft-07/schema#",
@@ -298,21 +296,30 @@
           "format": "date-time"
         }
       },
-      "required": [
-        "senderId",
-        "content",
-        "timestamp"
-      ]
+      "required": ["senderId", "content", "timestamp"]
     }
   },
   "auth": {
-    "providers": [
-      "password",
-      "anonymous"
-    ]
+    "providers": ["password"]
   },
   "firestore": {
     "structure": [
+       {
+        "path": "/organizations/{orgId}",
+        "definition": {
+          "entityName": "Organization",
+          "schema": {
+            "$ref": "#/entities/Organization"
+          },
+          "description": "Stores organization details.",
+          "params": [
+            {
+              "name": "orgId",
+              "description": "The organization's unique ID."
+            }
+          ]
+        }
+      },
       {
         "path": "/users/{userId}",
         "definition": {
@@ -320,7 +327,7 @@
           "schema": {
             "$ref": "#/entities/UserProfile"
           },
-          "description": "Stores individual staff member profiles.",
+          "description": "Stores individual staff member profiles, partitioned by orgId.",
           "params": [
             {
               "name": "userId",
@@ -336,7 +343,7 @@
           "schema": {
             "$ref": "#/entities/Attendance"
           },
-          "description": "User attendance records.",
+          "description": "User attendance records, partitioned by orgId.",
           "params": [
             {
               "name": "attendanceId",
@@ -352,7 +359,7 @@
           "schema": {
             "$ref": "#/entities/Requisition"
           },
-          "description": "Financial requisitions.",
+          "description": "Financial requisitions, partitioned by orgId.",
           "params": [
             {
               "name": "reqId",
@@ -368,7 +375,7 @@
           "schema": {
             "$ref": "#/entities/Task"
           },
-          "description": "Assigned tasks.",
+          "description": "Assigned tasks, partitioned by orgId.",
           "params": [
             {
               "name": "taskId",
@@ -384,7 +391,7 @@
           "schema": {
             "$ref": "#/entities/Announcement"
           },
-          "description": "Company-wide announcements.",
+          "description": "Company-wide announcements, partitioned by orgId.",
           "params": [
             {
               "name": "postId",
@@ -432,4 +439,3 @@
     ]
   }
 }
-    

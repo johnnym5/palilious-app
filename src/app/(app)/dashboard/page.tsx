@@ -1,7 +1,7 @@
 'use client';
 import { useState, useEffect } from 'react';
 import { StatCard } from "@/components/dashboard/StatCard";
-import { useSimpleAuth } from "@/hooks/use-simple-auth";
+import { useUser } from "@/firebase";
 import { Briefcase, CheckCircle, Clock, Users } from "lucide-react";
 import { Announcements } from "@/components/dashboard/Announcements";
 import QuickActions from "@/components/dashboard/QuickActions";
@@ -9,7 +9,7 @@ import { format } from "date-fns";
 import { TodaysCelebrations } from '@/components/dashboard/TodaysCelebrations';
 
 export default function DashboardPage() {
-    const { user } = useSimpleAuth();
+    const { user } = useUser();
     const [currentTime, setCurrentTime] = useState(new Date());
 
     useEffect(() => {

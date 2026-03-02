@@ -1,8 +1,16 @@
-export type UserRole = 'STAFF' | 'HR' | 'FINANCE' | 'MD';
+export type UserRole = 'ORG_ADMIN' | 'STAFF' | 'HR' | 'FINANCE' | 'MD';
 export type UserStatus = "ONLINE" | "OFFLINE" | "ON_LEAVE";
 
-export interface UserProfile {
+export interface Organization {
   id: string;
+  name: string;
+  ownerId: string;
+  createdAt: string;
+}
+
+export interface UserProfile {
+  id: string; // UID
+  orgId: string;
   email: string;
   username: string;
   fullName: string;
@@ -16,6 +24,7 @@ export interface UserProfile {
 export interface Attendance {
     id: string;
     userId: string;
+    orgId: string;
     date: string; // YYYY-MM-DD
     clockIn: string; // ISO String for timestamp
     clockOut?: string; // ISO String for timestamp
@@ -32,6 +41,7 @@ export interface ApprovalHistoryEntry {
 export interface Requisition {
   id: string;
   serialNo: string;
+  orgId: string;
   createdBy: string; // userId
   amount: number;
   description: string;
@@ -53,6 +63,7 @@ export interface TaskTimelineEntry {
 
 export interface Task {
   id: string;
+  orgId: string;
   assignedTo: string; // userId
   title: string;
   description: string;
@@ -64,6 +75,7 @@ export interface Task {
 
 export interface Announcement {
   id: string;
+  orgId: string;
   title: string;
   content: string;
   isPinned: boolean;
@@ -84,5 +96,3 @@ export interface ChatMessage {
     content: string;
     timestamp: string; // ISO String for timestamp
 }
-
-    

@@ -14,82 +14,102 @@ service cloud.firestore {
       return isSignedIn() && request.auth.uid == userId;
     }
 
-    function getUserRole() {
-      // Use exists() to prevent errors on new user creation before profile exists
-      return exists(/databases/$(database)/documents/users/$(request.auth.uid)) ? get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role : '';
-    }
-
-    function isRole(role) {
-      return isSignedIn() && getUserRole() == role;
-    }
-
-    function isOneOfRoles(roles) {
-      return isSignedIn() && getUserRole() in roles;
+    // Get a user's data document.
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
     }
     
+    // Get the current user's data document.
+    function getcurrentUserData() {
+      return getUserData(request.auth.uid);
+    }
+    
+    // Check if the user has a specific role in their organization.
+    function isRoleInOrg(role) {
+      return isSignedIn() && getcurrentUserData().role == role;
+    }
+
+    // Check if the user has one of a list of roles in their organization.
+    function isOneOfRolesInOrg(roles) {
+      return isSignedIn() && getcurrentUserData().role in roles;
+    }
+    
+    // Check if a resource belongs to the current user's organization.
+    function isRequestingOwnOrg(resource) {
+       return resource.data.orgId == getcurrentUserData().orgId;
+    }
+
     // --------------------------------------------------------------------
     // Collection Rules
     // --------------------------------------------------------------------
+    
+    /**
+     * @description Organizations. Only the owner can manage their organization.
+     * @path /organizations/{orgId}
+     */
+    match /organizations/{orgId} {
+      allow read: if isSignedIn();
+      allow create: if isOwner(request.resource.data.ownerId);
+      allow update: if isOwner(resource.data.ownerId);
+      allow delete: if false; // Disallow deletion for safety
+    }
 
     /**
-     * @description User profiles. A user can update their own profile.
-     * HR/MD roles can read, create, update, and delete all profiles. 
-     * All signed-in users can read basic info.
+     * @description User profiles. Users can read profiles in their own org.
+     * ORG_ADMINs can manage users within their org.
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow get: if isSignedIn();
-      allow list: if isOneOfRoles(['HR', 'MD']);
-      allow create: if isOneOfRoles(['HR', 'MD']);
-      allow update: if isOwner(userId) || isOneOfRoles(['HR', 'MD']);
-      allow delete: if isOneOfRoles(['HR', 'MD']);
+      allow get: if isSignedIn() && isRequestingOwnOrg(resource);
+      allow list: if isSignedIn(); // Requires client-side filtering by orgId
+      allow create: if isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
+      allow update: if isOwner(userId) || isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
+      allow delete: if isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
     }
 
     /**
      * @description Attendance records. Users can manage their own records.
-     * HR/MD roles can read all records.
+     * HR/MD can view all records within their org.
      * @path /attendance/{attendanceId}
      */
     match /attendance/{attendanceId} {
-      allow get: if isOwner(resource.data.userId) || isOneOfRoles(['HR', 'MD']);
-      allow list: if isSignedIn(); // Relies on client-side queries
-      allow create: if isOwner(request.resource.data.userId);
-      allow update, delete: if isOwner(resource.data.userId);
+      allow get: if isSignedIn() && isRequestingOwnOrg(resource) && (isOwner(resource.data.userId) || isOneOfRolesInOrg(['HR', 'MD']));
+      allow list: if isSignedIn(); // Requires client-side filtering by orgId
+      allow create: if isSignedIn() && isOwner(request.resource.data.userId) && request.resource.data.orgId == getcurrentUserData().orgId;
+      allow update, delete: if isSignedIn() && isOwner(resource.data.userId);
     }
 
     /**
-     * @description Financial requisitions. The creator can view.
-     * HR, Finance, and MD roles can access based on their function.
+     * @description Financial requisitions. Users can access requisitions within their own org.
      * @path /requisitions/{reqId}
      */
     match /requisitions/{reqId} {
-      allow get: if isOwner(resource.data.createdBy) || isOneOfRoles(['HR', 'FINANCE', 'MD']);
-      allow list: if isSignedIn(); // Relies on client-side queries
-      allow create: if isOwner(request.resource.data.createdBy);
-      allow update: if isOwner(resource.data.createdBy) || isOneOfRoles(['HR', 'FINANCE', 'MD']);
-      allow delete: if isRole('MD');
+      allow get: if isSignedIn() && isRequestingOwnOrg(resource);
+      allow list: if isSignedIn(); // Requires client-side filtering by orgId
+      allow create: if isSignedIn() && isOwner(request.resource.data.createdBy) && request.resource.data.orgId == getcurrentUserData().orgId;
+      allow update: if isSignedIn() && isRequestingOwnOrg(resource) && (isOwner(resource.data.createdBy) || isOneOfRolesInOrg(['HR', 'FINANCE', 'MD']));
+      allow delete: if isSignedIn() && isRequestingOwnOrg(resource) && isRoleInOrg('MD');
     }
 
     /**
-     * @description Tasks. The creator and assignee can read/update.
-     * HR/MD roles can view all tasks for oversight.
+     * @description Tasks. Users can access tasks within their own org.
      * @path /tasks/{taskId}
      */
     match /tasks/{taskId} {
-      allow get: if isOwner(resource.data.assignedTo) || isOwner(resource.data.createdBy) || isOneOfRoles(['HR', 'MD']);
-      allow list: if isSignedIn(); // Relies on client-side queries
-      allow create: if isOwner(request.resource.data.createdBy);
-      allow update: if isOwner(resource.data.assignedTo) || isOwner(resource.data.createdBy) || isOneOfRoles(['HR', 'MD']);
-      allow delete: if isOwner(resource.data.createdBy) || isOneOfRoles(['HR', 'MD']);
+      allow get: if isSignedIn() && isRequestingOwnOrg(resource);
+      allow list: if isSignedIn(); // Requires client-side filtering by orgId
+      allow create: if isSignedIn() && request.resource.data.orgId == getcurrentUserData().orgId;
+      allow update: if isSignedIn() && isRequestingOwnOrg(resource) && (isOwner(resource.data.assignedTo) || isRoleInOrg('MD'));
+      allow delete: if isSignedIn() && isRequestingOwnOrg(resource) && (isOwner(resource.data.assignedTo) || isRoleInOrg('MD'));
     }
 
     /**
-     * @description Company-wide announcements. Readable by all, writable by HR.
+     * @description Company-wide announcements. Readable by all in the org, writable by HR.
      * @path /announcements/{postId}
      */
     match /announcements/{postId} {
-      allow get, list: if isSignedIn();
-      allow create, update, delete: if isRole('HR');
+      allow get, list: if isSignedIn(); // Requires client-side filtering by orgId
+      allow create, update, delete: if isSignedIn() && isRoleInOrg('HR') && request.resource.data.orgId == getcurrentUserData().orgId;
     }
 
     /**
@@ -103,8 +123,7 @@ service cloud.firestore {
       allow delete: if false;
 
       /**
-       * @description Messages within a chat. Only participants can read.
-       * Only the sender can create/edit/delete their messages.
+       * @description Messages within a chat.
        * @path /chats/{chatId}/messages/{messageId}
        */
       match /messages/{messageId} {

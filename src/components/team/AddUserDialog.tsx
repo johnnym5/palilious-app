@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserRole } from "@/lib/types";
+import { UserRole, UserProfile } from "@/lib/types";
 import { useState } from "react";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { useFirestore, setDocumentNonBlocking } from "@/firebase";
+import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { firebaseConfig } from "@/firebase/config";
-import { doc } from "firebase/firestore";
+import { doc, getFirestore } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -22,7 +22,7 @@ import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
 
-const roles: UserRole[] = ['STAFF', 'HR', 'FINANCE', 'MD'];
+const roles: Exclude<UserRole, 'ORG_ADMIN'>[] = ['STAFF', 'HR', 'FINANCE', 'MD'];
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
@@ -44,7 +44,13 @@ interface AddUserDialogProps {
 export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
+  const { user: authUser } = useUser();
   const { toast } = useToast();
+
+  const adminProfileRef = useMemoFirebase(() => 
+    authUser ? doc(firestore, "users", authUser.uid) : null
+  , [firestore, authUser]);
+  const { data: adminProfile } = useDoc<UserProfile>(adminProfileRef);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -58,10 +64,16 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
   });
 
   async function onSubmit(values: FormData) {
-    if (!firestore) return;
+    if (!firestore || !adminProfile?.orgId) {
+        toast({
+            variant: "destructive",
+            title: "Error",
+            description: "Could not determine your organization. Please try again.",
+        });
+        return;
+    }
     setIsLoading(true);
     
-    // Use a unique name for the temporary app instance
     const tempAppName = `createUser-${Date.now()}`;
     const tempApp = initializeApp(firebaseConfig, tempAppName);
     const tempAuth = getAuth(tempApp);
@@ -70,8 +82,8 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
       const newUser = userCredential.user;
 
-      const userData = {
-        id: newUser.uid,
+      const userData: Omit<UserProfile, 'id'> = {
+        orgId: adminProfile.orgId,
         fullName: values.fullName,
         username: values.username,
         email: values.email,
@@ -88,7 +100,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       });
 
       const userRef = doc(firestore, "users", newUser.uid);
-      setDocumentNonBlocking(userRef, userData, { merge: false });
+      setDocumentNonBlocking(userRef, {id: newUser.uid, ...userData}, { merge: false });
 
       toast({
         title: "User Created Successfully",
@@ -117,7 +129,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
         <DialogHeader>
           <DialogTitle>Add New Staff Member</DialogTitle>
           <DialogDescription>
-            Create a new account. The user will be able to log in with the email and password you set.
+            Create a new account for your organization. The user will be able to log in with the email and password you set.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -249,5 +261,3 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     </Dialog>
   );
 }
-
-    

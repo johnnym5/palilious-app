@@ -14,69 +14,68 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useSimpleAuth } from "@/hooks/use-simple-auth";
+import { useAuth, useUser } from "@/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+
 
 const formSchema = z.object({
-  username: z.string().min(1, { message: "Username is required." }),
+  email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(1, { message: "Password is required." }),
 });
 
 export function LoginForm() {
-  const { login, user, isUserLoading } = useSimpleAuth();
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      username: "",
+      email: "",
       password: "",
     },
   });
 
   useEffect(() => {
-    if (!isUserLoading && user?.isLoggedIn) {
+    if (!isUserLoading && user) {
       router.push('/dashboard');
     }
   }, [user, isUserLoading, router]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    const success = login(values.username, values.password);
-
-    if (!success) {
-        // This toast will appear after the simulated loading is complete
-        setTimeout(() => {
-             toast({
-                variant: 'destructive',
-                title: 'Login Failed',
-                description: "Invalid username or password.",
-            });
-        }, 500)
+    setIsSubmitting(true);
+    try {
+      await signInWithEmailAndPassword(auth, values.email, values.password);
+      // Redirect is handled by the useEffect
+    } catch (error: any) {
+       toast({
+          variant: 'destructive',
+          title: 'Login Failed',
+          description: error.message || "Invalid username or password.",
+      });
+    } finally {
+        setIsSubmitting(false);
     }
-    // Redirect is handled by the useEffect
   }
+
+  const isLoading = isSubmitting || isUserLoading;
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-        <FormItem>
-            <FormLabel>Company Name</FormLabel>
-            <FormControl>
-                <Input placeholder="palilious" disabled />
-            </FormControl>
-        </FormItem>
-        
         <FormField
           control={form.control}
-          name="username"
+          name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>Email</FormLabel>
               <FormControl>
-                <Input placeholder="e.g. Admin" {...field} />
+                <Input placeholder="name@company.com" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -95,8 +94,8 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isUserLoading}>
-          {isUserLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button type="submit" className="w-full" disabled={isLoading}>
+          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Login
         </Button>
       </form>

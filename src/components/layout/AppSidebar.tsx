@@ -16,7 +16,12 @@ import {
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useSimpleAuth } from "@/hooks/use-simple-auth";
+import { useAuth, useDoc, useMemoFirebase } from "@/firebase";
+import { doc, getFirestore } from "firebase/firestore";
+import type { UserProfile } from "@/lib/types";
+import { useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
+import { Skeleton } from "../ui/skeleton";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -27,17 +32,24 @@ const mainNavItems = [
 ];
 
 const adminNavItems = [
-    { href: "/team", icon: Users, label: "Team Management", roles: ['HR', 'MD'] },
-    { href: "/company", icon: Building2, label: "Company Settings", roles: ['MD'] },
+    { href: "/team", icon: Users, label: "Team Management", roles: ['ORG_ADMIN', 'HR', 'MD'] },
+    { href: "/company", icon: Building2, label: "Company Settings", roles: ['ORG_ADMIN'] },
 ]
 
 export default function AppSidebar({ isMobile = false }) {
   const pathname = usePathname();
-  const { user, logout } = useSimpleAuth();
+  const auth = useAuth();
+  const { user: authUser } = useUser();
+  const firestore = getFirestore(auth.app);
 
+  const userProfileRef = useMemoFirebase(() => 
+    authUser ? doc(firestore, "users", authUser.uid) : null,
+  [firestore, authUser]);
+
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const handleLogout = () => {
-    logout();
+    signOut(auth);
   };
 
   const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => {
@@ -56,8 +68,13 @@ export default function AppSidebar({ isMobile = false }) {
       </Link>
     );
   };
+  
+  const userCanSee = (itemRoles: string[]) => {
+    if (!userProfile || !userProfile.role) return false;
+    return itemRoles.includes(userProfile.role);
+  }
 
-  if (!user) return null;
+  if (!authUser) return null;
 
   return (
     <aside className={cn("flex-col border-r bg-background", isMobile ? "flex w-full" : "hidden md:flex md:w-64")}>
@@ -69,8 +86,9 @@ export default function AppSidebar({ isMobile = false }) {
           {mainNavItems.map((item) => <NavLink key={item.href} {...item} />)}
           
           <div className="my-4 h-px w-full bg-border" />
-
-          {user && user.role === 'MD' && adminNavItems.filter(item => item.roles.includes(user.role)).map((item) => (
+          
+          {isProfileLoading && <Skeleton className="h-8 w-full" />}
+          {userProfile && adminNavItems.filter(item => userCanSee(item.roles)).map((item) => (
              <NavLink key={item.href} {...item} />
           ))}
         </nav>
@@ -84,13 +102,17 @@ export default function AppSidebar({ isMobile = false }) {
             </div>
 
             <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary">
-                 <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.photoURL || undefined} alt={user.displayName || ''} />
-                    <AvatarFallback>{user.displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
-                </Avatar>
+                {isProfileLoading ? (
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                ) : (
+                  <Avatar className="h-10 w-10">
+                      <AvatarImage src={userProfile?.avatarURL || undefined} alt={userProfile?.fullName || ''} />
+                      <AvatarFallback>{userProfile?.fullName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                  </Avatar>
+                )}
                 <div className="flex-1 truncate">
-                    <p className="font-semibold">{user.displayName}</p>
-                    <p className="text-xs text-muted-foreground">{user.email}</p>
+                    <p className="font-semibold">{userProfile?.fullName}</p>
+                    <p className="text-xs text-muted-foreground">{userProfile?.email}</p>
                 </div>
                 <button onClick={handleLogout}>
                     <LogOut className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors"/>

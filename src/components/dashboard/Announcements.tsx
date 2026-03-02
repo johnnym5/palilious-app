@@ -2,11 +2,21 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "../ui/button";
 import { PlusCircle } from "lucide-react";
-import { useSimpleAuth } from "@/hooks/use-simple-auth";
+import { useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { UserProfile } from "@/lib/types";
+import { doc, getFirestore } from "firebase/firestore";
 
 export function Announcements() {
-    const { user } = useSimpleAuth();
-    const canManage = user?.role === 'HR' || user?.role === 'MD';
+    const { user: authUser } = useUser();
+    const firestore = getFirestore();
+    
+    const userProfileRef = useMemoFirebase(() => 
+        authUser ? doc(firestore, "users", authUser.uid) : null,
+    [firestore, authUser]);
+    
+    const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+
+    const canManage = userProfile?.role === 'HR' || userProfile?.role === 'ORG_ADMIN';
 
     return (
         <Card>

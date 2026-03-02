@@ -9,20 +9,24 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useSimpleAuth } from "@/hooks/use-simple-auth";
+import { useUser, useAuth } from "@/firebase";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import Link from "next/link";
+import { signOut } from "firebase/auth";
 
 export function UserNav() {
-  const { user, logout } = useSimpleAuth();
+  const { user } = useUser();
+  const auth = useAuth();
 
   if (!user) {
     return null;
   }
   
   const handleLogout = () => {
-    logout();
+    signOut(auth);
   };
+  
+  const userInitials = user.displayName?.split(' ').map(n => n[0]).join('') || user.email?.charAt(0).toUpperCase();
 
   return (
     <DropdownMenu>
@@ -30,7 +34,7 @@ export function UserNav() {
         <Button variant="ghost" className="relative h-10 w-10 rounded-full">
           <Avatar className="h-10 w-10">
             <AvatarImage src={user.photoURL || undefined} alt={user.displayName || ''} />
-            <AvatarFallback>{user.displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+            <AvatarFallback>{userInitials}</AvatarFallback>
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
