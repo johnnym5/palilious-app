@@ -2,7 +2,6 @@
 import { StatCard } from "@/components/dashboard/StatCard";
 import { Briefcase, CheckCircle, Clock, Users } from "lucide-react";
 import { Announcements } from "@/components/dashboard/Announcements";
-import { TodaysCelebrations } from '@/components/dashboard/TodaysCelebrations';
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { CompanyGoal } from "@/components/dashboard/CompanyGoal";
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
@@ -100,7 +99,6 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-6">
                     <Announcements />
-                    <TodaysCelebrations />
                     <CompanyGoal />
                 </div>
             </div>
