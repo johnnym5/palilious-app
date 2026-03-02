@@ -17,7 +17,7 @@ import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth, useUser, setDocumentNonBlocking, addDocumentNonBlocking } from "@/firebase";
+import { useAuth, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { collection, doc } from "firebase/firestore";
 import type { Organization, UserProfile } from "@/lib/types";
@@ -34,7 +34,7 @@ type FormData = z.infer<typeof formSchema>;
 
 export function RegisterForm() {
   const auth = useAuth();
-  const firestore = auth.app.firestore;
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
@@ -72,6 +72,10 @@ export function RegisterForm() {
         createdAt: new Date().toISOString(),
       };
       const orgDocRef = await addDocumentNonBlocking(orgsCollection, orgData);
+
+      if (!orgDocRef) {
+        throw new Error("Failed to create organization document.");
+      }
 
       // 3. Create the UserProfile document for the ORG_ADMIN
       const userDocRef = doc(firestore, "users", newUser.uid);
