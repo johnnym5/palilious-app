@@ -5,10 +5,10 @@ import { Cake } from "lucide-react";
 import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { UserProfile } from "@/lib/types";
-import { format } from "date-fns";
+import { format, isToday } from "date-fns";
 import { Skeleton } from "../ui/skeleton";
 
-export function UpcomingBirthdays() {
+export function TodaysCelebrations() {
   const firestore = useFirestore();
 
   const usersQuery = useMemoFirebase(() => {
@@ -18,37 +18,20 @@ export function UpcomingBirthdays() {
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 
-  const upcomingBirthdays = (users || [])
-    .filter(u => u.birthday)
-    .map(u => ({
-      ...u,
-      birthdayDate: new Date(u.birthday!),
-    }))
-    .sort((a, b) => {
-      const now = new Date();
-      const aNext = new Date(a.birthdayDate);
-      aNext.setFullYear(now.getFullYear());
-      if (aNext < now) aNext.setFullYear(now.getFullYear() + 1);
-
-      const bNext = new Date(b.birthdayDate);
-      bNext.setFullYear(now.getFullYear());
-      if (bNext < now) bNext.setFullYear(now.getFullYear() + 1);
-      
-      return aNext.getTime() - bNext.getTime();
-    })
-    .slice(0, 3);
+  const todaysBirthdays = (users || [])
+    .filter(u => u.birthday && isToday(new Date(u.birthday)));
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
             <Cake className="h-5 w-5 text-primary" />
-            Upcoming Birthdays
+            Celebrating Today
         </CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {isLoading && Array.from({ length: 2 }).map((_, i) => (
+          {isLoading && Array.from({ length: 1 }).map((_, i) => (
             <div key={i} className="flex items-center">
               <Skeleton className="h-9 w-9 rounded-full" />
               <div className="ml-4 space-y-2">
@@ -57,7 +40,7 @@ export function UpcomingBirthdays() {
               </div>
             </div>
           ))}
-          {upcomingBirthdays.map((person) => (
+          {todaysBirthdays.map((person) => (
             <div key={person.id} className="flex items-center">
               <Avatar className="h-9 w-9">
                 <AvatarImage src={person.avatarURL} alt={person.fullName} />
@@ -65,12 +48,12 @@ export function UpcomingBirthdays() {
               </Avatar>
               <div className="ml-4 space-y-1">
                 <p className="text-sm font-medium leading-none">{person.fullName}</p>
-                <p className="text-sm text-muted-foreground">{format(person.birthdayDate, 'MMMM do')}</p>
+                <p className="text-sm text-muted-foreground">Happy Birthday!</p>
               </div>
             </div>
           ))}
-          {!isLoading && upcomingBirthdays.length === 0 && (
-             <p className="text-sm text-muted-foreground text-center">No upcoming birthdays.</p>
+          {!isLoading && todaysBirthdays.length === 0 && (
+             <p className="text-sm text-muted-foreground text-center">No birthdays today.</p>
           )}
         </div>
       </CardContent>
