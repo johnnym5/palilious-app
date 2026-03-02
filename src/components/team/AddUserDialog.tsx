@@ -21,6 +21,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { Calendar } from "@/components/ui/calendar";
 
 const positions: UserPosition[] = ['Staff', 'HR Manager', 'Finance Manager', 'Managing Director', 'Organization Administrator'];
 
