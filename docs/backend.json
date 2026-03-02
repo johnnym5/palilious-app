@@ -148,6 +148,13 @@
         "status": { "type": "string", "enum": ["QUEUED", "ACTIVE", "AWAITING_REVIEW", "ARCHIVED"] },
         "dueDate": { "type": "string", "format": "date-time" },
         "createdBy": { "type": "string", "description": "The user ID of the creator." },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "attachmentUrl": { "type": "string", "format": "uri", "description": "URL of any attachment." },
+        "sharedWith": {
+            "type": "array",
+            "description": "A list of user IDs this task is shared with.",
+            "items": { "type": "string" }
+        },
         "updates": {
           "type": "array",
           "items": {
@@ -171,7 +178,8 @@
         "status",
         "dueDate",
         "createdBy",
-        "updates"
+        "updates",
+        "createdAt"
       ]
     },
     "SystemConfig": {

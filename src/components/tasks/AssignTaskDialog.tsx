@@ -26,6 +26,7 @@ const formSchema = z.object({
   assignedTo: z.string({ required_error: "Please select a staff member." }),
   priority: z.enum(["CRITICAL", "OPERATIONAL", "ROUTINE"]),
   dueDate: z.date({ required_error: "A due date is required." }),
+  attachmentUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -58,6 +59,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
       title: "",
       description: "",
       priority: "ROUTINE",
+      attachmentUrl: "",
     },
   });
 
@@ -92,6 +94,8 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
             createdBy: authUser.uid,
             updates: [firstUpdate],
             createdAt: now,
+            attachmentUrl: values.attachmentUrl,
+            sharedWith: [],
         };
 
         await addDocumentNonBlocking(collection(firestore, 'tasks'), newTask);
@@ -124,6 +128,10 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                 <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Add more context about the mission..." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
+                <FormField control={form.control} name="attachmentUrl" render={({ field }) => (
+                    <FormItem><FormLabel>Attachment URL (Optional)</FormLabel><FormControl><Input placeholder="https://example.com/spec.pdf" {...field} /></FormControl><FormMessage /></FormItem>
+                )} />
+
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="assignedTo" render={({ field }) => (
                         <FormItem><FormLabel>Assign To</FormLabel>

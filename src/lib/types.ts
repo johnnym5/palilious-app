@@ -107,6 +107,8 @@ export interface Task {
   createdBy: string; // userId
   updates: TaskUpdate[];
   createdAt: string; // ISO string
+  attachmentUrl?: string;
+  sharedWith?: string[];
 }
 
 

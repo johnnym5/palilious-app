@@ -9,10 +9,11 @@ import { Input } from "@/components/ui/input";
 import { UserProfile } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useFirestore, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, updateDocumentNonBlocking, useAuth } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
@@ -28,6 +29,7 @@ interface EditUserDialogProps {
 export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
+  const auth = useAuth();
   const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
@@ -38,7 +40,6 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
     },
   });
 
-  // This effect will reset the form whenever the userToEdit prop changes.
   useEffect(() => {
     if (userToEdit) {
       form.reset({
@@ -47,6 +48,23 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
       });
     }
   }, [userToEdit, form]);
+
+  const handlePasswordReset = async () => {
+    if (!auth) return;
+    try {
+        await sendPasswordResetEmail(auth, userToEdit.email);
+        toast({
+            title: "Password Reset Email Sent",
+            description: `An email has been sent to ${userToEdit.email} with instructions.`,
+        });
+    } catch (error: any) {
+        toast({
+            variant: "destructive",
+            title: "Failed to Send Email",
+            description: error.message,
+        });
+    }
+  };
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
@@ -116,7 +134,11 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                 <Input disabled value={userToEdit.email} />
                 <p className="text-[0.8rem] text-muted-foreground">Email address cannot be changed.</p>
              </FormItem>
-            <DialogFooter>
+            <DialogFooter className="gap-y-2">
+                <Button type="button" variant="outline" onClick={handlePasswordReset}>
+                    Send Password Reset
+                </Button>
+                <div className="flex-1" />
                 <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
                 <Button type="submit" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
