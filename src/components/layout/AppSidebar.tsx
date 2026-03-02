@@ -12,14 +12,11 @@ import {
   Users,
   Building2,
 } from "lucide-react";
-import { signOut } from "firebase/auth";
-import { collection, doc, limit, query, where } from "firebase/firestore";
 
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useAuth, useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { UserProfile } from "@/lib/types";
+import { useSimpleAuth } from "@/hooks/use-simple-auth";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -36,26 +33,11 @@ const adminNavItems = [
 
 export default function AppSidebar({ isMobile = false }) {
   const pathname = usePathname();
-  const { user } = useUser();
-  const auth = useAuth();
-  const firestore = useFirestore();
+  const { user, logout } = useSimpleAuth();
 
-  const userProfileQuery = useMemoFirebase(() => {
-    if (!firestore || !user) return null;
-    return doc(firestore, 'users', user.uid);
-  }, [firestore, user]);
-
-  const { data: userProfile } = useDoc<UserProfile>(userProfileQuery);
-
-  const onlineUsersQuery = useMemoFirebase(() => {
-    if (!firestore) return null;
-    return query(collection(firestore, 'users'), where('status', '==', 'ONLINE'), limit(5));
-  }, [firestore]);
-
-  const { data: onlineUsers, isLoading: onlineUsersLoading } = useCollection<UserProfile>(onlineUsersQuery);
 
   const handleLogout = () => {
-    signOut(auth);
+    logout();
   };
 
   const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => {
@@ -88,7 +70,7 @@ export default function AppSidebar({ isMobile = false }) {
           
           <div className="my-4 h-px w-full bg-border" />
 
-          {userProfile && adminNavItems.filter(item => item.roles.includes(userProfile.role)).map((item) => (
+          {user && user.role === 'MD' && adminNavItems.filter(item => item.roles.includes(user.role)).map((item) => (
              <NavLink key={item.href} {...item} />
           ))}
         </nav>
@@ -97,20 +79,7 @@ export default function AppSidebar({ isMobile = false }) {
             <div className="p-2 rounded-lg bg-secondary">
                 <h3 className="font-semibold font-headline">Colleagues Online</h3>
                 <div className="flex items-center space-x-2 mt-2">
-                    {onlineUsers && onlineUsers.filter(u => u.id !== user.uid).slice(0,5).map(u => (
-                        <Avatar key={u.id} className="h-8 w-8 border-2 border-background">
-                            <AvatarImage src={u.avatarURL} alt={u.fullName} />
-                            <AvatarFallback>{u.fullName[0]}</AvatarFallback>
-                        </Avatar>
-                    ))}
-                    {onlineUsers && onlineUsers.length > 5 && (
-                        <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                            +{onlineUsers.length - 5}
-                        </div>
-                    )}
-                     {!onlineUsersLoading && onlineUsers?.length === 0 && (
-                        <p className="text-xs text-muted-foreground">No one is online.</p>
-                     )}
+                    <p className="text-xs text-muted-foreground">Temporarily disabled</p>
                 </div>
             </div>
 

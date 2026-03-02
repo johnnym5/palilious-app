@@ -16,7 +16,7 @@ export default function AppHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col p-0">
-          <VisuallyHidden asChild>
+          <VisuallyHidden>
             <SheetHeader>
               <SheetTitle>Navigation Menu</SheetTitle>
               <SheetDescription>Main navigation links for the application.</SheetDescription>

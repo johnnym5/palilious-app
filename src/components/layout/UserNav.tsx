@@ -9,21 +9,19 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useAuth, useUser } from "@/firebase";
+import { useSimpleAuth } from "@/hooks/use-simple-auth";
 import { LogOut, Settings, User as UserIcon } from "lucide-react";
 import Link from "next/link";
-import { signOut } from "firebase/auth";
 
 export function UserNav() {
-  const { user } = useUser();
-  const auth = useAuth();
+  const { user, logout } = useSimpleAuth();
 
   if (!user) {
     return null;
   }
   
   const handleLogout = () => {
-    signOut(auth);
+    logout();
   };
 
   return (
