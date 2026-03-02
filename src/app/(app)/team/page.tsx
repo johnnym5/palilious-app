@@ -1,10 +1,11 @@
 'use client';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle, Pencil } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from '@/firebase';
+import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore, deleteDocumentNonBlocking } from '@/firebase';
+import { useToast } from '@/hooks/use-toast';
 import type { UserProfile } from '@/lib/types';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { AddUserDialog } from '@/components/team/AddUserDialog';
@@ -16,14 +17,26 @@ import { Badge } from '@/components/ui/badge';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useSearchParams } from 'next/navigation';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 
 export default function TeamPage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [isAddUserOpen, setAddUserOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
+  const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const { isSuperAdmin } = useSuperAdmin();
   const impersonatedOrgId = searchParams.get('orgId');
 
@@ -56,6 +69,17 @@ export default function TeamPage() {
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const showOrgIdColumn = isSuperAdmin && !impersonatedOrgId;
+
+  const handleDeleteUser = () => {
+    if (!userToDelete) return;
+    const userRef = doc(firestore, 'users', userToDelete.id);
+    deleteDocumentNonBlocking(userRef);
+    toast({
+      title: 'User Deleted',
+      description: `${userToDelete.fullName} has been removed from the system. Note: Their authentication record may persist.`,
+    });
+    setUserToDelete(null);
+  };
 
   return (
     <div className="space-y-6">
@@ -99,7 +123,7 @@ export default function TeamPage() {
                           <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-8 w-32" /></TableCell>
-                           <TableCell><Skeleton className="h-8 w-16" /></TableCell>
+                           <TableCell className="text-right"><Skeleton className="h-8 w-24 ml-auto" /></TableCell>
                         </TableRow>
                       ))
                     )}
@@ -123,9 +147,14 @@ export default function TeamPage() {
                         <TableCell>{format(new Date(user.joinedDate), "PPP")}</TableCell>
                         <TableCell className="text-right">
                           {permissions.canManageStaff && user.id !== authUser?.uid && (
-                              <Button variant="ghost" size="icon" onClick={() => setUserToEdit(user)}>
-                                <Pencil className="h-4 w-4" />
-                              </Button>
+                              <div className="flex justify-end gap-2">
+                                <Button variant="ghost" size="icon" onClick={() => setUserToEdit(user)}>
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="text-destructive/70 hover:text-destructive" onClick={() => setUserToDelete(user)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                           )}
                         </TableCell>
                       </TableRow>
@@ -152,6 +181,30 @@ export default function TeamPage() {
                 }
             }}
         />
+      )}
+      
+      {userToDelete && (
+        <AlertDialog
+            open={!!userToDelete}
+            onOpenChange={(isOpen) => !isOpen && setUserToDelete(null)}
+        >
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This action cannot be undone. This will permanently delete the user's profile
+                        for <span className="font-semibold text-foreground">{userToDelete.fullName}</span> from the database.
+                        It will NOT delete their authentication record.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">
+                        Delete User
+                    </AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
       )}
     </div>
   );

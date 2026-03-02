@@ -21,6 +21,7 @@ import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 const baseSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
+  username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   position: z.string().min(1, { message: "Position is required." }),
@@ -66,6 +67,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
+      username: "",
       email: "",
       password: "",
       position: "",
@@ -116,7 +118,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const userRef = doc(firestore, "users", newUser.uid);
       const profileData: UserProfile = {
           id: newUser.uid,
-          username: values.email.split('@')[0].toLowerCase(), // Generate a default username
+          username: values.username.toLowerCase(),
           ...userData,
       }
       setDocumentNonBlocking(userRef, profileData, { merge: false });
@@ -189,6 +191,19 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
                       <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input placeholder="johndoe" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
