@@ -62,7 +62,7 @@ service cloud.firestore {
     match /users/{userId} {
       allow get: if isSignedIn() && (isOwner(userId) || isRequestingOwnOrg(resource));
       allow list: if isSignedIn(); // Requires client-side filtering by orgId
-      allow create: if isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
+      allow create: if isOwner(userId) || isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
       allow update: if isOwner(userId) || isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
       allow delete: if isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
     }
