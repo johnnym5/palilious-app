@@ -26,6 +26,14 @@ const configFormSchema = z.object({
   branding_color: z.string().refine((val) => val === "" || hexColorRegex.test(val), {
     message: "Must be a valid hex color (e.g., #RRGGBB) or empty.",
   }).optional().nullable(),
+  work_hours: z.object({
+    start: z.string().optional(),
+    end: z.string().optional(),
+  }).optional(),
+  office_coordinates: z.object({
+    lat: z.coerce.number().optional().nullable(),
+    lng: z.coerce.number().optional().nullable(),
+  }).optional().nullable(),
 });
 
 type FormData = z.infer<typeof configFormSchema>;
@@ -49,14 +57,35 @@ export function SystemConfigForm({ systemConfig }: SystemConfigFormProps) {
       allow_self_edit: systemConfig.allow_self_edit,
       currency_symbol: systemConfig.currency_symbol,
       branding_color: systemConfig.branding_color || "",
+      work_hours: {
+        start: systemConfig.work_hours?.start || "",
+        end: systemConfig.work_hours?.end || "",
+      },
+      office_coordinates: {
+        lat: systemConfig.office_coordinates?.lat,
+        lng: systemConfig.office_coordinates?.lng,
+      },
     },
   });
 
   async function onSubmit(values: FormData) {
     setIsLoading(true);
+
+    // Prepare data for Firestore update
+    const updateData = {
+      ...values,
+      branding_color: values.branding_color || null,
+      office_coordinates: (values.office_coordinates?.lat != null && values.office_coordinates?.lng != null) 
+          ? values.office_coordinates 
+          : null,
+      work_hours: (values.work_hours?.start && values.work_hours?.end) 
+          ? values.work_hours
+          : null,
+    };
+
     try {
       const configRef = doc(firestore, "system_configs", systemConfig.id);
-      updateDocumentNonBlocking(configRef, values);
+      updateDocumentNonBlocking(configRef, updateData);
       toast({
         title: "Configuration Saved",
         description: "Your organization's settings have been updated.",
@@ -169,6 +198,72 @@ export function SystemConfigForm({ systemConfig }: SystemConfigFormProps) {
                 />
              </div>
         </div>
+
+        <div className="space-y-4">
+            <h3 className="text-md font-medium">Attendance & Location</h3>
+            <div className="space-y-4">
+                <FormField
+                    control={form.control}
+                    name="attendance_strict"
+                    render={({ field }) => (
+                        <FormItem className="flex items-center justify-between rounded-lg border p-3 shadow-sm">
+                            <div className="space-y-0.5">
+                                <FormLabel>Attendance Strict Mode</FormLabel>
+                                <FormDescription className="text-xs">Enforce Geofencing for clock-ins.</FormDescription>
+                            </div>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )}
+                    />
+                <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                        control={form.control}
+                        name="work_hours.start"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Work Hours Start</FormLabel>
+                                <FormControl><Input type="time" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="work_hours.end"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Work Hours End</FormLabel>
+                                <FormControl><Input type="time" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="office_coordinates.lat"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Office Latitude</FormLabel>
+                                <FormControl><Input type="number" step="any" placeholder="e.g. 34.0522" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                    <FormField
+                        control={form.control}
+                        name="office_coordinates.lng"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Office Longitude</FormLabel>
+                                <FormControl><Input type="number" step="any" placeholder="e.g. -118.2437" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                </div>
+            </div>
+        </div>
+
         <Button type="submit" disabled={isLoading}>
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Save Configuration
