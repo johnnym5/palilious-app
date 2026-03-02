@@ -25,7 +25,7 @@ export default function QuickActions() {
                 </Link>
                 <Link href="/tasks" passHref>
                     <Button variant="outline" size="lg" className="flex-col h-auto py-4 w-full">
-                        <ListPlus className="h-6 w-6 mb-2 text-primary"/>
+                        <ListTodo className="h-6 w-6 mb-2 text-primary"/>
                         <span className="font-semibold">Add a Task</span>
                     </Button>
                 </Link>
