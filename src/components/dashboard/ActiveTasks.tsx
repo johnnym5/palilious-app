@@ -1,14 +1,15 @@
 'use client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy, limit } from "firebase/firestore";
+import { collection, query, where } from "firebase/firestore";
 import type { Task, TaskStatus } from "@/lib/types";
 import { Skeleton } from "../ui/skeleton";
-import { CheckSquare, Circle, Clock, ArrowRight, ShieldCheck } from "lucide-react";
+import { Circle, Clock, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button";
 import { formatDistanceToNow } from "date-fns";
 import { TaskPriorityBadge } from "../tasks/TaskPriorityBadge";
+import { useMemo } from "react";
 
 const statusIcons: Record<Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>, React.ElementType> = {
     QUEUED: Circle,
@@ -26,19 +27,31 @@ export function ActiveTasks() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
 
+    // Simplified query to avoid composite index.
     const tasksQuery = useMemoFirebase(() => {
         if (!authUser) return null;
         return query(
             collection(firestore, 'tasks'),
             where('assignedTo', '==', authUser.uid),
-            where('status', 'in', ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW']),
-            orderBy('status', 'desc'),
-            orderBy('dueDate', 'asc'),
-            limit(5)
+            where('status', 'in', ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW'])
         );
     }, [firestore, authUser]);
 
     const { data: tasks, isLoading } = useCollection<Task>(tasksQuery);
+
+    // Perform sorting and limiting on the client side.
+    const displayedTasks = useMemo(() => {
+        if (!tasks) return [];
+        return tasks.sort((a, b) => {
+            // Sort by status descending (QUEUED > AWAITING_REVIEW > ACTIVE)
+            if (a.status > b.status) return -1;
+            if (a.status < b.status) return 1;
+            
+            // Then by due date ascending
+            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+        }).slice(0, 5);
+    }, [tasks]);
+
 
   return (
     <Card className="h-full">
@@ -56,10 +69,10 @@ export function ActiveTasks() {
       <CardContent>
         <div className="space-y-4">
             {isLoading && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-            {!isLoading && tasks?.length === 0 && (
+            {!isLoading && displayedTasks.length === 0 && (
                  <p className="text-sm text-muted-foreground text-center pt-16">No active missions. All clear!</p>
             )}
-            {!isLoading && tasks?.map(task => {
+            {!isLoading && displayedTasks.map(task => {
                 const StatusIcon = statusIcons[task.status as Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>];
                 const colorClass = statusColors[task.status as Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>];
                 return (
