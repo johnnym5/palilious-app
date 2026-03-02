@@ -12,7 +12,7 @@ export default function LoginPage() {
       <Card className="w-full max-w-sm">
         <CardHeader>
           <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>Enter your email and password to sign in.</CardDescription>
+          <CardDescription>Enter your organization, username, and password to sign in.</CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm />

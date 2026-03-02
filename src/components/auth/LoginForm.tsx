@@ -14,68 +14,101 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth, useUser } from "@/firebase";
+import { useAuth } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { query, collection, where, getDocs, getFirestore } from "firebase/firestore";
+import type { UserProfile } from "@/lib/types";
 
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email." }),
+  organizationName: z.string().min(1, { message: "Organization name is required." }),
+  username: z.string().min(1, { message: "Username is required." }),
   password: z.string().min(1, { message: "Password is required." }),
 });
 
 export function LoginForm() {
-  const auth = useAuth();
-  const { user, isUserLoading } = useUser();
-  const router = useRouter();
-  const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
+  const auth = useAuth();
+  const firestore = getFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      organizationName: "",
+      username: "",
       password: "",
     },
   });
 
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, isUserLoading, router]);
-
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      await signInWithEmailAndPassword(auth, values.email, values.password);
-      // Redirect is handled by the useEffect
+      // 1. Find organization by name
+      const orgsRef = collection(firestore, "organizations");
+      const orgQuery = query(orgsRef, where("name", "==", values.organizationName));
+      const orgSnapshot = await getDocs(orgQuery);
+
+      if (orgSnapshot.empty) {
+        throw new Error("Organization not found.");
+      }
+      const orgData = orgSnapshot.docs[0];
+      const orgId = orgData.id;
+
+      // 2. Find user by username and orgId
+      const usersRef = collection(firestore, "users");
+      const userQuery = query(usersRef, where("username", "==", values.username), where("orgId", "==", orgId));
+      const userSnapshot = await getDocs(userQuery);
+
+      if (userSnapshot.empty) {
+        throw new Error("User not found in this organization.");
+      }
+
+      const userDoc = userSnapshot.docs[0];
+      const userData = userDoc.data() as UserProfile;
+
+      // 3. Sign in with email and password
+      await signInWithEmailAndPassword(auth, userData.email, values.password);
+
+      // Successful login will be handled by the layout redirect
+      
     } catch (error: any) {
        toast({
           variant: 'destructive',
           title: 'Login Failed',
-          description: error.message || "Invalid username or password.",
+          description: error.message || "An unexpected error occurred.",
       });
     } finally {
         setIsSubmitting(false);
     }
   }
 
-  const isLoading = isSubmitting || isUserLoading;
-
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
         <FormField
           control={form.control}
-          name="email"
+          name="organizationName"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Organization Name</FormLabel>
               <FormControl>
-                <Input placeholder="name@company.com" {...field} />
+                <Input placeholder="Your Company, Inc." {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="username"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Username</FormLabel>
+              <FormControl>
+                <Input placeholder="johndoe" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -94,8 +127,8 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button type="submit" className="w-full" disabled={isSubmitting}>
+          {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Login
         </Button>
       </form>
