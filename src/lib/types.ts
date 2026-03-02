@@ -58,6 +58,10 @@ export interface Attendance {
     status: AttendanceStatus;
     approvedBy?: string; // userId
     approvedAt?: string; // ISO String
+    remarks?: Array<'EARLY' | 'LATE' | 'OVERTIME' | 'UNDERTIME'>;
+    duration?: number; // seconds
+    overtime?: number; // seconds
+    undertime?: number; // seconds
 }
 
 export type RequisitionStatus = "PENDING_HR" | "PENDING_FINANCE" | "PENDING_MD" | "APPROVED" | "PAID" | "REJECTED";

@@ -11,6 +11,7 @@ import {
   LogOut,
   Users,
   Building2,
+  BookOpenCheck,
 } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
@@ -31,6 +32,7 @@ const mainNavItems = [
   { href: "/attendance", icon: CalendarCheck2, label: "Attendance" },
   { href: "/requisitions", icon: ReceiptText, label: "Requisitions" },
   { href: "/tasks", icon: ListTodo, label: "Tasks" },
+  { href: "/workbook", icon: BookOpenCheck, label: "Workbook" },
   { href: "/chat", icon: MessagesSquare, label: "Chat" },
 ];
 
@@ -98,6 +100,9 @@ export default function AppSidebar({ isMobile = false }) {
                 return null;
             }
             if (item.href === "/chat" && !isConfigLoading && systemConfig?.chat_enabled === false) {
+                return null;
+            }
+            if (item.href === "/workbook" && !permissions.canManageStaff) {
                 return null;
             }
             return <NavLink key={item.href} {...item} />

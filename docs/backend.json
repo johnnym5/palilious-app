@@ -99,6 +99,26 @@
             "type": "string",
             "format": "date-time",
             "description": "The timestamp of the approval or rejection."
+        },
+        "remarks": {
+            "type": "array",
+            "description": "Notes about the attendance record, like early/late clock-in or overtime/undertime.",
+            "items": {
+                "type": "string",
+                "enum": ["EARLY", "LATE", "OVERTIME", "UNDERTIME"]
+            }
+        },
+        "duration": {
+            "type": "number",
+            "description": "The total duration of the shift in seconds."
+        },
+        "overtime": {
+            "type": "number",
+            "description": "Calculated overtime in seconds."
+        },
+        "undertime": {
+            "type": "number",
+            "description": "Calculated undertime in seconds."
         }
       },
       "required": [

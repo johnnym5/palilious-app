@@ -6,6 +6,8 @@ import type { Attendance, UserProfile } from "@/lib/types";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, limit } from "firebase/firestore";
 import { format, differenceInSeconds } from 'date-fns';
+import { Badge } from "../ui/badge";
+import { cn } from "@/lib/utils";
 
 interface AttendanceHistoryProps {
   userProfile: UserProfile | null;
@@ -55,18 +57,19 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
               <TableHead>Date</TableHead>
               <TableHead>Clock In</TableHead>
               <TableHead>Clock Out</TableHead>
-              <TableHead className="text-right">Duration</TableHead>
+              <TableHead>Duration</TableHead>
+              <TableHead className="text-right">Remarks</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>
-                <TableCell colSpan={4}><Skeleton className="h-6 w-full" /></TableCell>
+                <TableCell colSpan={5}><Skeleton className="h-6 w-full" /></TableCell>
               </TableRow>
             ))}
             {!isLoading && attendanceHistory?.length === 0 && (
               <TableRow>
-                  <TableCell colSpan={4} className="h-24 text-center">
+                  <TableCell colSpan={5} className="h-24 text-center">
                       No attendance history found.
                   </TableCell>
               </TableRow>
@@ -76,7 +79,20 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
                 <TableCell className="font-medium">{format(new Date(record.clockIn), 'PPP')}</TableCell>
                 <TableCell>{format(new Date(record.clockIn), 'p')}</TableCell>
                 <TableCell>{record.clockOut ? format(new Date(record.clockOut), 'p') : '—'}</TableCell>
-                <TableCell className="text-right font-mono">{calculateDuration(record.clockIn, record.clockOut)}</TableCell>
+                <TableCell className="font-mono">{calculateDuration(record.clockIn, record.clockOut)}</TableCell>
+                <TableCell className="text-right space-x-1">
+                    {record.remarks?.map(remark => (
+                        <Badge key={remark} variant="secondary" className={cn(
+                            remark === 'LATE' && 'bg-amber-100 text-amber-800 dark:bg-amber-900/50 dark:text-amber-300',
+                            remark === 'EARLY' && 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300',
+                            remark === 'OVERTIME' && 'bg-green-100 text-green-800 dark:bg-green-900/50 dark:text-green-300',
+                            remark === 'UNDERTIME' && 'bg-red-100 text-red-800 dark:bg-red-900/50 dark:text-red-300',
+                            "capitalize text-xs"
+                        )}>
+                            {remark.toLowerCase()}
+                        </Badge>
+                    ))}
+                </TableCell>
               </TableRow>
             ))}
           </TableBody>

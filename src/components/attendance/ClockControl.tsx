@@ -5,7 +5,7 @@ import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { format, differenceInSeconds } from 'date-fns';
 import { Clock, Loader2, LogIn, LogOut, ShieldQuestion } from "lucide-react";
-import type { UserProfile, Attendance } from "@/lib/types";
+import type { UserProfile, Attendance, SystemConfig } from "@/lib/types";
 import type { Permissions } from "@/hooks/usePermissions";
 import { useFirestore, useCollection, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, limit, doc } from "firebase/firestore";
@@ -14,9 +14,10 @@ import { useToast } from "@/hooks/use-toast";
 interface ClockControlProps {
   userProfile: UserProfile | null;
   permissions: Permissions;
+  systemConfig: SystemConfig | null;
 }
 
-export function ClockControl({ userProfile, permissions }: ClockControlProps) {
+export function ClockControl({ userProfile, permissions, systemConfig }: ClockControlProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isLoading, setIsLoading] = useState(true);
@@ -73,16 +74,36 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
         setIsSubmitting(true);
         
         try {
-            const attendanceRef = collection(firestore, 'attendance');
+            const remarks: Attendance['remarks'] = [];
+            const now = new Date();
+
+            if (systemConfig?.work_hours?.start) {
+                const [startHour, startMinute] = systemConfig.work_hours.start.split(':').map(Number);
+                const officeStartTime = new Date(now);
+                officeStartTime.setHours(startHour, startMinute, 0, 0);
+                
+                if (now < officeStartTime) {
+                    remarks.push('EARLY');
+                }
+
+                const lateThreshold = new Date(officeStartTime);
+                lateThreshold.setMinutes(officeStartTime.getMinutes() + 30);
+                if (now > lateThreshold) {
+                    remarks.push('LATE');
+                }
+            }
+            
             const newRecord: Omit<Attendance, 'id'> = {
                 userId: userProfile.id,
                 userName: userProfile.fullName,
                 orgId: userProfile.orgId,
                 date: today,
-                clockIn: new Date().toISOString(),
+                clockIn: now.toISOString(),
                 status: 'PENDING',
+                remarks,
             };
-            await addDocumentNonBlocking(attendanceRef, newRecord);
+
+            await addDocumentNonBlocking(collection(firestore, 'attendance'), newRecord);
 
             toast({ title: "Clock-In Submitted", description: "Your request is pending HR approval." });
         } catch (error: any) {
@@ -97,12 +118,50 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
         setIsSubmitting(true);
 
         try {
-            // User status should always go to OFFLINE on clock-out
             const userRef = doc(firestore, 'users', userProfile.id);
             updateDocumentNonBlocking(userRef, { status: 'OFFLINE' });
             
             const attendanceRef = doc(firestore, 'attendance', attendanceRecord.id);
-            updateDocumentNonBlocking(attendanceRef, { clockOut: new Date().toISOString() });
+            
+            const clockInTime = new Date(attendanceRecord.clockIn);
+            const clockOutTime = new Date();
+            const durationInSeconds = differenceInSeconds(clockOutTime, clockInTime);
+
+            let overtime = 0;
+            let undertime = 0;
+            const remarks = attendanceRecord.remarks || [];
+
+            if (systemConfig?.work_hours?.start && systemConfig?.work_hours?.end) {
+                const [startHour, startMinute] = systemConfig.work_hours.start.split(':').map(Number);
+                const [endHour, endMinute] = systemConfig.work_hours.end.split(':').map(Number);
+                
+                const officeStartTime = new Date(clockInTime);
+                officeStartTime.setHours(startHour, startMinute, 0, 0);
+
+                const officeEndTime = new Date(clockOutTime);
+                officeEndTime.setHours(endHour, endMinute, 0, 0);
+
+                const expectedDurationInSeconds = differenceInSeconds(officeEndTime, officeStartTime);
+                const diff = durationInSeconds - expectedDurationInSeconds;
+
+                if (diff > 60) { // Over 1 minute of overtime
+                    overtime = diff;
+                    if (!remarks.includes('OVERTIME')) remarks.push('OVERTIME');
+                } else if (diff < -60) { // Over 1 minute of undertime
+                    undertime = Math.abs(diff);
+                    if (!remarks.includes('UNDERTIME')) remarks.push('UNDERTIME');
+                }
+            }
+
+            const updateData = {
+                clockOut: clockOutTime.toISOString(),
+                duration: durationInSeconds,
+                overtime,
+                undertime,
+                remarks,
+            };
+
+            updateDocumentNonBlocking(attendanceRef, updateData);
             
             toast({ title: "Clocked Out", description: "Your shift has ended." });
         } catch (error: any) {

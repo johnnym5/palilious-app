@@ -8,6 +8,7 @@ import type { UserProfile } from "@/lib/types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { PendingApprovals } from "@/components/attendance/PendingApprovals";
+import { useSystemConfig } from "@/hooks/useSystemConfig";
 
 export default function AttendancePage() {
   const { user: authUser } = useUser();
@@ -18,7 +19,10 @@ export default function AttendancePage() {
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
+  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile);
   const permissions = usePermissions(userProfile);
+
+  const isLoading = isProfileLoading || isConfigLoading;
 
   return (
     <div className="space-y-8">
@@ -27,7 +31,7 @@ export default function AttendancePage() {
         <p className="text-muted-foreground">Manage your work hours and see who's currently online.</p>
       </div>
       
-       {isProfileLoading ? (
+       {isLoading ? (
          <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-1 space-y-8">
               <Skeleton className="h-40 w-full" />
@@ -40,7 +44,7 @@ export default function AttendancePage() {
       ) : (
         <div className="grid gap-8 lg:grid-cols-3">
           <div className="lg:col-span-1 space-y-8">
-              <ClockControl userProfile={userProfile} permissions={permissions} />
+              <ClockControl userProfile={userProfile} permissions={permissions} systemConfig={systemConfig} />
               <StatusFeed userProfile={userProfile} permissions={permissions} />
           </div>
           <div className="lg:col-span-2 space-y-8">
