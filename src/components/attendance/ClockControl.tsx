@@ -7,7 +7,7 @@ import { format, differenceInSeconds } from 'date-fns';
 import { Clock, Loader2, LogIn, LogOut } from "lucide-react";
 import type { UserProfile, Attendance } from "@/lib/types";
 import type { Permissions } from "@/hooks/usePermissions";
-import { useFirestore, useCollection, addDocumentNonBlocking, updateDocumentNonBlocking } from "@/firebase";
+import { useFirestore, useCollection, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, limit, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 
@@ -26,13 +26,15 @@ export function ClockControl({ userProfile, permissions }: ClockControlProps) {
     
     const today = format(new Date(), 'yyyy-MM-dd');
 
-    // This is not memoized with useMemoFirebase because we want it to fetch once on load, not subscribe
-    const attendanceQuery = userProfile ? query(
-        collection(firestore, 'attendance'),
-        where('userId', '==', userProfile.id),
-        where('date', '==', today),
-        limit(1)
-    ) : null;
+    const attendanceQuery = useMemoFirebase(() => 
+        userProfile ? query(
+            collection(firestore, 'attendance'),
+            where('userId', '==', userProfile.id),
+            where('date', '==', today),
+            limit(1)
+        ) : null
+    , [firestore, userProfile?.id, today]);
+    
     const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
     
     useEffect(() => {
