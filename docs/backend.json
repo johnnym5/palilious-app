@@ -80,6 +80,45 @@
         "date",
         "clockIn"
       ]
+    },
+    "Requisition": {
+      "title": "Requisition",
+      "type": "object",
+      "description": "Represents a single financial requisition.",
+      "properties": {
+        "serialNo": { "type": "string", "description": "The requisition's unique serial number (e.g., REQ-0001)." },
+        "orgId": { "type": "string", "description": "The ID of the organization." },
+        "createdBy": { "type": "string", "description": "The user ID of the creator." },
+        "creatorName": { "type": "string", "description": "The name of the user who created the request." },
+        "title": { "type": "string", "description": "The title of the requisition." },
+        "amount": { "type": "number", "description": "The requisition amount." },
+        "description": { "type": "string", "description": "A detailed description of the requisition." },
+        "attachmentUrl": { "type": "string", "format": "uri", "description": "URL of any attachment." },
+        "status": {
+            "type": "string",
+            "enum": ["PENDING_HR", "PENDING_FINANCE", "PENDING_MD", "APPROVED", "PAID", "REJECTED"],
+            "description": "The current status of the requisition."
+        },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "approvalHistory": {
+            "type": "array",
+            "description": "A log of all status changes.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "actorId": { "type": "string", "description": "The user ID of the person who made the change." },
+                    "actorName": { "type": "string", "description": "The name of the person who made the change." },
+                    "action": { "type": "string", "enum": ["CREATED", "APPROVED", "REJECTED", "PAID"]},
+                    "timestamp": { "type": "string", "format": "date-time" },
+                    "fromStatus": { "type": "string" },
+                    "toStatus": { "type": "string" },
+                    "reason": { "type": "string", "description": "Reason for rejection, if applicable." }
+                },
+                "required": ["actorId", "actorName", "action", "timestamp", "fromStatus", "toStatus"]
+            }
+        }
+      },
+      "required": ["serialNo", "orgId", "createdBy", "creatorName", "title", "amount", "description", "status", "createdAt", "approvalHistory"]
     }
   },
   "auth": {
@@ -88,7 +127,7 @@
   "firestore": {
     "structure": [
       {
-        "path": "/artifacts/{appId}/public/data/users/{userId}",
+        "path": "/users/{userId}",
         "definition": {
           "entityName": "UserProfile",
           "schema": {
@@ -97,10 +136,6 @@
           "description": "Stores user profiles for the ControlFlow app.",
           "params": [
             {
-              "name": "appId",
-              "description": "The application identifier."
-            },
-            {
               "name": "userId",
               "description": "The user's unique ID."
             }
@@ -108,7 +143,7 @@
         }
       },
       {
-        "path": "/artifacts/{appId}/public/data/attendance/{attendanceId}",
+        "path": "/attendance/{attendanceId}",
         "definition": {
           "entityName": "Attendance",
           "schema": {
@@ -117,12 +152,24 @@
           "description": "Stores user attendance records.",
           "params": [
             {
-              "name": "appId",
-              "description": "The application identifier."
-            },
-            {
               "name": "attendanceId",
               "description": "The attendance record's unique ID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/requisitions/{requisitionId}",
+        "definition": {
+          "entityName": "Requisition",
+          "schema": {
+            "$ref": "#/entities/Requisition"
+          },
+          "description": "Stores financial requisition requests.",
+          "params": [
+            {
+              "name": "requisitionId",
+              "description": "The requisition's unique ID."
             }
           ]
         }

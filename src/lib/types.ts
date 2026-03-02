@@ -33,9 +33,13 @@ export interface Attendance {
 export type RequisitionStatus = "PENDING_HR" | "PENDING_FINANCE" | "PENDING_MD" | "APPROVED" | "PAID" | "REJECTED";
 
 export interface ApprovalHistoryEntry {
-    actor: string; // userId
-    action: string;
-    time: string; // ISO String for timestamp
+    actorId: string;
+    actorName: string;
+    action: 'CREATED' | 'APPROVED' | 'REJECTED' | 'PAID';
+    timestamp: string; // ISO String for timestamp
+    fromStatus: RequisitionStatus | 'N/A';
+    toStatus: RequisitionStatus;
+    reason?: string; // For rejections
 }
 
 export interface Requisition {
@@ -43,12 +47,16 @@ export interface Requisition {
   serialNo: string;
   orgId: string;
   createdBy: string; // userId
+  creatorName: string;
+  title: string;
   amount: number;
   description: string;
   attachmentUrl?: string;
   status: RequisitionStatus;
-  approvalHistory?: ApprovalHistoryEntry[];
+  approvalHistory: ApprovalHistoryEntry[];
+  createdAt: string; // ISO String for timestamp
 }
+
 
 export interface AiFields {
     phone?: string;
