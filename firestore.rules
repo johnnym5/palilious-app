@@ -17,9 +17,9 @@ service cloud.firestore {
         return getUserData(request.auth.uid).orgId == orgId;
     }
 
-    // ORG_ADMIN, HR, or MD roles are considered managers within their org.
+    // Checks if the user's position grants them management permissions.
     function isOrgManager() {
-        return getUserData(request.auth.uid).role in ['ORG_ADMIN', 'HR', 'MD'];
+        return getUserData(request.auth.uid).position in ['Organization Administrator', 'Managing Director', 'HR Manager'];
     }
 
     // --- Rules ---
