@@ -1,0 +1,296 @@
+/**
+ * Core Philosophy:
+ * This ruleset implements a Role-Based Access Control (RBAC) model combined
+ * with a strict user-ownership model. The core of this system is the 'role'
+ * field within each `/users/{userId}` document, which dictates a user's
+ * privileges across the application (e.g., STAFF, HR, FINANCE, MD).
+ * Standard staff members have ownership of their own content (like attendance
+ * records and leave requests), while privileged roles (HR, MD, etc.) are
+ * granted broader read and write access for administrative purposes.
+ *
+ * Data Structure:
+ * The data is organized into several top-level collections to facilitate
+ * role-based queries and enforce distinct security postures.
+ * - `/users/{userId}`: Central hub for user profiles and roles.
+ * - `/chatConversations`, `/requisitions`: Collections for collaborative or
+ *   multi-user workflows.
+ * - `/announcements`, `/documents`: Collections intended for company-wide
+ *   read access with restricted write access.
+ * - Subcollections like `/requisitions/{reqId}/auditLogs` are used for
+ *   data that is tightly coupled to a parent document.
+ *
+ * Key Security Decisions:
+ * - A user's role is fetched from their `/users/{userId}` document to make
+ *   authorization decisions. This `get()` call is a foundational and
+ *   accepted pattern for checking the current user's own permissions.
+ * - For collaborative data like chats, access is controlled by a `participantIds`
+ *   array within the document, ensuring only members can interact with it.
+ * - Collections intended for public consumption are readable by any authenticated
+ *   user, but write access is strictly limited to users with specific roles (e.g., HR).
+ * - User listing is disabled for regular staff; only HR and MD roles can list all user profiles.
+ *
+ * Denormalization for Authorization:
+ * To create simpler and more performant rules, data critical for authorization
+ * is denormalized. For example, a chat message document is expected to contain a
+ * copy of the parent conversation's `participantIds` to allow for fast, direct
+ * authorization checks on individual message reads without needing an extra `get()` call.
+ * This principle is applied to avoid slow or costly lookups during rule evaluation.
+ *
+ * Structural Segregation:
+ * Data with different access patterns is intentionally separated into distinct
+ * collections. For example, public announcements (`/announcements`) are in a
+ * separate top-level collection from private leave requests (`/leaveRequests`),
+ * which allows for simpler and more secure rules for list operations.
+ */
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // --------------------------------------------------------------------
+    // Helper Functions
+    // --------------------------------------------------------------------
+
+    /**
+     * Returns true if the user is signed in.
+     */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /**
+     * Returns true if the requesting user's UID matches the provided userId.
+     * This is the foundation for the "ownership" security model.
+     * @param userId The UID of the document owner.
+     */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /**
+     * Returns true if the user is the owner of an existing document.
+     * Used for safe updates and deletes.
+     * @param userId The UID of the document owner.
+     */
+    function isExistingOwner(userId) {
+      return resource != null && isOwner(userId);
+    }
+
+    /**
+     * Retrieves the user's profile document, which contains their role.
+     * This is a central function for our Role-Based Access Control (RBAC) system.
+     */
+    function getUserProfile() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    /**
+     * Checks if the requesting user has a specific role.
+     * @param role The role to check for (e.g., 'HR', 'FINANCE', 'MD').
+     */
+    function isRole(role) {
+      return isSignedIn() && getUserProfile().data.role == role;
+    }
+
+    /**
+     * Checks if the requesting user has one of the roles in a provided list.
+     * @param roles A list of roles to check against (e.g., ['HR', 'MD']).
+     */
+    function isOneOfRoles(roles) {
+      return isSignedIn() && getUserProfile().data.role in roles;
+    }
+
+    // --------------------------------------------------------------------
+    // Collection Rules
+    // --------------------------------------------------------------------
+
+    /**
+     * @description Staff member profiles. A user can create and update their
+     * own profile. HR and MD roles have read access to all profiles for
+     * administrative purposes. Profile deletion is disallowed.
+     * @path /users/{userId}
+     * @allow (create) An authenticated user creating their own profile document.
+     * @deny (list) A user with the 'STAFF' role trying to list all users.
+     * @principle Enforces self-service profile management and grants privileged
+     * read access for administrative roles.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isOneOfRoles(['HR', 'MD']);
+      allow list: if isOneOfRoles(['HR', 'MD']);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if false;
+    }
+
+    /**
+     * @description Daily clock-in/out records. Users can create and manage their
+     * own records. HR and MD can read all records for reporting.
+     * @path /attendanceRecords/{recordId}
+     * @allow (create) A signed-in user creating an attendance record for themselves.
+     * @deny (update) A user trying to modify another user's attendance record.
+     * @principle Secures personal data via an ownership field (`userId`) within the
+     * document, while allowing privileged oversight.
+     */
+    match /attendanceRecords/{recordId} {
+      allow get: if isOwner(resource.data.userId) || isOneOfRoles(['HR', 'MD']);
+      allow list: if isSignedIn(); // Relies on client-side queries for security (QAP)
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if resource != null && isOwner(resource.data.userId) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(resource.data.userId);
+    }
+
+    /**
+     * @description Financial requisitions with a multi-stage approval workflow.
+     * Requesters can create and view their own. HR, Finance, and MD roles can
+     * interact with requisitions based on their administrative function.
+     * @path /requisitions/{requisitionId}
+     * @allow (create) A staff member submitting a new requisition for themselves.
+     * @deny (get) A user trying to read a requisition they did not submit.
+     * @principle Implements a complex workflow where access is granted based on
+     * the user's relationship to the document (requester) or their system role.
+     */
+    match /requisitions/{requisitionId} {
+      allow get: if isOwner(resource.data.requesterId) || isOneOfRoles(['HR', 'FINANCE', 'MD']);
+      allow list: if isSignedIn(); // Relies on client-side queries for security (QAP)
+      allow create: if isSignedIn() && request.resource.data.requesterId == request.auth.uid;
+      allow update: if resource != null && (isOwner(resource.data.requesterId) || isOneOfRoles(['HR', 'FINANCE', 'MD'])) && request.resource.data.requesterId == resource.data.requesterId;
+      allow delete: if resource != null && isRole('MD');
+
+      /**
+       * @description Audit logs for a requisition, tracking all state changes.
+       * Logs are append-only and can be read by the original requester or admins.
+       * @path /requisitions/{requisitionId}/auditLogs/{logId}
+       * @allow (create) A user involved in the requisition creating a new log entry.
+       * @deny (update) Any user trying to modify an existing audit log.
+       * @principle Ensures data immutability for audit trails. Subcollection
+       * list access requires checking the parent document for ownership.
+       */
+      match /auditLogs/{logId} {
+        allow get: if isOwner(resource.data.requesterId) || isOneOfRoles(['HR', 'FINANCE', 'MD']);
+        // List access requires a get() on the parent to verify the requester.
+        allow list: if isOwner(get(/databases/$(database)/documents/requisitions/$(requisitionId)).data.requesterId) || isOneOfRoles(['HR', 'FINANCE', 'MD']);
+        allow create: if isSignedIn() && request.resource.data.actorId == request.auth.uid;
+        allow update: if false;
+        allow delete: if false;
+      }
+    }
+
+    /**
+     * @description Tasks assigned to staff. A task can be read and updated by
+     * its creator and the person it's assigned to. HR and MD can view all tasks.
+     * @path /tasks/{taskId}
+     * @allow (update) The user assigned to the task updating its status.
+     * @deny (delete) The user assigned to the task trying to delete it.
+     * @principle Manages shared access between a creator and an assignee,
+     * with privileged oversight.
+     */
+    match /tasks/{taskId} {
+      allow get: if isOwner(resource.data.createdByUserId) || isOwner(resource.data.assignedToUserId) || isOneOfRoles(['HR', 'MD']);
+      allow list: if isSignedIn(); // Relies on client-side queries for security (QAP)
+      allow create: if isSignedIn() && request.resource.data.createdByUserId == request.auth.uid;
+      allow update: if resource != null && (isOwner(resource.data.createdByUserId) || isOwner(resource.data.assignedToUserId)) && request.resource.data.createdByUserId == resource.data.createdByUserId;
+      allow delete: if resource != null && (isOwner(resource.data.createdByUserId) || isOneOfRoles(['HR', 'MD']));
+    }
+
+    /**
+     * @description Company-wide announcements. Readable by all signed-in staff,
+     * but can only be created, updated, or deleted by users with the HR role.
+     * @path /announcements/{announcementId}
+     * @allow (list) Any authenticated user listing all announcements.
+     * @deny (create) A user without the 'HR' role trying to post an announcement.
+     * @principle Segregates public-read data and restricts writes to a
+     * specific administrative role.
+     */
+    match /announcements/{announcementId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isRole('HR') && request.resource.data.authorId == request.auth.uid;
+      allow update: if resource != null && isRole('HR') && isOwner(resource.data.authorId) && request.resource.data.authorId == resource.data.authorId;
+      allow delete: if resource != null && isRole('HR') && isOwner(resource.data.authorId);
+    }
+
+    /**
+     * @description Company-wide goals for the Executive Dashboard. Readable by all
+     * staff, but writable only by HR and MD roles.
+     * @path /companyGoals/{goalId}
+     * @allow (get) Any authenticated user viewing a company goal.
+     * @deny (update) A 'STAFF' user trying to update goal progress.
+     * @principle Provides public-read access to organizational data while
+     * securing write operations for executive roles.
+     */
+    match /companyGoals/{goalId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isOneOfRoles(['HR', 'MD']) && request.resource.data.ownerId == request.auth.uid;
+      allow update: if resource != null && isOneOfRoles(['HR', 'MD']) && request.resource.data.ownerId == resource.data.ownerId;
+      allow delete: if resource != null && isOneOfRoles(['HR', 'MD']);
+    }
+
+    /**
+     * @description One-on-one chat conversations between staff members. Access
+     * is strictly limited to the users listed in the `participantIds` array.
+     * @path /chatConversations/{conversationId}
+     * @allow (get) A user reading a conversation they are a participant in.
+     * @deny (get) A user trying to read a conversation they are not part of.
+     * @principle Implements a closed collaborator model where document access is
+     * governed by a list of authorized user UIDs.
+     */
+    match /chatConversations/{conversationId} {
+      allow get: if request.auth.uid in resource.data.participantIds;
+      allow list: if isSignedIn(); // Relies on client QAP: where('participantIds', 'array-contains', auth.uid)
+      allow create: if request.auth.uid in request.resource.data.participantIds;
+      allow update: if resource != null && request.auth.uid in resource.data.participantIds && request.resource.data.participantIds == resource.data.participantIds;
+      allow delete: if false;
+
+      /**
+       * @description Individual messages within a chat conversation. Only
+       * participants can read messages, and only the sender can create them.
+       * @path /chatConversations/{conversationId}/messages/{messageId}
+       * @allow (create) A conversation participant sending a new message.
+       * @deny (update) A user trying to edit a message they did not send.
+       * @principle Secures a subcollection by checking the parent document's
+       * permissions for list/create and using ownership for update/delete.
+       */
+      match /messages/{messageId} {
+        // Access requires checking membership in the parent conversation document.
+        allow get, list: if request.auth.uid in get(/databases/$(database)/documents/chatConversations/$(conversationId)).data.participantIds;
+        allow create: if (request.auth.uid in get(/databases/$(database)/documents/chatConversations/$(conversationId)).data.participantIds) && request.resource.data.senderId == request.auth.uid;
+        allow update: if isExistingOwner(resource.data.senderId) && request.resource.data.senderId == resource.data.senderId;
+        allow delete: if isExistingOwner(resource.data.senderId);
+      }
+    }
+
+    /**
+     * @description Staff leave requests. Users can manage their own requests,
+     * while HR and MD roles can access all requests for approval and processing.
+     * @path /leaveRequests/{leaveRequestId}
+     * @allow (create) A staff member submitting a leave request for themselves.
+     * @deny (get) A user trying to view another staff member's leave request.
+     * @principle Secures personal data via an ownership field (`userId`), with
+     * an override for privileged administrative roles.
+     */
+    match /leaveRequests/{leaveRequestId} {
+      allow get: if isOwner(resource.data.userId) || isOneOfRoles(['HR', 'MD']);
+      allow list: if isSignedIn(); // Relies on client-side queries for security (QAP)
+      allow create: if isSignedIn() && request.resource.data.userId == request.auth.uid;
+      allow update: if resource != null && (isOwner(resource.data.userId) || isOneOfRoles(['HR', 'MD'])) && request.resource.data.userId == resource.data.userId;
+      allow delete: if isExistingOwner(resource.data.userId) || isOneOfRoles(['HR', 'MD']);
+    }
+
+    /**
+     * @description Company policy documents and handbooks. Readable by all
+     * signed-in staff, but managed exclusively by the HR role.
+     * @path /documents/{documentId}
+     * @allow (list) Any authenticated user listing all available documents.
+     * @deny (create) A user without the 'HR' role trying to upload a new document.
+     * @principle Segregates public-read data and restricts write access to a
+     * specific administrative role for document management.
+     */
+    match /documents/{documentId} {
+      allow get: if isSignedIn();
+      allow list: if isSignedIn();
+      allow create: if isRole('HR') && request.resource.data.uploadedByUserId == request.auth.uid;
+      allow update: if resource != null && isRole('HR') && isOwner(resource.data.uploadedByUserId) && request.resource.data.uploadedByUserId == resource.data.uploadedByUserId;
+      allow delete: if resource != null && isRole('HR') && isOwner(resource.data.uploadedByUserId);
+    }
+  }
+}

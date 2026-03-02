@@ -1,0 +1,772 @@
+{
+  "entities": {
+    "UserProfile": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "UserProfile",
+      "type": "object",
+      "description": "Represents a staff member's profile within the ControlFlow system, holding essential personal and role-based information.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the UserProfile entity, typically derived from an external authentication system's user ID (e.g., Firebase UID)."
+        },
+        "fullName": {
+          "type": "string",
+          "description": "The full name of the staff member."
+        },
+        "email": {
+          "type": "string",
+          "description": "The professional email address of the staff member.",
+          "format": "email"
+        },
+        "role": {
+          "type": "string",
+          "description": "The assigned role of the staff member within the company (e.g., STAFF, HR, FINANCE, MD)."
+        },
+        "joinedDate": {
+          "type": "string",
+          "description": "The date when the staff member officially joined the company.",
+          "format": "date"
+        },
+        "birthday": {
+          "type": "string",
+          "description": "The birth date of the staff member, used for birthday announcements.",
+          "format": "date"
+        },
+        "avatarURL": {
+          "type": "string",
+          "description": "A URL pointing to the staff member's profile picture or avatar.",
+          "format": "uri"
+        }
+      },
+      "required": [
+        "id",
+        "fullName",
+        "email",
+        "role",
+        "joinedDate"
+      ]
+    },
+    "AttendanceRecord": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "AttendanceRecord",
+      "type": "object",
+      "description": "Records a staff member's daily clock-in and clock-out times for attendance tracking.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the AttendanceRecord entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile of the staff member this attendance record belongs to. (Relationship: UserProfile 1:N AttendanceRecord)"
+        },
+        "clockInTime": {
+          "type": "string",
+          "description": "The exact timestamp when the staff member clocked in.",
+          "format": "date-time"
+        },
+        "clockOutTime": {
+          "type": "string",
+          "description": "The exact timestamp when the staff member clocked out. This property is null if the staff member is currently clocked in.",
+          "format": "date-time"
+        },
+        "date": {
+          "type": "string",
+          "description": "The specific calendar date for this attendance record, used for preventing multiple clock-ins on the same day.",
+          "format": "date"
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "clockInTime",
+        "date"
+      ]
+    },
+    "Requisition": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Requisition",
+      "type": "object",
+      "description": "Represents a financial requisition submitted by a staff member, requiring multi-stage approval from HR, Finance, and MD.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Requisition entity."
+        },
+        "serialNumber": {
+          "type": "string",
+          "description": "An auto-generated unique serial number for the requisition (e.g., REQ-00001)."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed explanation of the purpose and nature of the requisition."
+        },
+        "amount": {
+          "type": "number",
+          "description": "The monetary value requested in the requisition."
+        },
+        "attachmentURL": {
+          "type": "string",
+          "description": "A URL pointing to an attached image or PDF document supporting the requisition.",
+          "format": "uri"
+        },
+        "requesterId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who originally submitted this requisition. (Relationship: UserProfile 1:N Requisition)"
+        },
+        "submittedAt": {
+          "type": "string",
+          "description": "The timestamp when the requisition was first submitted.",
+          "format": "date-time"
+        },
+        "status": {
+          "type": "string",
+          "description": "The overall current status of the requisition (e.g., PENDING_HR, APPROVED_HR, REJECTED_HR, PENDING_FINANCE, APPROVED_FINANCE, REJECTED_FINANCE, PENDING_MD, APPROVED_MD, REJECTED_MD, PAID)."
+        },
+        "hrApproverId": {
+          "type": "string",
+          "description": "Reference to the UserProfile (HR role) who approved or rejected the HR stage of the requisition. (Relationship: UserProfile 1:N Requisition)"
+        },
+        "hrApprovalDate": {
+          "type": "string",
+          "description": "The timestamp when the HR stage of the requisition was approved or rejected.",
+          "format": "date-time"
+        },
+        "financeApproverId": {
+          "type": "string",
+          "description": "Reference to the UserProfile (Finance role) who approved or rejected the Finance stage of the requisition. (Relationship: UserProfile 1:N Requisition)"
+        },
+        "financeApprovalDate": {
+          "type": "string",
+          "description": "The timestamp when the Finance stage of the requisition was approved or rejected.",
+          "format": "date-time"
+        },
+        "mdApproverId": {
+          "type": "string",
+          "description": "Reference to the UserProfile (MD role) who approved or rejected the MD stage of the requisition. (Relationship: UserProfile 1:N Requisition)"
+        },
+        "mdApprovalDate": {
+          "type": "string",
+          "description": "The timestamp when the MD stage of the requisition was approved or rejected.",
+          "format": "date-time"
+        },
+        "paymentStatus": {
+          "type": "boolean",
+          "description": "Indicates whether the requisition has been marked as 'PAID' by the Finance department."
+        },
+        "paymentDate": {
+          "type": "string",
+          "description": "The timestamp when the requisition was marked as paid.",
+          "format": "date-time"
+        },
+        "payerId": {
+          "type": "string",
+          "description": "Reference to the UserProfile (Finance role) who marked the requisition as paid. (Relationship: UserProfile 1:N Requisition)"
+        }
+      },
+      "required": [
+        "id",
+        "serialNumber",
+        "description",
+        "amount",
+        "requesterId",
+        "submittedAt",
+        "status",
+        "paymentStatus"
+      ]
+    },
+    "RequisitionAuditLog": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "RequisitionAuditLog",
+      "type": "object",
+      "description": "Tracks every significant action or state change pertaining to a Requisition for complete transparency and accountability.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the RequisitionAuditLog entity."
+        },
+        "requisitionId": {
+          "type": "string",
+          "description": "Reference to the Requisition that this audit log entry pertains to. (Relationship: Requisition 1:N RequisitionAuditLog)"
+        },
+        "actionType": {
+          "type": "string",
+          "description": "The specific type of action recorded (e.g., 'SUBMITTED', 'APPROVED_HR', 'REJECTED_FINANCE', 'MARKED_PAID', 'UPDATED_DESCRIPTION')."
+        },
+        "actorId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who performed the action. (Relationship: UserProfile 1:N RequisitionAuditLog)"
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The exact date and time when the action was performed.",
+          "format": "date-time"
+        },
+        "details": {
+          "type": "string",
+          "description": "Optional additional context or descriptive details about the action, such as approval notes or specific changes made."
+        }
+      },
+      "required": [
+        "id",
+        "requisitionId",
+        "actionType",
+        "actorId",
+        "timestamp"
+      ]
+    },
+    "Task": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Task",
+      "type": "object",
+      "description": "Defines an individual task assigned to a staff member, including due dates, descriptions, and optional 'smart' fields.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Task entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "A concise title summarizing the task."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed explanation of the task, including necessary instructions or context."
+        },
+        "dueDateTime": {
+          "type": "string",
+          "description": "The combined date and specific time by which the task is expected to be completed.",
+          "format": "date-time"
+        },
+        "assignedToUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who is responsible for completing this task. (Relationship: UserProfile 1:N Task)"
+        },
+        "createdByUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who created and assigned this task. (Relationship: UserProfile 1:N Task)"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the task (e.g., 'PENDING', 'IN_PROGRESS', 'COMPLETED', 'OVERDUE', 'CANCELLED')."
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the task was initially created.",
+          "format": "date-time"
+        },
+        "updatedAt": {
+          "type": "string",
+          "description": "The timestamp when the task was last modified.",
+          "format": "date-time"
+        },
+        "followUpReminderDate": {
+          "type": "string",
+          "description": "An optional date to set a reminder for following up on a pending task.",
+          "format": "date"
+        },
+        "contactPhone": {
+          "type": "string",
+          "description": "An optional phone number suggested by LLM integration, relevant to the task."
+        },
+        "contactEmail": {
+          "type": "string",
+          "description": "An optional email address suggested by LLM integration, relevant to the task.",
+          "format": "email"
+        },
+        "location": {
+          "type": "string",
+          "description": "An optional location suggested by LLM integration, relevant to the task."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "description",
+        "dueDateTime",
+        "assignedToUserId",
+        "createdByUserId",
+        "status",
+        "createdAt"
+      ]
+    },
+    "Announcement": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Announcement",
+      "type": "object",
+      "description": "Stores official announcements posted by HR for company-wide visibility, with a 'pinned' status option.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Announcement entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title or subject of the announcement."
+        },
+        "content": {
+          "type": "string",
+          "description": "The full text content of the announcement."
+        },
+        "authorId": {
+          "type": "string",
+          "description": "Reference to the UserProfile (HR role) who published this announcement. (Relationship: UserProfile 1:N Announcement)"
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when the announcement was created and published.",
+          "format": "date-time"
+        },
+        "isPinned": {
+          "type": "boolean",
+          "description": "A boolean flag indicating if the announcement should be pinned for prominent display (e.g., at the top of a list)."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "content",
+        "authorId",
+        "createdAt",
+        "isPinned"
+      ]
+    },
+    "CompanyGoal": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "CompanyGoal",
+      "type": "object",
+      "description": "Defines a company-wide goal with progress tracking, displayed on the Executive Dashboard.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the CompanyGoal entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "A concise title for the company goal."
+        },
+        "description": {
+          "type": "string",
+          "description": "A detailed description outlining the objective of the company goal."
+        },
+        "targetValue": {
+          "type": "number",
+          "description": "The target numerical value or metric that defines the completion of the goal."
+        },
+        "currentValue": {
+          "type": "number",
+          "description": "The current numerical value or progress achieved towards the goal."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The date when the goal period officially began.",
+          "format": "date"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The date when the goal period is expected to conclude.",
+          "format": "date"
+        },
+        "ownerId": {
+          "type": "string",
+          "description": "Reference to the UserProfile responsible for overseeing this company goal. (Relationship: UserProfile 1:N CompanyGoal)"
+        },
+        "status": {
+          "type": "string",
+          "description": "The current status of the goal (e.g., 'ON_TRACK', 'AT_RISK', 'COMPLETED', 'PENDING')."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "targetValue",
+        "currentValue",
+        "startDate",
+        "endDate",
+        "status"
+      ]
+    },
+    "ChatConversation": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatConversation",
+      "type": "object",
+      "description": "Represents a 1-on-1 chat conversation between two staff members.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatConversation entity."
+        },
+        "participantIds": {
+          "type": "array",
+          "description": "An array containing the unique identifiers of the two UserProfiles participating in this conversation. (Relationship: UserProfile N:N ChatConversation)",
+          "items": {
+            "type": "string"
+          }
+        },
+        "createdAt": {
+          "type": "string",
+          "description": "The timestamp when this chat conversation was initiated.",
+          "format": "date-time"
+        },
+        "lastMessageId": {
+          "type": "string",
+          "description": "Reference to the ID of the most recent ChatMessage in this conversation, used for quick display in chat lists. (Relationship: ChatConversation 1:N ChatMessage)"
+        }
+      },
+      "required": [
+        "id",
+        "participantIds",
+        "createdAt"
+      ]
+    },
+    "ChatMessage": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents an individual message sent within a chat conversation.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the ChatMessage entity."
+        },
+        "conversationId": {
+          "type": "string",
+          "description": "Reference to the ChatConversation this message belongs to. (Relationship: ChatConversation 1:N ChatMessage)"
+        },
+        "senderId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who sent this message. (Relationship: UserProfile 1:N ChatMessage)"
+        },
+        "content": {
+          "type": "string",
+          "description": "The text content of the chat message."
+        },
+        "timestamp": {
+          "type": "string",
+          "description": "The exact timestamp when the message was sent.",
+          "format": "date-time"
+        },
+        "isRead": {
+          "type": "boolean",
+          "description": "A boolean indicating whether the recipient has read this message."
+        }
+      },
+      "required": [
+        "id",
+        "conversationId",
+        "senderId",
+        "content",
+        "timestamp",
+        "isRead"
+      ]
+    },
+    "LeaveRequest": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "LeaveRequest",
+      "type": "object",
+      "description": "Records a staff member's request for annual or sick leave, requiring approval from an HR/Admin.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the LeaveRequest entity."
+        },
+        "userId": {
+          "type": "string",
+          "description": "Reference to the UserProfile who submitted this leave request. (Relationship: UserProfile 1:N LeaveRequest)"
+        },
+        "leaveType": {
+          "type": "string",
+          "description": "The specific type of leave being requested (e.g., 'ANNUAL', 'SICK', 'BEREAVEMENT')."
+        },
+        "startDate": {
+          "type": "string",
+          "description": "The start date of the requested leave period.",
+          "format": "date"
+        },
+        "endDate": {
+          "type": "string",
+          "description": "The end date of the requested leave period.",
+          "format": "date"
+        },
+        "reason": {
+          "type": "string",
+          "description": "A detailed explanation or justification for the leave request."
+        },
+        "status": {
+          "type": "string",
+          "description": "The current approval status of the leave request (e.g., 'PENDING', 'APPROVED', 'REJECTED')."
+        },
+        "submittedAt": {
+          "type": "string",
+          "description": "The timestamp when the leave request was submitted.",
+          "format": "date-time"
+        },
+        "approverId": {
+          "type": "string",
+          "description": "Reference to the UserProfile (e.g., HR role) who approved or rejected this leave request. (Relationship: UserProfile 1:N LeaveRequest)"
+        },
+        "approvalDate": {
+          "type": "string",
+          "description": "The timestamp when the leave request was approved or rejected.",
+          "format": "date-time"
+        },
+        "rejectionReason": {
+          "type": "string",
+          "description": "An optional reason provided if the leave request was rejected."
+        }
+      },
+      "required": [
+        "id",
+        "userId",
+        "leaveType",
+        "startDate",
+        "endDate",
+        "reason",
+        "status",
+        "submittedAt"
+      ]
+    },
+    "Document": {
+      "$schema": "http://json-schema.org/draft-07/schema#",
+      "title": "Document",
+      "type": "object",
+      "description": "Stores metadata and links for company policy documents, handbooks, and training manuals in the Document Vault.",
+      "properties": {
+        "id": {
+          "type": "string",
+          "description": "Unique identifier for the Document entity."
+        },
+        "title": {
+          "type": "string",
+          "description": "The title or name of the document."
+        },
+        "description": {
+          "type": "string",
+          "description": "A brief summary or description of the document's content."
+        },
+        "fileURL": {
+          "type": "string",
+          "description": "A URL pointing to the actual document file (e.g., PDF) stored in cloud storage (e.g., Firebase Storage).",
+          "format": "uri"
+        },
+        "uploadedByUserId": {
+          "type": "string",
+          "description": "Reference to the UserProfile (HR role) who uploaded this document. (Relationship: UserProfile 1:N Document)"
+        },
+        "uploadedAt": {
+          "type": "string",
+          "description": "The timestamp when the document was uploaded to the vault.",
+          "format": "date-time"
+        },
+        "category": {
+          "type": "string",
+          "description": "The category of the document (e.g., 'POLICY', 'HANDBOOK', 'TRAINING_MANUAL')."
+        }
+      },
+      "required": [
+        "id",
+        "title",
+        "fileURL",
+        "uploadedByUserId",
+        "uploadedAt",
+        "category"
+      ]
+    }
+  },
+  "auth": {
+    "providers": [
+      "password",
+      "anonymous"
+    ]
+  },
+  "firestore": {
+    "structure": [
+      {
+        "path": "/users/{userId}",
+        "definition": {
+          "entityName": "UserProfile",
+          "schema": {
+            "$ref": "#/backend/entities/UserProfile"
+          },
+          "description": "Stores individual staff member profiles. The 'role' field within these documents is critical for DBAC (Database Access Control) and security rules. Accessible by the owning user for updates, and by HR/MD for broader reads. Includes essential personal and role-based information, and the 'role' attribute for authorization checks across the system.",
+          "params": [
+            {
+              "name": "userId",
+              "description": "The unique identifier (UID) of the user, matching `request.auth.uid`."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/attendanceRecords/{recordId}",
+        "definition": {
+          "entityName": "AttendanceRecord",
+          "schema": {
+            "$ref": "#/backend/entities/AttendanceRecord"
+          },
+          "description": "Records daily clock-in and clock-out times for staff members. This is a top-level collection to facilitate global queries for features like 'Colleague Status' and payroll exports by HR/MD. Documents include 'userId' for path-independent ownership checks. Only the owning user can create/update their own records, and HR/MD can read all.",
+          "params": [
+            {
+              "name": "recordId",
+              "description": "The unique identifier for an attendance record."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/requisitions/{requisitionId}",
+        "definition": {
+          "entityName": "Requisition",
+          "schema": {
+            "$ref": "#/backend/entities/Requisition"
+          },
+          "description": "Stores financial requisitions submitted by staff, requiring multi-stage approval. This is a top-level collection to enable various roles (requester, HR, Finance, MD) to query and interact with requisitions based on their `requesterId`, `status`, and respective approver IDs.",
+          "params": [
+            {
+              "name": "requisitionId",
+              "description": "The unique identifier for a requisition."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/requisitions/{requisitionId}/auditLogs/{logId}",
+        "definition": {
+          "entityName": "RequisitionAuditLog",
+          "schema": {
+            "$ref": "#/backend/entities/RequisitionAuditLog"
+          },
+          "description": "Tracks every significant action or state change for a Requisition. Located as a subcollection to maintain strong relational context. Includes denormalized 'requesterId' from the parent Requisition document for Authorization Independence, allowing requesters to read their own audit logs without a `get()` to the parent, and 'actorId' for specific action accountability.",
+          "params": [
+            {
+              "name": "requisitionId",
+              "description": "The unique identifier of the parent requisition."
+            },
+            {
+              "name": "logId",
+              "description": "The unique identifier for an audit log entry."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/backend/entities/Task"
+          },
+          "description": "Defines individual tasks assigned to staff members. This is a top-level collection, facilitating queries for tasks assigned to a specific user (`assignedToUserId`) or created by a user (`createdByUserId`), and for HR/MD to view all tasks. All tasks share a homogeneous security posture.",
+          "params": [
+            {
+              "name": "taskId",
+              "description": "The unique identifier for a task."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/announcements/{announcementId}",
+        "definition": {
+          "entityName": "Announcement",
+          "schema": {
+            "$ref": "#/backend/entities/Announcement"
+          },
+          "description": "Stores official announcements posted by HR for company-wide visibility. This is a top-level collection with public read access for all staff and write access restricted to HR. The 'authorId' field supports HR write authorization.",
+          "params": [
+            {
+              "name": "announcementId",
+              "description": "The unique identifier for an announcement."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/companyGoals/{goalId}",
+        "definition": {
+          "entityName": "CompanyGoal",
+          "schema": {
+            "$ref": "#/backend/entities/CompanyGoal"
+          },
+          "description": "Defines company-wide goals with progress tracking. This is a top-level collection, publicly readable by all staff (for the Executive Dashboard) and writable by MD/HR. All goals share a consistent security posture.",
+          "params": [
+            {
+              "name": "goalId",
+              "description": "The unique identifier for a company goal."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chatConversations/{conversationId}",
+        "definition": {
+          "entityName": "ChatConversation",
+          "schema": {
+            "$ref": "#/backend/entities/ChatConversation"
+          },
+          "description": "Represents a 1-on-1 chat conversation between two staff members. This is a top-level collection. The 'participantIds' array within each document is crucial for authorization, ensuring only participants can read or interact with the conversation, thereby supporting Authorization Independence and secure `list` operations.",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "The unique identifier for a chat conversation."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/chatConversations/{conversationId}/messages/{messageId}",
+        "definition": {
+          "entityName": "ChatMessage",
+          "schema": {
+            "$ref": "#/backend/entities/ChatMessage"
+          },
+          "description": "Represents an individual message sent within a chat conversation. Located as a subcollection of `chatConversations`. To ensure Authorization Independence, each `ChatMessage` document must include a denormalized 'participantIds' array (copied from its parent `ChatConversation`) to determine read/write access without requiring a `get()` to the parent conversation document.",
+          "params": [
+            {
+              "name": "conversationId",
+              "description": "The unique identifier of the parent chat conversation."
+            },
+            {
+              "name": "messageId",
+              "description": "The unique identifier for a chat message."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/leaveRequests/{leaveRequestId}",
+        "definition": {
+          "entityName": "LeaveRequest",
+          "schema": {
+            "$ref": "#/backend/entities/LeaveRequest"
+          },
+          "description": "Records staff members' requests for leave. This is a top-level collection. Documents include 'userId' for staff to manage their own requests and 'approverId' for HR/MD to process them, supporting `list` operations based on these fields.",
+          "params": [
+            {
+              "name": "leaveRequestId",
+              "description": "The unique identifier for a leave request."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/documents/{documentId}",
+        "definition": {
+          "entityName": "Document",
+          "schema": {
+            "$ref": "#/backend/entities/Document"
+          },
+          "description": "Stores metadata and links for company policy documents in a centralized vault. This is a top-level collection, publicly readable by all staff and writable by HR. The 'uploadedByUserId' field supports HR write authorization.",
+          "params": [
+            {
+              "name": "documentId",
+              "description": "The unique identifier for a document."
+            }
+          ]
+        }
+      }
+    ],
+    "reasoning": "The Firestore data structure for 'ControlFlow' is designed to prioritize Authorization Independence, Structural Segregation, and consistent Access Modeling, as mandated. Each top-level collection serves a distinct security posture or a common query pattern required by different user roles (STAFF, HR, FINANCE, MD).\n\n1.  **Authorization Independence (Denormalization Strategy):**\n    *   **UserProfile (users/{userId}):** This collection holds the core `role` information for each user. This is crucial for Database Access Control (DBAC) and allows security rules to check `get(/users/$(request.auth.uid)).data.role` to determine permissions across the application without complex lookups or custom claims. While this uses a `get()` call, it's a direct and atomic lookup for the authenticated user's own role, adhering to the spirit of minimizing dependencies.\n    *   **ChatMessage (chatConversations/{conversationId}/messages/{messageId}):** To ensure authorization independence for reading/writing messages, the `participantIds` from the parent `ChatConversation` must be denormalized into each `ChatMessage` document. This eliminates the need for a `get()` call to the parent `ChatConversation` document when authorizing `ChatMessage` access, making rules atomic and debuggable. The `ChatMessage` schema would be augmented to include `participantIds`.\n    *   **RequisitionAuditLog (requisitions/{requisitionId}/auditLogs/{logId}):** To allow a requester to view their own audit logs without querying the parent `Requisition` document, the `requesterId` from the parent `Requisition` must be denormalized into each `RequisitionAuditLog` document. This ensures that a `get()` call to the parent is not required for basic access checks.\n\n2.  **Structural Segregation & QAPs (Query as Authorization Patterns):**\n    *   **`users/{userId}`:** Private to the user for writes, readable by HR/MD for profile management, and specific fields (e.g., fullName, avatarURL) readable by all for features like 'Colleague Status' or chat participant display. This segregation supports listing all users by HR/MD, and individual user profile reads.\n    *   **`attendanceRecords/{recordId}`:** Moved to a top-level collection instead of a subcollection of `users`. This is critical for the 'Colleague Status' and 'Automated Payroll Export' features, which require querying across *all* attendance records. The `userId` field within each document facilitates secure QAPs: a user can query their own records (`.where('userId', '==', request.auth.uid)`), while HR/MD can query all records. Rules will enforce that `userId` matches `request.auth.uid` for writes, and `request.auth.uid` must have an 'HR' or 'MD' role for broader reads.\n    *   **`requisitions/{requisitionId}`:** A top-level collection for multi-stage approval workflow. `requesterId`, `status`, and approver IDs are fields within the document, enabling QAPs for different roles: `requesterId == request.auth.uid` for personal view; `status == 'PENDING_HR'` for HR; `status == 'PENDING_FINANCE'` for Finance, etc. This allows efficient `list` operations for each stage of the workflow.\n    *   **`requisitions/{requisitionId}/auditLogs/{logId}`:** A subcollection of `requisitions`, as logs are tightly coupled. With denormalized `requesterId` and `actorId` (from the original schema) in each log document, rules can allow access based on being the `requesterId` of the parent requisition or the `actorId` of the specific log entry, ensuring secure QAPs for listing specific requisition's audit trail.\n    *   **`tasks/{taskId}`:** A top-level collection, with `assignedToUserId` and `createdByUserId` fields. This enables QAPs for listing tasks where the user is assigned or created, and for HR/MD to list all tasks for oversight.\n    *   **`announcements/{announcementId}`:** Top-level, public read for all staff, HR write. Simple QAPs: all staff can list all announcements.\n    *   **`companyGoals/{goalId}`:** Top-level, public read for all staff (Executive Dashboard), MD/HR write. Simple QAPs: all staff can list all goals.\n    *   **`chatConversations/{conversationId}`:** Top-level, allowing `list` operations to find conversations where `request.auth.uid` is `in` the `participantIds` array. This supports secure listing of a user's conversations.\n    *   **`leaveRequests/{leaveRequestId}`:** Top-level, with `userId` and `approverId` fields. Supports QAPs for users to list their own requests and for HR/MD to list all requests (or those pending their approval).\n    *   **`documents/{documentId}`:** Top-level, public read for all staff (Document Vault), HR write. Simple QAPs: all staff can list all documents."
+  }
+}
