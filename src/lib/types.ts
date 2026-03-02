@@ -19,6 +19,11 @@ export interface UserProfile {
   joinedDate: string; // ISO String for timestamp
   birthday?: string; // ISO String for timestamp
   status?: UserStatus;
+  notificationPreferences?: {
+    requisitionUpdates?: boolean;
+    taskAssignments?: boolean;
+    announcements?: boolean;
+  };
 }
 
 export interface Attendance {

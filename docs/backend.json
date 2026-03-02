@@ -13,10 +13,6 @@
           "type": "string",
           "description": "User's unique username."
         },
-        "password": {
-          "type": "string",
-          "description": "User's password (stored in plaintext - NOT SECURE)."
-        },
         "displayName": {
           "type": "string",
           "description": "User's display name."
@@ -39,12 +35,26 @@
             "OFFLINE"
           ],
           "description": "User's current status."
+        },
+        "notificationPreferences": {
+          "type": "object",
+          "description": "User's notification settings.",
+          "properties": {
+            "requisitionUpdates": {
+              "type": "boolean"
+            },
+            "taskAssignments": {
+              "type": "boolean"
+            },
+            "announcements": {
+              "type": "boolean"
+            }
+          }
         }
       },
       "required": [
         "orgId",
         "username",
-        "password",
         "displayName",
         "position"
       ]
