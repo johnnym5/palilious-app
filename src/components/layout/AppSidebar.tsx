@@ -18,11 +18,12 @@ import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useAuth, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
-import type { UserProfile } from "@/lib/types";
+import type { UserProfile, Organization } from "@/lib/types";
 import { useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { Skeleton } from "../ui/skeleton";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { Badge } from "../ui/badge";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -47,15 +48,20 @@ export default function AppSidebar({ isMobile = false }) {
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null,
   [firestore, authUser]);
-
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  
+  const orgRef = useMemoFirebase(() => 
+    userProfile?.orgId ? doc(firestore, "organizations", userProfile.orgId) : null,
+  [firestore, userProfile?.orgId]);
+  const { data: organization, isLoading: isOrgLoading } = useDoc<Organization>(orgRef);
+
 
   const handleLogout = () => {
     signOut(auth);
   };
 
   const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => {
-    const isActive = pathname === href || (href === "/dashboard" && pathname.startsWith("/dashboard"));
+    const isActive = pathname.startsWith(href);
     return (
       <Link
         href={href}
@@ -76,19 +82,24 @@ export default function AppSidebar({ isMobile = false }) {
     if (!userProfile || !userProfile.role) return false;
     return itemRoles.includes(userProfile.role);
   }
+  
+  const orgName = organization?.name ? organization.name.charAt(0).toUpperCase() + organization.name.slice(1) : "";
 
   if (!authUser) return null;
 
   return (
-    <aside className={cn("flex-col border-r bg-background", isMobile ? "flex w-full" : "hidden md:flex md:w-64")}>
-      <div className="flex h-16 items-center border-b px-6">
+    <aside className={cn("flex-col border-r bg-background", isMobile ? "flex w-full" : "hidden md:flex md:w-72")}>
+      <div className="flex h-16 items-center border-b px-4 gap-2">
         <Logo />
+         {isOrgLoading ? <Skeleton className="h-4 w-24" /> : 
+          <span className="font-semibold text-md text-muted-foreground truncate">{orgName}</span>
+        }
       </div>
       <div className="flex flex-1 flex-col justify-between">
-        <nav className="grid items-start gap-2 p-4 text-sm font-medium">
+        <nav className="grid items-start gap-1 p-4 text-sm font-medium">
           {mainNavItems.map((item) => <NavLink key={item.href} {...item} />)}
           
-          <div className="my-4 h-px w-full bg-border" />
+          <div className="my-2 h-px w-full bg-border" />
           
           {isProfileLoading && <Skeleton className="h-8 w-full" />}
           {userProfile && adminNavItems.filter(item => userCanSee(item.roles)).map((item) => (
@@ -96,15 +107,8 @@ export default function AppSidebar({ isMobile = false }) {
           ))}
         </nav>
 
-        <div className="mt-auto p-4 space-y-4">
-            <div className="p-2 rounded-lg bg-secondary">
-                <h3 className="font-semibold font-headline">Colleagues Online</h3>
-                <div className="flex items-center space-x-2 mt-2">
-                    <p className="text-xs text-muted-foreground">Temporarily disabled</p>
-                </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary">
+        <div className="mt-auto border-t p-4">
+            <div className="flex items-center gap-3 rounded-lg">
                 {isProfileLoading ? (
                   <Skeleton className="h-10 w-10 rounded-full" />
                 ) : (
@@ -115,9 +119,9 @@ export default function AppSidebar({ isMobile = false }) {
                 )}
                 <div className="flex-1 truncate">
                     <p className="font-semibold">{userProfile?.fullName}</p>
-                    <p className="text-xs text-muted-foreground">{userProfile?.email}</p>
+                    <Badge variant="secondary" className="text-xs">{userProfile?.role}</Badge>
                 </div>
-                <button onClick={handleLogout}>
+                <button onClick={handleLogout} className="ml-auto">
                     <LogOut className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors"/>
                 </button>
             </div>

@@ -1,11 +1,36 @@
+'use client';
 import { UserNav } from "@/components/layout/UserNav";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
-import { Menu } from "lucide-react";
+import { Menu, Clock } from "lucide-react";
 import AppSidebar from "./AppSidebar";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
+import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { format } from 'date-fns';
+import { useUser } from '@/firebase';
 
 export default function AppHeader() {
+  const pathname = usePathname();
+  const { user } = useUser();
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => setCurrentTime(new Date()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const getTitle = () => {
+    const userFirstName = user?.displayName?.split(' ')[0];
+
+    if (pathname.includes('/dashboard')) {
+        return userFirstName ? `Good Morning, ${userFirstName}!` : 'Dashboard';
+    }
+    // Capitalize the first letter of the route segment
+    const segment = pathname.split('/').pop()?.replace('-', ' ') || '';
+    return segment.charAt(0).toUpperCase() + segment.slice(1);
+  }
+
   return (
     <header className="sticky top-0 z-30 flex h-14 items-center gap-4 border-b bg-background/80 px-4 backdrop-blur-lg sm:h-16 sm:px-6">
        <Sheet>
@@ -25,8 +50,16 @@ export default function AppHeader() {
           <AppSidebar isMobile />
         </SheetContent>
       </Sheet>
-      <div className="flex-1" />
-      <UserNav />
+      <div className="flex-1">
+        <h1 className="text-lg font-semibold font-headline hidden md:block">{getTitle()}</h1>
+      </div>
+      <div className='flex items-center gap-4'>
+        <div className='hidden sm:flex items-center gap-2 text-muted-foreground'>
+            <Clock className='h-4 w-4' />
+            <p className="text-sm">{format(currentTime, 'PPP, p')}</p>
+        </div>
+        <UserNav />
+      </div>
     </header>
   );
 }
