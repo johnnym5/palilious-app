@@ -94,6 +94,12 @@ export interface TaskUpdate {
   note?: string;
 }
 
+export interface SubTask {
+  id: string;
+  text: string;
+  completed: boolean;
+}
+
 export interface Task {
   id: string;
   orgId: string;
@@ -109,6 +115,7 @@ export interface Task {
   createdAt: string; // ISO string
   attachmentUrl?: string;
   sharedWith?: string[];
+  subTasks?: SubTask[];
 }
 
 

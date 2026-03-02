@@ -167,6 +167,19 @@
             },
             "required": ["status", "time", "updatedBy"]
           }
+        },
+        "subTasks": {
+            "type": "array",
+            "description": "A list of sub-tasks or checklist items within the task.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "id": { "type": "string", "description": "A unique ID for the sub-task item." },
+                    "text": { "type": "string", "description": "The content of the sub-task item." },
+                    "completed": { "type": "boolean", "description": "Whether the sub-task item is completed." }
+                },
+                "required": ["id", "text", "completed"]
+            }
         }
       },
       "required": [

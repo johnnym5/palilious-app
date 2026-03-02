@@ -96,6 +96,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
             createdAt: now,
             attachmentUrl: values.attachmentUrl,
             sharedWith: [],
+            subTasks: [],
         };
 
         await addDocumentNonBlocking(collection(firestore, 'tasks'), newTask);
