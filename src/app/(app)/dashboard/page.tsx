@@ -3,7 +3,6 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { Briefcase, CheckCircle, Clock, Users } from "lucide-react";
 import { Announcements } from "@/components/dashboard/Announcements";
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
-import { CompanyGoal } from "@/components/dashboard/CompanyGoal";
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
 import type { UserProfile, Task, Requisition, TaskStatus, RequisitionStatus } from "@/lib/types";
@@ -99,7 +98,6 @@ export default function DashboardPage() {
                 </div>
                 <div className="space-y-6">
                     <Announcements />
-                    <CompanyGoal />
                 </div>
             </div>
         </div>

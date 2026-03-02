@@ -271,6 +271,21 @@
             "timestamp": { "type": "string", "format": "date-time" }
         },
         "required": ["chatId", "orgId", "senderId", "content", "timestamp"]
+    },
+    "Announcement": {
+      "title": "Announcement",
+      "type": "object",
+      "description": "Represents an organization-wide announcement.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "title": { "type": "string" },
+        "content": { "type": "string" },
+        "isPinned": { "type": "boolean" },
+        "authorId": { "type": "string", "description": "The user ID of the author." },
+        "authorName": { "type": "string", "description": "The name of the author." },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "title", "content", "isPinned", "authorId", "authorName", "createdAt"]
     }
   },
   "auth": {
@@ -391,6 +406,22 @@
                 "name": "messageId",
                 "description": "The message's unique ID."
             }
+            ]
+        }
+    },
+    {
+        "path": "/announcements/{announcementId}",
+        "definition": {
+            "entityName": "Announcement",
+            "schema": {
+                "$ref": "#/entities/Announcement"
+            },
+            "description": "Stores organization-wide announcements.",
+            "params": [
+                {
+                    "name": "announcementId",
+                    "description": "The announcement's unique ID."
+                }
             ]
         }
     }

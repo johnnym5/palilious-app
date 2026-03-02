@@ -125,7 +125,8 @@ export interface Announcement {
   title: string;
   content: string;
   isPinned: boolean;
-  author: string; // userId
+  authorId: string; // userId
+  authorName: string;
   createdAt: string; // ISO String for timestamp
 }
 
