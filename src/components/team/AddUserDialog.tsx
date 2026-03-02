@@ -108,7 +108,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
         avatarURL: `https://picsum.photos/seed/${newUser.uid}/48/48`,
-        birthday: values.birthday?.toISOString(),
+        ...(values.birthday && { birthday: values.birthday.toISOString() }),
       };
 
       await updateProfile(newUser, { 
