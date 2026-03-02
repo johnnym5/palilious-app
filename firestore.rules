@@ -32,16 +32,17 @@ service cloud.firestore {
     // --------------------------------------------------------------------
 
     /**
-     * @description User profiles. A user can create/update their own profile.
-     * HR/MD roles can read all profiles. All signed-in users can read basic info.
+     * @description User profiles. A user can update their own profile.
+     * HR/MD roles can read, create, update, and delete all profiles. 
+     * All signed-in users can read basic info.
      * @path /users/{userId}
      */
     match /users/{userId} {
-      allow get: if isSignedIn(); // Allow reading any profile for name/avatar
+      allow get: if isSignedIn();
       allow list: if isOneOfRoles(['HR', 'MD']);
-      allow create: if isOwner(userId);
+      allow create: if isOneOfRoles(['HR', 'MD']);
       allow update: if isOwner(userId) || isOneOfRoles(['HR', 'MD']);
-      allow delete: if false; // Disallow deleting user profiles
+      allow delete: if isOneOfRoles(['HR', 'MD']);
     }
 
     /**
