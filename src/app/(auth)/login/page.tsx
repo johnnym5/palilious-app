@@ -8,8 +8,8 @@ export default function LoginPage() {
       <Logo />
       <Card className="w-full max-w-sm">
         <CardHeader>
-          <CardTitle>Welcome Back</CardTitle>
-          <CardDescription>Enter your credentials to access your dashboard.</CardDescription>
+          <CardTitle>Welcome</CardTitle>
+          <CardDescription>Enter your company, username, and password to sign in.</CardDescription>
         </CardHeader>
         <CardContent>
           <LoginForm />
@@ -19,3 +19,5 @@ export default function LoginPage() {
     </div>
   );
 }
+
+    

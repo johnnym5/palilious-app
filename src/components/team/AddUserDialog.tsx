@@ -26,6 +26,7 @@ const roles: UserRole[] = ['STAFF', 'HR', 'FINANCE', 'MD'];
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
+  username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   role: z.enum(roles, { required_error: "Role is required." }),
@@ -49,6 +50,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
+      username: "",
       email: "",
       password: "",
       role: "STAFF",
@@ -71,6 +73,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const userData = {
         id: newUser.uid,
         fullName: values.fullName,
+        username: values.username,
         email: values.email,
         role: values.role,
         joinedDate: new Date().toISOString(),
@@ -127,6 +130,19 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
                     <FormLabel>Full Name</FormLabel>
                     <FormControl>
                       <Input placeholder="John Doe" {...field} />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="username"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl>
+                      <Input placeholder="johndoe" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -233,3 +249,5 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     </Dialog>
   );
 }
+
+    

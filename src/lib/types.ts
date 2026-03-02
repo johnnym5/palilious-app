@@ -4,6 +4,7 @@ export type UserStatus = "ONLINE" | "OFFLINE" | "ON_LEAVE";
 export interface UserProfile {
   id: string;
   email: string;
+  username: string;
   fullName: string;
   role: UserRole;
   avatarURL?: string;
@@ -83,3 +84,5 @@ export interface ChatMessage {
     content: string;
     timestamp: string; // ISO String for timestamp
 }
+
+    

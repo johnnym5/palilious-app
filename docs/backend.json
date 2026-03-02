@@ -15,6 +15,10 @@
           "format": "email",
           "description": "User's email address."
         },
+        "username": {
+          "type": "string",
+          "description": "User's unique username."
+        },
         "fullName": {
           "type": "string",
           "description": "User's full name."
@@ -56,6 +60,7 @@
       "required": [
         "id",
         "email",
+        "username",
         "fullName",
         "role",
         "joinedDate"
@@ -427,3 +432,4 @@
     ]
   }
 }
+    

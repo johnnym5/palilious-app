@@ -15,18 +15,22 @@ import {
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
-import { initiateEmailSignIn, useAuth, useUser } from "@/firebase";
+import { useAuth, useUser, useFirestore } from "@/firebase";
+import { signInWithEmailAndPassword } from "firebase/auth";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
+import { UserProfile } from "@/lib/types";
 
 const formSchema = z.object({
-  email: z.string().email({ message: "Please enter a valid email." }),
+  username: z.string().min(1, { message: "Username is required." }),
   password: z.string().min(1, { message: "Password is required." }),
 });
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
   const auth = useAuth();
+  const firestore = useFirestore();
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const { toast } = useToast();
@@ -34,7 +38,7 @@ export function LoginForm() {
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -45,34 +49,70 @@ export function LoginForm() {
     }
   }, [user, isUserLoading, router]);
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    initiateEmailSignIn(auth, values.email, values.password);
-    // The auth state change will be caught by the useUser hook and trigger the redirect.
-    // We add a small timeout to handle cases where login fails.
-    setTimeout(() => {
-        if (!auth.currentUser) {
-            setIsLoading(false);
-            toast({
-                variant: 'destructive',
-                title: 'Login Failed',
-                description: 'Please check your email and password.',
-            });
-        }
-    }, 2000);
+    if (!firestore) {
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: 'Database service is not available.',
+      });
+      setIsLoading(false);
+      return;
+    }
+
+    try {
+      // 1. Find user by username
+      const usersRef = collection(firestore, "users");
+      const q = query(usersRef, where("username", "==", values.username));
+      const querySnapshot = await getDocs(q);
+
+      if (querySnapshot.empty) {
+        throw new Error("Invalid username or password.");
+      }
+
+      // 2. Get email from the found user
+      const userDoc = querySnapshot.docs[0];
+      const userData = userDoc.data() as UserProfile;
+      const email = userData.email;
+
+      // 3. Sign in with email and password
+      await signInWithEmailAndPassword(auth, email, values.password);
+      
+      // Redirect is handled by the useEffect
+    } catch (error: any) {
+      let errorMessage = "Please check your credentials and try again.";
+      if (error.message.includes("invalid-credential") || error.message === "Invalid username or password.") {
+          errorMessage = "Invalid username or password.";
+      }
+      toast({
+        variant: 'destructive',
+        title: 'Login Failed',
+        description: errorMessage,
+      });
+    } finally {
+      setIsLoading(false);
+    }
   }
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormItem>
+            <FormLabel>Company Name</FormLabel>
+            <FormControl>
+                <Input placeholder="palilious" disabled />
+            </FormControl>
+        </FormItem>
+        
         <FormField
           control={form.control}
-          name="email"
+          name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email</FormLabel>
+              <FormLabel>Username</FormLabel>
               <FormControl>
-                <Input placeholder="john.doe@company.com" {...field} />
+                <Input placeholder="e.g. johndoe" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
@@ -91,11 +131,13 @@ export function LoginForm() {
             </FormItem>
           )}
         />
-        <Button type="submit" className="w-full" disabled={isLoading}>
-          {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+        <Button type="submit" className="w-full" disabled={isLoading || isUserLoading}>
+          {(isLoading || isUserLoading) && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           Login
         </Button>
       </form>
     </Form>
   );
 }
+
+    
