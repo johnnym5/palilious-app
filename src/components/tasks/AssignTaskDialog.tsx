@@ -16,7 +16,7 @@ import { useFirestore, useUser, useCollection, addDocumentNonBlocking, useMemoFi
 import { collection, query, where, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, UserProfile, TaskUpdate } from "@/lib/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -148,7 +148,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                 </div>
                  <FormField control={form.control} name="dueDate" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel>
-                        <Popover>
+                        <Popover modal>
                             <PopoverTrigger asChild>
                                 <FormControl>
                                 <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
