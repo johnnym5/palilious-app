@@ -1,9 +1,43 @@
+'use client';
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { mockBirthdays } from "@/lib/placeholder-data";
 import { Cake } from "lucide-react";
+import { useCollection, useFirestore, useMemoFirebase } from "@/firebase";
+import { collection } from "firebase/firestore";
+import { UserProfile } from "@/lib/types";
+import { format } from "date-fns";
+import { Skeleton } from "../ui/skeleton";
 
 export function UpcomingBirthdays() {
+  const firestore = useFirestore();
+
+  const usersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return collection(firestore, 'users');
+  }, [firestore]);
+
+  const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+
+  const upcomingBirthdays = (users || [])
+    .filter(u => u.birthday)
+    .map(u => ({
+      ...u,
+      birthdayDate: new Date(u.birthday!),
+    }))
+    .sort((a, b) => {
+      const now = new Date();
+      const aNext = new Date(a.birthdayDate);
+      aNext.setFullYear(now.getFullYear());
+      if (aNext < now) aNext.setFullYear(now.getFullYear() + 1);
+
+      const bNext = new Date(b.birthdayDate);
+      bNext.setFullYear(now.getFullYear());
+      if (bNext < now) bNext.setFullYear(now.getFullYear() + 1);
+      
+      return aNext.getTime() - bNext.getTime();
+    })
+    .slice(0, 3);
+
   return (
     <Card>
       <CardHeader>
@@ -14,18 +48,30 @@ export function UpcomingBirthdays() {
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {mockBirthdays.map((person) => (
-            <div key={person.fullName} className="flex items-center">
+          {isLoading && Array.from({ length: 2 }).map((_, i) => (
+            <div key={i} className="flex items-center">
+              <Skeleton className="h-9 w-9 rounded-full" />
+              <div className="ml-4 space-y-2">
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-20" />
+              </div>
+            </div>
+          ))}
+          {upcomingBirthdays.map((person) => (
+            <div key={person.id} className="flex items-center">
               <Avatar className="h-9 w-9">
-                <AvatarImage src={person.avatarUrl} alt={person.fullName} />
+                <AvatarImage src={person.avatarURL} alt={person.fullName} />
                 <AvatarFallback>{person.fullName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
               </Avatar>
               <div className="ml-4 space-y-1">
                 <p className="text-sm font-medium leading-none">{person.fullName}</p>
-                <p className="text-sm text-muted-foreground">{person.birthday}</p>
+                <p className="text-sm text-muted-foreground">{format(person.birthdayDate, 'MMMM do')}</p>
               </div>
             </div>
           ))}
+          {!isLoading && upcomingBirthdays.length === 0 && (
+             <p className="text-sm text-muted-foreground text-center">No upcoming birthdays.</p>
+          )}
         </div>
       </CardContent>
     </Card>

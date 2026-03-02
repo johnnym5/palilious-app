@@ -62,12 +62,17 @@ export function RegisterForm() {
         fullName: formData.fullName,
         email: formData.email,
         role: formData.role,
-        joinedDate: new Date().toISOString().split('T')[0], // a string in 'YYYY-MM-DD' format
+        joinedDate: new Date().toISOString(),
+        status: 'ONLINE',
+        avatarURL: `https://picsum.photos/seed/${user.uid}/48/48`,
         createdAt: serverTimestamp(),
       };
       
       // Update Firebase Auth user profile
-      updateProfile(user, { displayName: formData.fullName }).then(() => {
+      updateProfile(user, { 
+        displayName: formData.fullName,
+        photoURL: `https://picsum.photos/seed/${user.uid}/48/48`
+      }).then(() => {
         // Set user document in Firestore
         setDocumentNonBlocking(userRef, userData, { merge: true });
         // Redirect to dashboard
@@ -77,7 +82,7 @@ export function RegisterForm() {
         toast({
           variant: "destructive",
           title: "Profile Update Failed",
-          description: "Could not set your display name.",
+          description: "Could not set your display name or photo.",
         });
         setIsLoading(false);
       });

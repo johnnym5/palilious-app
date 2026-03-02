@@ -1,15 +1,12 @@
 'use client';
 import { StatCard } from "@/components/dashboard/StatCard";
 import { useCollection, useUser, useMemoFirebase, useFirestore } from "@/firebase";
-import { Activity, Briefcase, CheckCircle2, DollarSign, Users } from "lucide-react";
+import { Briefcase, CheckCircle2, DollarSign, Users } from "lucide-react";
 import { Announcements } from "@/components/dashboard/Announcements";
 import { UpcomingBirthdays } from "@/components/dashboard/UpcomingBirthdays";
-import { CompanyGoals } from "@/components/dashboard/CompanyGoals";
 import QuickActions from "@/components/dashboard/QuickActions";
 import { collection, query, where } from "firebase/firestore";
-import { CompanyGoal as CompanyGoalType, Requisition, Task } from "@/lib/types";
-import { mockBirthdays, mockUsers } from "@/lib/placeholder-data";
-
+import { Requisition, Task } from "@/lib/types";
 
 export default function DashboardPage() {
     const { user } = useUser();
@@ -22,17 +19,11 @@ export default function DashboardPage() {
 
     const tasksQuery = useMemoFirebase(() => {
         if (!firestore || !user) return null;
-        return query(collection(firestore, 'tasks'), where('assignedToUserId', '==', user.uid), where('status', '!=', 'COMPLETED'));
+        return query(collection(firestore, 'tasks'), where('assignedTo', '==', user.uid), where('isCompleted', '==', false));
     }, [firestore, user]);
-
-    const companyGoalsQuery = useMemoFirebase(() => {
-        if (!firestore) return null;
-        return collection(firestore, 'companyGoals');
-    }, [firestore]);
 
     const { data: requisitions, isLoading: requisitionsLoading } = useCollection<Requisition>(requisitionsQuery);
     const { data: tasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
-    const { data: companyGoals, isLoading: goalsLoading } = useCollection<CompanyGoalType>(companyGoalsQuery);
 
     const pendingRequisitions = requisitions ? requisitions.length : 0;
     const myTasks = tasks ? tasks.length : 0;
@@ -56,7 +47,6 @@ export default function DashboardPage() {
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-6">
                     <QuickActions />
-                    <CompanyGoals goals={companyGoals || []} />
                 </div>
                 <div className="space-y-6">
                     <Announcements />

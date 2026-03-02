@@ -13,13 +13,13 @@ import {
   Building2,
 } from "lucide-react";
 import { signOut } from "firebase/auth";
+import { collection, doc, limit, query, where } from "firebase/firestore";
 
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
-import { mockUsers } from "@/lib/placeholder-data";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useAuth, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useAuth, useCollection, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { UserProfile } from "@/lib/types";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -45,7 +45,14 @@ export default function AppSidebar({ isMobile = false }) {
     return doc(firestore, 'users', user.uid);
   }, [firestore, user]);
 
-  const { data: userProfile } = useDoc(userProfileQuery);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileQuery);
+
+  const onlineUsersQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
+    return query(collection(firestore, 'users'), where('status', '==', 'ONLINE'), limit(5));
+  }, [firestore]);
+
+  const { data: onlineUsers, isLoading: onlineUsersLoading } = useCollection<UserProfile>(onlineUsersQuery);
 
   const handleLogout = () => {
     signOut(auth);
@@ -90,17 +97,20 @@ export default function AppSidebar({ isMobile = false }) {
             <div className="p-2 rounded-lg bg-secondary">
                 <h3 className="font-semibold font-headline">Colleagues Online</h3>
                 <div className="flex items-center space-x-2 mt-2">
-                    {mockUsers.filter(u => u.onlineStatus === 'Online').slice(0, 5).map(u => (
+                    {onlineUsers && onlineUsers.filter(u => u.id !== user.uid).slice(0,5).map(u => (
                         <Avatar key={u.id} className="h-8 w-8 border-2 border-background">
-                            <AvatarImage src={u.avatarUrl} alt={u.fullName} />
+                            <AvatarImage src={u.avatarURL} alt={u.fullName} />
                             <AvatarFallback>{u.fullName[0]}</AvatarFallback>
                         </Avatar>
                     ))}
-                    {mockUsers.filter(u => u.onlineStatus === 'Online').length > 5 && (
+                    {onlineUsers && onlineUsers.length > 5 && (
                         <div className="flex items-center justify-center h-8 w-8 rounded-full bg-primary text-primary-foreground text-xs font-bold">
-                            +{mockUsers.filter(u => u.onlineStatus === 'Online').length - 5}
+                            +{onlineUsers.length - 5}
                         </div>
                     )}
+                     {!onlineUsersLoading && onlineUsers?.length === 0 && (
+                        <p className="text-xs text-muted-foreground">No one is online.</p>
+                     )}
                 </div>
             </div>
 
