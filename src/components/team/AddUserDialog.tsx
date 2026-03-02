@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserProfile, Organization } from "@/lib/types";
+import { UserProfile, Organization, UserPosition } from "@/lib/types";
 import { useState, useMemo } from "react";
 import { Loader2 } from "lucide-react";
 import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -27,6 +27,14 @@ const baseSchema = z.object({
   position: z.string().min(1, { message: "Position is required." }),
 });
 
+const getPositionFromKeywords = (title: string): UserPosition => {
+    const lowerCaseTitle = title.toLowerCase();
+    if (lowerCaseTitle.includes('admin')) return 'Organization Administrator';
+    if (lowerCaseTitle.includes('director')) return 'Managing Director';
+    if (lowerCaseTitle.includes('finance')) return 'Finance Manager';
+    if (lowerCaseTitle.includes('hr') || lowerCaseTitle.includes('human resource')) return 'HR Manager';
+    return 'Staff';
+};
 
 interface AddUserDialogProps {
   children: React.ReactNode;
@@ -95,19 +103,16 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
       const newUser = userCredential.user;
 
+      const position = getPositionFromKeywords(values.position);
+
       const userData: Omit<UserProfile, 'id' | 'username'> = {
         orgId: orgId,
         fullName: values.fullName,
         email: values.email.toLowerCase(),
-        position: values.position,
+        position: position,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
         avatarURL: `https://picsum.photos/seed/${newUser.uid}/48/48`,
-        notificationPreferences: {
-          requisitionUpdates: true,
-          taskAssignments: true,
-          announcements: true,
-        }
       };
 
       await updateProfile(newUser, { 

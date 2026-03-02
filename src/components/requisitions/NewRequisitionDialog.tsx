@@ -14,6 +14,7 @@ import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Requisition, UserProfile, ApprovalHistoryEntry } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { useSystemConfig } from "@/hooks/useSystemConfig";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
@@ -27,18 +28,14 @@ interface NewRequisitionDialogProps {
   children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  userProfile: UserProfile | null;
 }
 
-export function NewRequisitionDialog({ children, open, onOpenChange }: NewRequisitionDialogProps) {
+export function NewRequisitionDialog({ children, open, onOpenChange, userProfile }: NewRequisitionDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const { user: authUser } = useUser();
   const { toast } = useToast();
-
-  const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, "users", authUser.uid) : null
-  , [firestore, authUser]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { config: systemConfig } = useSystemConfig(userProfile);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -100,8 +97,6 @@ export function NewRequisitionDialog({ children, open, onOpenChange }: NewRequis
         onOpenChange(false);
     } catch (error: any) {
         console.error("Error creating requisition:", error);
-        // The global error listener will handle permission errors.
-        // For other errors, we can show a generic toast.
         if (error.code !== 'permission-denied') {
             toast({
                 variant: "destructive",
@@ -142,7 +137,7 @@ export function NewRequisitionDialog({ children, open, onOpenChange }: NewRequis
                     name="amount"
                     render={({ field }) => (
                     <FormItem>
-                        <FormLabel>Amount ($)</FormLabel>
+                        <FormLabel>Amount ({systemConfig?.currency_symbol || '$'})</FormLabel>
                         <FormControl><Input type="number" placeholder="2500.00" {...field} /></FormControl>
                         <FormMessage />
                     </FormItem>

@@ -6,10 +6,15 @@ import { doc } from 'firebase/firestore';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Skeleton } from '@/components/ui/skeleton';
+import { useSystemConfig } from '@/hooks/useSystemConfig';
+import { ShieldAlert, MessageSquareOff } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 export default function ChatPage() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
+    const router = useRouter();
     
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
@@ -17,8 +22,10 @@ export default function ChatPage() {
         authUser ? doc(firestore, 'users', authUser.uid) : null,
     [firestore, authUser]);
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+    const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(currentUserProfile);
 
-    if (isProfileLoading) {
+
+    if (isProfileLoading || isConfigLoading) {
         return (
             <div className="h-full flex flex-col">
                  <div className="flex items-center justify-between mb-4">
@@ -38,6 +45,18 @@ export default function ChatPage() {
             </div>
         )
     }
+
+    if (!systemConfig?.chat_enabled) {
+        return (
+            <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                <MessageSquareOff className="w-16 h-16 text-muted-foreground mb-4" />
+                <h1 className="text-2xl font-bold font-headline">Chat is Disabled</h1>
+                <p className="text-muted-foreground mt-2">The internal chat system is currently disabled by your organization.</p>
+                <Button onClick={() => router.push('/dashboard')} className="mt-6">Return to Dashboard</Button>
+            </div>
+       )
+    }
+
 
     return (
         <div className="h-full flex flex-col">

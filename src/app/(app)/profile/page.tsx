@@ -17,6 +17,7 @@ import { Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
+import { usePermissions, Permissions } from '@/hooks/usePermissions';
 
 const profileFormSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -32,7 +33,7 @@ const passwordFormSchema = z.object({
     path: ["confirmPassword"],
 });
 
-function ProfileUpdateForm({ userProfile }: { userProfile: UserProfile }) {
+function ProfileUpdateForm({ userProfile, permissions }: { userProfile: UserProfile, permissions: Permissions }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -45,7 +46,10 @@ function ProfileUpdateForm({ userProfile }: { userProfile: UserProfile }) {
         }
     });
 
+    const canEdit = permissions.canEditOwnProfile;
+
     const onSubmit = (values: z.infer<typeof profileFormSchema>) => {
+        if (!canEdit) return;
         setIsSubmitting(true);
         const userRef = doc(firestore, 'users', userProfile.id);
         updateDocumentNonBlocking(userRef, {
@@ -62,14 +66,14 @@ function ProfileUpdateForm({ userProfile }: { userProfile: UserProfile }) {
                 <FormField control={form.control} name="fullName" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Full Name</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <FormControl><Input {...field} disabled={!canEdit} /></FormControl>
                         <FormMessage />
                     </FormItem>
                 )} />
                 <FormField control={form.control} name="username" render={({ field }) => (
                     <FormItem>
                         <FormLabel>Username</FormLabel>
-                        <FormControl><Input {...field} /></FormControl>
+                        <FormControl><Input {...field} disabled={!canEdit} /></FormControl>
                         <FormDescription>This will be used for logging in.</FormDescription>
                         <FormMessage />
                     </FormItem>
@@ -79,10 +83,12 @@ function ProfileUpdateForm({ userProfile }: { userProfile: UserProfile }) {
                     <Input disabled value={userProfile.email} />
                     <FormDescription>Email address cannot be changed.</FormDescription>
                 </FormItem>
-                <Button type="submit" disabled={isSubmitting}>
-                    {isSubmitting && <Loader2 className="animate-spin" />}
-                    Save Changes
-                </Button>
+                {canEdit && (
+                  <Button type="submit" disabled={isSubmitting}>
+                      {isSubmitting && <Loader2 className="animate-spin" />}
+                      Save Changes
+                  </Button>
+                )}
             </form>
         </Form>
     )
@@ -163,6 +169,7 @@ export default function ProfilePage() {
   , [firestore, authUser]);
   
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const permissions = usePermissions(userProfile);
 
   return (
     <div className="space-y-8">
@@ -202,7 +209,7 @@ export default function ProfilePage() {
               <CardDescription>This information may be visible to others in your organization.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isProfileLoading ? <Skeleton className="h-64 w-full" /> : userProfile && <ProfileUpdateForm userProfile={userProfile} />}
+                {isProfileLoading ? <Skeleton className="h-64 w-full" /> : userProfile && <ProfileUpdateForm userProfile={userProfile} permissions={permissions} />}
             </CardContent>
           </Card>
         </TabsContent>

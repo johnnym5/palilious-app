@@ -10,6 +10,7 @@ import { format } from 'date-fns';
 import { Skeleton } from '../ui/skeleton';
 import { RequisitionDetailDialog } from './RequisitionDetailDialog';
 import { Inbox } from 'lucide-react';
+import { useSystemConfig } from '@/hooks/useSystemConfig';
 
 interface RequisitionTableProps {
     filter: string;
@@ -40,12 +41,10 @@ const getQueryForFilter = (
             if (inboxStatuses.length > 0) {
               filterClauses = [where('status', 'in', [...new Set(inboxStatuses)])];
             } else {
-              // If user has an "Inbox" tab but no permissions, show nothing.
               filterClauses = [where('status', '==', 'NO_RESULTS')]; 
             }
             break;
         case "All":
-             // No extra filters needed for 'All' if permissions are high enough
             break;
         case "Pending":
             filterClauses = [where('status', 'in', pendingStatuses)];
@@ -60,7 +59,6 @@ const getQueryForFilter = (
             filterClauses = [where('status', '==', 'REJECTED')];
             break;
         default:
-            // Default to my requests if filter is unknown
              filterClauses = [where('createdBy', '==', userId)];
             break;
     }
@@ -71,6 +69,7 @@ const getQueryForFilter = (
 export function RequisitionTable({ filter, userProfile, isSuperAdmin, permissions }: RequisitionTableProps) {
     const firestore = useFirestore();
     const [selectedRequest, setSelectedRequest] = useState<Requisition | null>(null);
+    const { config: systemConfig } = useSystemConfig(userProfile);
 
     const requisitionsQuery = useMemoFirebase((): Query<DocumentData> | null => {
         if (!firestore || !userProfile) return null;
@@ -82,6 +81,8 @@ export function RequisitionTable({ filter, userProfile, isSuperAdmin, permission
     }, [firestore, filter, userProfile, isSuperAdmin, permissions]);
 
     const { data: requisitions, isLoading } = useCollection<Requisition>(requisitionsQuery);
+
+    const currencySymbol = systemConfig?.currency_symbol || '$';
 
     return (
         <>
@@ -123,7 +124,7 @@ export function RequisitionTable({ filter, userProfile, isSuperAdmin, permission
                                 <TableCell className="font-mono text-xs text-muted-foreground">{req.serialNo}</TableCell>
                                 <TableCell className="font-medium">{req.title}</TableCell>
                                 <TableCell className="text-muted-foreground">{req.creatorName}</TableCell>
-                                <TableCell className="text-right font-semibold text-primary">${req.amount.toFixed(2)}</TableCell>
+                                <TableCell className="text-right font-semibold text-primary">{currencySymbol}{req.amount.toFixed(2)}</TableCell>
                                 <TableCell className="text-muted-foreground">{format(new Date(req.createdAt), "dd MMM, yyyy")}</TableCell>
                                 <TableCell><RequisitionStatusBadge status={req.status} /></TableCell>
                             </TableRow>
@@ -139,6 +140,7 @@ export function RequisitionTable({ filter, userProfile, isSuperAdmin, permission
                     currentUserProfile={userProfile}
                     isSuperAdmin={isSuperAdmin}
                     permissions={permissions}
+                    currencySymbol={currencySymbol}
                 />
             )}
         </>

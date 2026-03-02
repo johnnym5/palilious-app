@@ -1,6 +1,7 @@
 'use client';
 import type { UserProfile, UserPosition } from '@/lib/types';
 import { useSuperAdmin } from './useSuperAdmin';
+import { useSystemConfig } from './useSystemConfig';
 
 export interface Permissions {
   canApproveHR: boolean;
@@ -10,7 +11,7 @@ export interface Permissions {
   canManageStaff: boolean;
   canManageCompany: boolean;
   canClockIn: boolean;
-  // Add other permissions as needed
+  canEditOwnProfile: boolean;
 }
 
 const positionPermissions: Record<UserPosition, Partial<Permissions>> = {
@@ -45,10 +46,12 @@ const defaultPermissions: Permissions = {
   canManageStaff: false,
   canManageCompany: false,
   canClockIn: true,
+  canEditOwnProfile: true,
 };
 
 export function usePermissions(userProfile: UserProfile | null) {
   const { isSuperAdmin } = useSuperAdmin();
+  const { config: systemConfig } = useSystemConfig(userProfile);
 
   if (isSuperAdmin) {
     return { 
@@ -59,7 +62,8 @@ export function usePermissions(userProfile: UserProfile | null) {
         canDisburse: true,
         canManageStaff: true,
         canManageCompany: true,
-        canClockIn: true, // Super admin can do everything
+        canClockIn: true,
+        canEditOwnProfile: true,
     };
   }
 
@@ -69,8 +73,12 @@ export function usePermissions(userProfile: UserProfile | null) {
 
   const userPermissions = positionPermissions[userProfile.position] || {};
 
+  // Staff can only edit their profile if the system config allows it.
+  const canEditOwnProfile = userProfile.position !== 'Staff' || (systemConfig?.allow_self_edit ?? true);
+
   return {
     ...defaultPermissions,
     ...userPermissions,
+    canEditOwnProfile,
   };
 }

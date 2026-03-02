@@ -14,6 +14,18 @@ export interface SystemConfig {
   finance_access: boolean;
   admin_tools: boolean;
   attendance_strict: boolean;
+  chat_enabled: boolean;
+  allow_self_edit: boolean;
+  office_coordinates?: {
+    lat: number;
+    lng: number;
+  } | null;
+  work_hours?: {
+    start: string; // "HH:mm"
+    end: string;   // "HH:mm"
+  };
+  currency_symbol: string;
+  branding_color?: string | null; // Hex code
 }
 
 export interface UserProfile {
@@ -26,11 +38,6 @@ export interface UserProfile {
   avatarURL?: string;
   joinedDate: string; // ISO String for timestamp
   status?: UserStatus;
-  notificationPreferences?: {
-    requisitionUpdates?: boolean;
-    taskAssignments?: boolean;
-    announcements?: boolean;
-  };
 }
 
 export type AttendanceStatus = "PENDING" | "APPROVED" | "REJECTED";

@@ -1,20 +1,40 @@
 'use client';
-import { useUser } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import AppSidebar from '@/components/layout/AppSidebar';
 import AppHeader from '@/components/layout/AppHeader';
+import { doc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
+import { useSystemConfig } from '@/hooks/useSystemConfig';
+import { hexToHslString } from '@/lib/utils';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const firestore = useFirestore();
 
+  const userProfileRef = useMemoFirebase(() => 
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const { config } = useSystemConfig(userProfile);
+  
   useEffect(() => {
     if (!isUserLoading && !user) {
       router.replace('/login');
     }
   }, [user, isUserLoading, router]);
+
+  useEffect(() => {
+    if (config?.branding_color) {
+      const hslString = hexToHslString(config.branding_color);
+      if (hslString) {
+        document.documentElement.style.setProperty('--primary', hslString);
+      }
+    }
+  }, [config]);
 
   if (isUserLoading || !user) {
     return (

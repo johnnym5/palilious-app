@@ -1,8 +1,8 @@
 'use client';
 
-import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
-import { doc } from 'firebase/firestore';
-import type { Organization, UserProfile } from '@/lib/types';
+import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useCollection } from '@/firebase';
+import { collection, doc, query, where } from 'firebase/firestore';
+import type { Organization, UserProfile, SystemConfig } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
@@ -16,6 +16,8 @@ import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/usePermissions';
 import { useRouter } from 'next/navigation';
+import { useSystemConfig } from '@/hooks/useSystemConfig';
+import { SystemConfigForm } from '@/components/company/SystemConfigForm';
 
 const orgFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
@@ -33,7 +35,6 @@ function CompanySettingsForm({ organization }: { organization: Organization }) {
         }
     });
     
-    // This effect ensures the form is reset if the organization data from Firestore changes
     useEffect(() => {
         form.reset({ name: organization.name.charAt(0).toUpperCase() + organization.name.slice(1) });
     }, [organization, form]);
@@ -84,6 +85,8 @@ export default function CompanySettingsPage() {
   [firestore, userProfile?.orgId]);
   const { data: organization, isLoading: isOrgLoading } = useDoc<Organization>(orgRef);
   
+  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile);
+  
   if (!isProfileLoading && !permissions.canManageCompany) {
       return (
            <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -95,21 +98,34 @@ export default function CompanySettingsPage() {
       )
   }
 
+  const isLoading = isProfileLoading || isOrgLoading || isConfigLoading;
+
   return (
     <div className="space-y-6">
        <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">Company Settings</h1>
             <p className="text-muted-foreground">Manage your organization's details and settings.</p>
         </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Organization Profile</CardTitle>
-          <CardDescription>Manage your organization's public name.</CardDescription>
-        </CardHeader>
-        <CardContent>
-            {isOrgLoading || isProfileLoading ? <Skeleton className="h-40 w-full" /> : (organization ? <CompanySettingsForm organization={organization} /> : <p>Organization not found.</p>)}
-        </CardContent>
-      </Card>
+      <div className="grid gap-6 lg:grid-cols-2 items-start">
+        <Card>
+            <CardHeader>
+            <CardTitle>Organization Profile</CardTitle>
+            <CardDescription>Manage your organization's public name.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? <Skeleton className="h-40 w-full" /> : (organization ? <CompanySettingsForm organization={organization} /> : <p>Organization not found.</p>)}
+            </CardContent>
+        </Card>
+        <Card>
+            <CardHeader>
+            <CardTitle>System Configuration</CardTitle>
+            <CardDescription>Manage global feature toggles and operational settings.</CardDescription>
+            </CardHeader>
+            <CardContent>
+                {isLoading ? <Skeleton className="h-96 w-full" /> : (systemConfig ? <SystemConfigForm systemConfig={systemConfig} /> : <p>System configuration not found.</p>)}
+            </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

@@ -13,9 +13,9 @@
           "type": "string",
           "description": "User's unique username."
         },
-        "displayName": {
+        "fullName": {
           "type": "string",
-          "description": "User's display name."
+          "description": "User's full name."
         },
         "position": {
           "type": "string",
@@ -29,27 +29,12 @@
             "OFFLINE"
           ],
           "description": "User's current status."
-        },
-        "notificationPreferences": {
-          "type": "object",
-          "description": "User's notification settings.",
-          "properties": {
-            "requisitionUpdates": {
-              "type": "boolean"
-            },
-            "taskAssignments": {
-              "type": "boolean"
-            },
-            "announcements": {
-              "type": "boolean"
-            }
-          }
         }
       },
       "required": [
         "orgId",
         "username",
-        "displayName",
+        "fullName",
         "position"
       ]
     },
@@ -192,30 +177,39 @@
     "SystemConfig": {
       "title": "SystemConfig",
       "type": "object",
-      "description": "Stores system-wide configuration toggles for an organization.",
+      "description": "Stores system-wide configuration for an organization.",
       "properties": {
-        "orgId": {
-          "type": "string",
-          "description": "The ID of the organization this config applies to."
+        "orgId": { "type": "string" },
+        "finance_access": { "type": "boolean", "description": "Toggles visibility of the Requisitions module." },
+        "admin_tools": { "type": "boolean", "description": "Toggles visibility of Team Management for non-admins." },
+        "attendance_strict": { "type": "boolean", "description": "Toggles strict mode for attendance (e.g., Geofencing)." },
+        "chat_enabled": { "type": "boolean", "description": "Globally enable or disable the internal messaging system." },
+        "allow_self_edit": { "type": "boolean", "description": "Toggle whether staff can edit their own profile details." },
+        "office_coordinates": {
+          "type": "object",
+          "properties": {
+            "lat": { "type": "number" },
+            "lng": { "type": "number" }
+          }
         },
-        "finance_access": {
-          "type": "boolean",
-          "description": "Toggles visibility of the Requisitions module."
+        "work_hours": {
+          "type": "object",
+          "properties": {
+            "start": { "type": "string", "format": "time" },
+            "end": { "type": "string", "format": "time" }
+          }
         },
-        "admin_tools": {
-          "type": "boolean",
-          "description": "Toggles visibility of the Team Management module for non-admins."
-        },
-        "attendance_strict": {
-          "type": "boolean",
-          "description": "Toggles strict mode for attendance (e.g., Geofencing)."
-        }
+        "currency_symbol": { "type": "string" },
+        "branding_color": { "type": "string", "description": "A hex code for the primary brand color." }
       },
       "required": [
         "orgId",
         "finance_access",
         "admin_tools",
-        "attendance_strict"
+        "attendance_strict",
+        "chat_enabled",
+        "allow_self_edit",
+        "currency_symbol"
       ]
     },
     "Chat": {

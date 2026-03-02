@@ -53,6 +53,7 @@ interface RequisitionDetailDialogProps {
   currentUserProfile: UserProfile
   isSuperAdmin: boolean
   permissions: Permissions
+  currencySymbol: string
 }
 
 const WORKFLOW: Record<
@@ -74,6 +75,7 @@ export function RequisitionDetailDialog({
   currentUserProfile,
   isSuperAdmin,
   permissions,
+  currencySymbol
 }: RequisitionDetailDialogProps) {
   const firestore = useFirestore()
   const { toast } = useToast()
@@ -224,7 +226,7 @@ export function RequisitionDetailDialog({
                   <Banknote className="h-4 w-4" /> Amount
                 </span>
                 <span className="font-mono text-lg font-semibold text-primary">
-                  ${requisition.amount.toFixed(2)}
+                  {currencySymbol}{requisition.amount.toFixed(2)}
                 </span>
               </div>
               <div className="flex items-center justify-between">

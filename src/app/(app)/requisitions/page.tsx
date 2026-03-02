@@ -39,7 +39,6 @@ const getVisibleTabs = (permissions: Permissions, isStaff: boolean) => {
         tabs.add("Rejected");
     }
     
-    // A consistent order for the tabs
     const orderedTabs = ["My Requests", "Inbox", "All", "Pending", "Approved", "Paid", "Rejected"];
     return orderedTabs.filter(tab => tabs.has(tab));
 };
@@ -59,12 +58,10 @@ export default function RequisitionsPage() {
   const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile);
 
   const permissions = usePermissions(userProfile);
-  // A "staff" user is defined as someone without any special requisition approval or management permissions.
   const isStaff = !permissions.canApproveHR && !permissions.canApproveFinance && !permissions.canApproveMD && !permissions.canManageStaff;
   const visibleTabs = getVisibleTabs(permissions, isStaff);
   const [activeTab, setActiveTab] = useState(visibleTabs[0]);
   
-  // Effect to reset tab if it's no longer visible after profile loads
   useState(() => {
     if (!visibleTabs.includes(activeTab)) {
         setActiveTab(visibleTabs[0] || "My Requests");
@@ -107,7 +104,7 @@ export default function RequisitionsPage() {
             </CardContent>
           </Card>
 
-          <NewRequisitionDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen}>
+          <NewRequisitionDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen} userProfile={userProfile}>
             <Button 
                 className="absolute bottom-0 right-0 h-16 w-16 rounded-full shadow-lg shadow-primary/30" 
                 onClick={() => setIsNewRequestOpen(true)}

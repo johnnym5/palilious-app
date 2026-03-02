@@ -97,6 +97,9 @@ export default function AppSidebar({ isMobile = false }) {
             if (item.href === "/requisitions" && !isConfigLoading && !systemConfig?.finance_access) {
                 return null;
             }
+            if (item.href === "/chat" && !isConfigLoading && !systemConfig?.chat_enabled) {
+                return null;
+            }
             return <NavLink key={item.href} {...item} />
           })}
           

@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { collection, doc } from "firebase/firestore";
-import type { Organization, UserProfile, SystemConfig } from "@/lib/types";
+import type { Organization, UserProfile, SystemConfig, UserPosition } from "@/lib/types";
 
 const formSchema = z.object({
   organizationName: z.string().min(1, { message: "Organization name is required." }),
@@ -31,6 +31,15 @@ const formSchema = z.object({
 });
 
 type FormData = z.infer<typeof formSchema>;
+
+const getPositionFromKeywords = (title: string): UserPosition => {
+    const lowerCaseTitle = title.toLowerCase();
+    if (lowerCaseTitle.includes('admin')) return 'Organization Administrator';
+    if (lowerCaseTitle.includes('director')) return 'Managing Director';
+    if (lowerCaseTitle.includes('finance')) return 'Finance Manager';
+    if (lowerCaseTitle.includes('hr') || lowerCaseTitle.includes('human resource')) return 'HR Manager';
+    return 'Staff';
+};
 
 export function RegisterForm() {
   const auth = useAuth();
@@ -83,19 +92,26 @@ export function RegisterForm() {
           orgId: orgDocRef.id,
           finance_access: true,
           admin_tools: true,
-          attendance_strict: false, // Default to false as it's not implemented
+          attendance_strict: false,
+          chat_enabled: true,
+          allow_self_edit: true,
+          office_coordinates: null,
+          work_hours: { start: '09:00', end: '17:00' },
+          currency_symbol: '$',
+          branding_color: null,
       };
       await addDocumentNonBlocking(configCollection, configData);
 
       // 3. Create the UserProfile document for the ORG_ADMIN
       const userDocRef = doc(firestore, "users", newUser.uid);
-      // Store email and username as lowercase for case-insensitive lookup
+      const position = getPositionFromKeywords(values.fullName); // Using fullName as a proxy for title
+      
       const userProfileData: Omit<UserProfile, 'id'> = {
         orgId: orgDocRef.id,
         email: values.email.toLowerCase(),
         username: values.username.toLowerCase(),
         fullName: values.fullName,
-        position: 'Organization Administrator',
+        position: position,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
         avatarURL: `https://picsum.photos/seed/${newUser.uid}/48/48`,
@@ -113,7 +129,6 @@ export function RegisterForm() {
         description: `Organization "${values.organizationName}" created.`,
       });
 
-      // Redirect is handled by the useEffect on auth state change
     } catch (error: any) {
       console.error("Registration Error: ", error);
       toast({
@@ -151,7 +166,7 @@ export function RegisterForm() {
             <FormItem>
               <FormLabel>Your Full Name</FormLabel>
               <FormControl>
-                <Input placeholder="John Doe" {...field} />
+                <Input placeholder="John Doe, Admin" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>
