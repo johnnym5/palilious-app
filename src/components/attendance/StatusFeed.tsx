@@ -4,9 +4,10 @@ import { ScrollArea } from "../ui/scroll-area";
 import type { UserProfile } from "@/lib/types";
 import type { Permissions } from "@/hooks/usePermissions";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy } from "firebase/firestore";
+import { collection, query, where } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { useMemo } from "react";
 
 interface StatusFeedProps {
   userProfile: UserProfile | null;
@@ -16,17 +17,33 @@ interface StatusFeedProps {
 export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
   const firestore = useFirestore();
 
+  // Simplified query to avoid composite index requirement
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !userProfile || !permissions.canManageStaff) return null;
     return query(
       collection(firestore, 'users'),
-      where('orgId', '==', userProfile.orgId),
-      orderBy('status', 'desc'), // Show ONLINE users first
-      orderBy('fullName', 'asc')
+      where('orgId', '==', userProfile.orgId)
     );
   }, [firestore, userProfile, permissions.canManageStaff]);
 
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+
+  // Perform sorting on the client-side
+  const sortedUsers = useMemo(() => {
+    if (!users) return [];
+    return [...users].sort((a, b) => {
+      // 'ONLINE' users come first
+      if (a.status === 'ONLINE' && b.status !== 'ONLINE') {
+        return -1;
+      }
+      if (a.status !== 'ONLINE' && b.status === 'ONLINE') {
+        return 1;
+      }
+      // Then sort by full name alphabetically
+      return a.fullName.localeCompare(b.fullName);
+    });
+  }, [users]);
+
 
   if (!permissions.canManageStaff) {
     return (
@@ -60,7 +77,7 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
                         </div>
                     </div>
                ))}
-               {!isLoading && users?.map(user => (
+               {!isLoading && sortedUsers.map(user => (
                    <div key={user.id} className="flex items-center gap-4">
                        <Avatar className="relative h-10 w-10">
                             <AvatarImage src={user.avatarURL} alt={user.fullName} />
@@ -77,7 +94,7 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
                        </div>
                    </div>
                ))}
-                {!isLoading && users?.length === 0 && (
+                {!isLoading && sortedUsers.length === 0 && (
                      <p className="text-sm text-muted-foreground text-center pt-8">No staff members found.</p>
                 )}
             </div>
