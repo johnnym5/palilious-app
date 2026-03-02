@@ -109,13 +109,26 @@ export interface Announcement {
 
 export interface Chat {
     id: string;
+    orgId: string;
     participants: string[]; // userIds
-    lastMessage?: string;
+    participantProfiles: { // Map userId to a mini profile
+        [key: string]: {
+            fullName: string;
+            avatarURL?: string;
+        }
+    };
+    lastMessage?: {
+        text: string;
+        senderId: string;
+        timestamp: string;
+    };
     updatedAt: string; // ISO String for timestamp
 }
 
 export interface ChatMessage {
-    id:string;
+    id: string;
+    chatId: string;
+    orgId: string;
     senderId: string;
     content: string;
     timestamp: string; // ISO String for timestamp

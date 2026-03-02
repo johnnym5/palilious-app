@@ -197,6 +197,45 @@
         "admin_tools",
         "attendance_strict"
       ]
+    },
+    "Chat": {
+        "title": "Chat",
+        "type": "object",
+        "description": "Represents a chat conversation between two or more users.",
+        "properties": {
+            "orgId": { "type": "string" },
+            "participants": {
+                "type": "array",
+                "items": { "type": "string" },
+                "description": "Array of user IDs participating in the chat."
+            },
+            "participantProfiles": {
+                "type": "object"
+            },
+            "lastMessage": {
+                "type": "object",
+                "properties": {
+                    "text": { "type": "string" },
+                    "senderId": { "type": "string" },
+                    "timestamp": { "type": "string", "format": "date-time" }
+                }
+            },
+            "updatedAt": { "type": "string", "format": "date-time" }
+        },
+        "required": ["orgId", "participants", "participantProfiles", "updatedAt"]
+    },
+    "ChatMessage": {
+        "title": "ChatMessage",
+        "type": "object",
+        "description": "Represents a single message within a chat.",
+        "properties": {
+            "chatId": { "type": "string" },
+            "orgId": { "type": "string" },
+            "senderId": { "type": "string" },
+            "content": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" }
+        },
+        "required": ["chatId", "orgId", "senderId", "content", "timestamp"]
     }
   },
   "auth": {
@@ -283,7 +322,43 @@
             }
           ]
         }
-      }
+      },
+      {
+        "path": "/chats/{chatId}",
+        "definition": {
+            "entityName": "Chat",
+            "schema": {
+            "$ref": "#/entities/Chat"
+            },
+            "description": "Stores chat conversations.",
+            "params": [
+            {
+                "name": "chatId",
+                "description": "The chat's unique ID."
+            }
+            ]
+        }
+    },
+    {
+        "path": "/chats/{chatId}/messages/{messageId}",
+        "definition": {
+            "entityName": "ChatMessage",
+            "schema": {
+            "$ref": "#/entities/ChatMessage"
+            },
+            "description": "Stores messages for a specific chat.",
+            "params": [
+            {
+                "name": "chatId",
+                "description": "The chat's unique ID."
+            },
+            {
+                "name": "messageId",
+                "description": "The message's unique ID."
+            }
+            ]
+        }
+    }
     ]
   }
 }
