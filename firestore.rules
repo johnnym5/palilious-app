@@ -1,136 +1,19 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // --------------------------------------------------------------------
-    // Helper Functions
-    // --------------------------------------------------------------------
-
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    function isOwner(userId) {
-      return isSignedIn() && request.auth.uid == userId;
-    }
-
-    // Get a user's data document.
-    function getUserData(userId) {
-      return get(/databases/$(database)/documents/users/$(userId)).data;
-    }
-    
-    // Get the current user's data document.
-    function getcurrentUserData() {
-      return getUserData(request.auth.uid);
-    }
-    
-    // Check if the user has a specific role in their organization.
-    function isRoleInOrg(role) {
-      return isSignedIn() && getcurrentUserData().role == role;
-    }
-
-    // Check if the user has one of a list of roles in their organization.
-    function isOneOfRolesInOrg(roles) {
-      return isSignedIn() && getcurrentUserData().role in roles;
-    }
-    
-    // Check if a resource belongs to the current user's organization.
-    function isRequestingOwnOrg(resource) {
-       return resource.data.orgId == getcurrentUserData().orgId;
-    }
-
-    // --------------------------------------------------------------------
-    // Collection Rules
-    // --------------------------------------------------------------------
-    
-    /**
-     * @description Organizations. Only the owner can manage their organization.
-     * @path /organizations/{orgId}
-     */
-    match /organizations/{orgId} {
-      allow read: if isSignedIn();
-      allow create: if isOwner(request.resource.data.ownerId);
-      allow update: if isOwner(resource.data.ownerId);
-      allow delete: if false; // Disallow deletion for safety
-    }
-
-    /**
-     * @description User profiles. Users can read their own profile, or any profile in their own org.
-     * ORG_ADMINs can manage users within their org.
-     * @path /users/{userId}
-     */
-    match /users/{userId} {
-      allow get: if isSignedIn() && (isOwner(userId) || isRequestingOwnOrg(resource));
-      allow list: if isSignedIn(); // Requires client-side filtering by orgId
-      allow create: if isOwner(userId) || isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
-      allow update: if isOwner(userId) || isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
-      allow delete: if isOneOfRolesInOrg(['ORG_ADMIN', 'HR', 'MD']);
-    }
-
-    /**
-     * @description Attendance records. Users can manage their own records.
-     * HR/MD can view all records within their org.
-     * @path /attendance/{attendanceId}
-     */
-    match /attendance/{attendanceId} {
-      allow get: if isSignedIn() && isRequestingOwnOrg(resource) && (isOwner(resource.data.userId) || isOneOfRolesInOrg(['HR', 'MD']));
-      allow list: if isSignedIn(); // Requires client-side filtering by orgId
-      allow create: if isSignedIn() && isOwner(request.resource.data.userId) && request.resource.data.orgId == getcurrentUserData().orgId;
-      allow update, delete: if isSignedIn() && isOwner(resource.data.userId);
-    }
-
-    /**
-     * @description Financial requisitions. Users can access requisitions within their own org.
-     * @path /requisitions/{reqId}
-     */
-    match /requisitions/{reqId} {
-      allow get: if isSignedIn() && isRequestingOwnOrg(resource);
-      allow list: if isSignedIn(); // Requires client-side filtering by orgId
-      allow create: if isSignedIn() && isOwner(request.resource.data.createdBy) && request.resource.data.orgId == getcurrentUserData().orgId;
-      allow update: if isSignedIn() && isRequestingOwnOrg(resource) && (isOwner(resource.data.createdBy) || isOneOfRolesInOrg(['HR', 'FINANCE', 'MD']));
-      allow delete: if isSignedIn() && isRequestingOwnOrg(resource) && isRoleInOrg('MD');
-    }
-
-    /**
-     * @description Tasks. Users can access tasks within their own org.
-     * @path /tasks/{taskId}
-     */
-    match /tasks/{taskId} {
-      allow get: if isSignedIn() && isRequestingOwnOrg(resource);
-      allow list: if isSignedIn(); // Requires client-side filtering by orgId
-      allow create: if isSignedIn() && request.resource.data.orgId == getcurrentUserData().orgId;
-      allow update: if isSignedIn() && isRequestingOwnOrg(resource) && (isOwner(resource.data.assignedTo) || isRoleInOrg('MD'));
-      allow delete: if isSignedIn() && isRequestingOwnOrg(resource) && (isOwner(resource.data.assignedTo) || isRoleInOrg('MD'));
-    }
-
-    /**
-     * @description Company-wide announcements. Readable by all in the org, writable by HR.
-     * @path /announcements/{postId}
-     */
-    match /announcements/{postId} {
-      allow get, list: if isSignedIn(); // Requires client-side filtering by orgId
-      allow create, update, delete: if isSignedIn() && isRoleInOrg('HR') && request.resource.data.orgId == getcurrentUserData().orgId;
-    }
-
-    /**
-     * @description Chat conversations. Only participants can access.
-     * @path /chats/{chatId}
-     */
-    match /chats/{chatId} {
-      allow get, update: if request.auth.uid in resource.data.participants;
-      allow list: if isSignedIn(); // Relies on client-side queries
-      allow create: if request.auth.uid in request.resource.data.participants;
-      allow delete: if false;
-
-      /**
-       * @description Messages within a chat.
-       * @path /chats/{chatId}/messages/{messageId}
-       */
-      match /messages/{messageId} {
-        allow get, list: if request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-        allow create: if isOwner(request.resource.data.senderId) && request.auth.uid in get(/databases/$(database)/documents/chats/$(chatId)).data.participants;
-        allow update, delete: if isOwner(resource.data.senderId);
-      }
+    // This rule allows anyone with your Firestore database reference to view, edit,
+    // and delete all data in your Firestore database. It is useful for getting
+    // started, but it is configured to expire after 30 days because it
+    // leaves your app open to attackers. At that time, all client
+    // requests to your Firestore database will be denied.
+    //
+    // Make sure to write security rules for your app before that time, or else
+    // all client requests to your Firestore database will be denied until you Update
+    // your rules
+    match /{document=**} {
+      allow read, write: if request.time < timestamp.date(2026, 4, 1);
     }
   }
 }
