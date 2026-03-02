@@ -15,14 +15,17 @@ import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useSearchParams } from 'next/navigation';
 
 
 export default function TeamPage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
+  const searchParams = useSearchParams();
   const [isAddUserOpen, setAddUserOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
   const { isSuperAdmin } = useSuperAdmin();
+  const impersonatedOrgId = searchParams.get('orgId');
 
   const userProfileRef = useMemoFirebase(
     () => (authUser ? doc(firestore, 'users', authUser.uid) : null),
@@ -34,17 +37,25 @@ export default function TeamPage() {
   const usersQuery = useMemoFirebase(
     () => {
       if (!firestore) return null;
+      // Super Admin viewing a specific org from URL
+      if (isSuperAdmin && impersonatedOrgId) {
+        return query(collection(firestore, 'users'), where('orgId', '==', impersonatedOrgId));
+      }
+      // Super Admin on team page without specific org (shows all)
       if (isSuperAdmin) {
         return collection(firestore, 'users');
       }
+      // Regular user viewing their own org
       if (userProfile?.orgId) {
         return query(collection(firestore, 'users'), where('orgId', '==', userProfile.orgId));
       }
       return null;
     },
-    [firestore, userProfile, isSuperAdmin]
+    [firestore, userProfile, isSuperAdmin, impersonatedOrgId]
   );
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+
+  const showOrgIdColumn = isSuperAdmin && !impersonatedOrgId;
 
   return (
     <div className="space-y-6">
@@ -72,7 +83,7 @@ export default function TeamPage() {
                 <TableHeader>
                     <TableRow>
                       <TableHead>Name</TableHead>
-                      {isSuperAdmin && <TableHead>Organization ID</TableHead>}
+                      {showOrgIdColumn && <TableHead>Organization ID</TableHead>}
                       <TableHead>Position</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Joined</TableHead>
@@ -84,7 +95,7 @@ export default function TeamPage() {
                       Array.from({ length: 5 }).map((_, i) => (
                         <TableRow key={i}>
                           <TableCell><Skeleton className="h-8 w-48" /></TableCell>
-                           {isSuperAdmin && <TableCell><Skeleton className="h-8 w-32" /></TableCell>}
+                           {showOrgIdColumn && <TableCell><Skeleton className="h-8 w-32" /></TableCell>}
                           <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-8 w-32" /></TableCell>
@@ -106,7 +117,7 @@ export default function TeamPage() {
                             </div>
                           </div>
                         </TableCell>
-                        {isSuperAdmin && <TableCell><p className="text-xs text-muted-foreground font-mono">{user.orgId}</p></TableCell>}
+                        {showOrgIdColumn && <TableCell><p className="text-xs text-muted-foreground font-mono">{user.orgId}</p></TableCell>}
                         <TableCell><Badge variant="secondary">{user.position}</Badge></TableCell>
                         <TableCell><Badge variant={user.status === 'ONLINE' ? 'default' : 'outline'}>{user.status}</Badge></TableCell>
                         <TableCell>{format(new Date(user.joinedDate), "PPP")}</TableCell>
@@ -121,7 +132,7 @@ export default function TeamPage() {
                     ))}
                     {!areUsersLoading && users?.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="h-24 text-center">
+                        <TableCell colSpan={showOrgIdColumn ? 6 : 5} className="h-24 text-center">
                             No staff members found.
                         </TableCell>
                       </TableRow>
