@@ -194,7 +194,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                {task.attachmentUrl && (
                   <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2 text-muted-foreground">
-                      <LinkIcon className="h-4 w-4" /> Attachment
+                      <LinkIcon className="h-4 w-4" /> Document
                     </span>
                     <Link href={task.attachmentUrl} target="_blank" rel="noopener noreferrer" className='font-medium text-primary hover:underline truncate max-w-[100px]'>
                         View File

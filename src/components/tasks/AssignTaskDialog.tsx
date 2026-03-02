@@ -130,7 +130,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                     <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Add more context about the mission..." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
                 <FormField control={form.control} name="attachmentUrl" render={({ field }) => (
-                    <FormItem><FormLabel>Attachment URL (Optional)</FormLabel><FormControl><Input placeholder="https://example.com/spec.pdf" {...field} /></FormControl><FormMessage /></FormItem>
+                    <FormItem><FormLabel>Link to Document (Optional)</FormLabel><FormControl><Input placeholder="Paste a link to your Excel, Word, or PDF file" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
 
                 <div className="grid grid-cols-2 gap-4">
@@ -157,7 +157,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                 </div>
                  <FormField control={form.control} name="dueDate" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel>
-                        <Popover modal>
+                        <Popover>
                             <PopoverTrigger asChild>
                                 <FormControl>
                                 <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
