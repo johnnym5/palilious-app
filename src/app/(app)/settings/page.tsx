@@ -50,7 +50,6 @@ function SettingsForm({ userProfile }: { userProfile: UserProfile }) {
                         </Label>
                         <Switch 
                             id="task-assignments" 
-                            disabled // Feature not yet implemented
                             checked={userProfile.notificationPreferences?.taskAssignments ?? false}
                             onCheckedChange={(checked) => handleNotificationChange('taskAssignments', checked)}
                         />
@@ -64,7 +63,6 @@ function SettingsForm({ userProfile }: { userProfile: UserProfile }) {
                         </Label>
                         <Switch 
                             id="announcements" 
-                            disabled // Feature not yet implemented
                             checked={userProfile.notificationPreferences?.announcements ?? false}
                             onCheckedChange={(checked) => handleNotificationChange('announcements', checked)}
                         />

@@ -38,6 +38,11 @@ export interface UserProfile {
   avatarURL?: string;
   joinedDate: string; // ISO String for timestamp
   status?: UserStatus;
+  notificationPreferences?: {
+    requisitionUpdates?: boolean;
+    taskAssignments?: boolean;
+    announcements?: boolean;
+  };
 }
 
 export type AttendanceStatus = "PENDING" | "APPROVED" | "REJECTED";

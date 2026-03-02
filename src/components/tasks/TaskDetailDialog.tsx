@@ -4,6 +4,7 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -12,17 +13,28 @@ import type { Permissions } from '@/hooks/usePermissions';
 import { format, formatDistanceToNow } from 'date-fns';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { ScrollArea } from '../ui/scroll-area';
-import { Calendar, CheckSquare, Clock, HardDriveDownload, History, Info, Link as LinkIcon, User, Zap, Target, Plus } from 'lucide-react';
+import { Calendar, CheckSquare, Clock, HardDriveDownload, History, Info, Link as LinkIcon, User, Zap, Target, Plus, Trash2 } from 'lucide-react';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
 import { useState } from 'react';
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
+import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
 import { cn } from '@/lib/utils';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 
 interface TaskDetailDialogProps {
   task: Task;
@@ -45,6 +57,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
   const firestore = useFirestore();
   const [subTasks, setSubTasks] = useState<SubTask[]>(task.subTasks || []);
   const [newSubTask, setNewSubTask] = useState('');
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
   const handleSubTaskToggle = (subTaskId: string) => {
     const updatedSubTasks = subTasks.map(st => 
@@ -66,7 +79,14 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
       const taskRef = doc(firestore, 'tasks', task.id);
       updateDocumentNonBlocking(taskRef, { subTasks: updatedSubTasks });
   };
-
+  
+  const handleDeleteTask = (e: React.MouseEvent) => {
+    e.preventDefault();
+    const taskRef = doc(firestore, 'tasks', task.id);
+    deleteDocumentNonBlocking(taskRef);
+    setShowDeleteConfirm(false); // close confirmation
+    onOpenChange(false); // Close the main dialog
+  }
 
   const getStatusText = (entry: TaskUpdate) => {
     switch (entry.status) {
@@ -87,12 +107,12 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
              <DialogTitle className='max-w-md'>{task.title}</DialogTitle>
              <TaskPriorityBadge priority={task.priority} />
           </div>
-          <DialogDescription className="flex items-center gap-4 pt-1">
-            <Badge variant="secondary">{task.status.replace('_', ' ')}</Badge>
+           <div className="flex items-center gap-4 pt-1 text-sm text-muted-foreground">
+             <Badge variant="secondary">{task.status.replace('_', ' ')}</Badge>
             <span>
               Assigned to {task.assignedToName}
             </span>
-          </DialogDescription>
+          </div>
         </DialogHeader>
 
         <div className="grid md:grid-cols-3 gap-6 py-4">
@@ -204,6 +224,36 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
             </div>
           </div>
         </div>
+
+        <DialogFooter>
+            {permissions.canManageStaff && (
+                  <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                    <AlertDialogTrigger asChild>
+                        <Button variant="destructive" className="mr-auto">
+                            <Trash2 className="mr-2 h-4 w-4" />
+                            Delete Mission
+                        </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the mission "{task.title}".
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction
+                                className="bg-destructive hover:bg-destructive/90" 
+                                onClick={handleDeleteTask}
+                            >
+                                Delete
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );
