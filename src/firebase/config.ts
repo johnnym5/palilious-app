@@ -1,8 +1,9 @@
 export const firebaseConfig = {
-  "projectId": "studio-2214070311-ec1c7",
-  "appId": "1:451324532097:web:d9c9ab0982e05698500480",
-  "apiKey": "AIzaSyBS2ZAdTI4iZt2teYo8R5nezwpIGPMt-aY",
-  "authDomain": "studio-2214070311-ec1c7.firebaseapp.com",
-  "measurementId": "",
-  "messagingSenderId": "451324532097"
+    apiKey: "AIzaSyDzEUJ8HQ0SMLhuyBjXe8l7PKZL5i49III",
+    authDomain: "palilious.firebaseapp.com",
+    projectId: "palilious",
+    storageBucket: "palilious.appspot.com",
+    messagingSenderId: "670593045621",
+    appId: "1:670593045621:web:0ab9bb120a1aeed9b5143c",
+    measurementId: "G-FGS78EHV3R"
 };

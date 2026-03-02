@@ -5,8 +5,8 @@ export interface User {
   fullName: string;
   email: string;
   role: UserRole;
-  avatarUrl: string;
-  onlineStatus: 'Online' | 'Offline';
+  avatarUrl?: string;
+  onlineStatus?: 'Online' | 'Offline';
 }
 
 export type RequisitionStatus = 'PENDING_HR' | 'PENDING_FINANCE' | 'PENDING_MD' | 'APPROVED' | 'REJECTED' | 'PAID';
@@ -15,7 +15,7 @@ export interface Requisition {
   id: string;
   serialNumber: string;
   userId: string;
-  user: User;
+  user?: User;
   description: string;
   amount: number;
   status: RequisitionStatus;
@@ -27,14 +27,14 @@ export interface Task {
   id: string;
   title: string;
   description: string;
-  dueDate: string;
-  deadlineTime: string;
+  dueDateTime: string;
   isCompleted: boolean;
-  assignedTo: User;
+  assignedToUserId: string;
+  status: string;
 }
 
 export interface Announcement {
-  id: string;
+  id:string;
   title: string;
   content: string;
   author: string;
@@ -45,7 +45,7 @@ export interface Announcement {
 export interface CompanyGoal {
   id: string;
   title: string;
-  progress: number;
-  target: number;
+  currentValue: number;
+  targetValue: number;
   description: string;
 }

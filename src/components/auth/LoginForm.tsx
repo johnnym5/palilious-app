@@ -14,7 +14,10 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { initiateEmailSignIn, useAuth, useUser } from "@/firebase";
+import { useRouter } from "next/navigation";
+import { useToast } from "@/hooks/use-toast";
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -23,6 +26,10 @@ const formSchema = z.object({
 
 export function LoginForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const auth = useAuth();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+  const { toast } = useToast();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -32,14 +39,26 @@ export function LoginForm() {
     },
   });
 
+  useEffect(() => {
+    if (!isUserLoading && user) {
+      router.push('/dashboard');
+    }
+  }, [user, isUserLoading, router]);
+
   function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    console.log(values);
-    // Simulate API call
+    initiateEmailSignIn(auth, values.email, values.password);
+    // The auth state change will be caught by the useUser hook and trigger the redirect.
+    // We add a small timeout to handle cases where login fails.
     setTimeout(() => {
-      setIsLoading(false);
-      // In a real app, you would redirect on success
-      // e.g., router.push('/dashboard');
+        if (!auth.currentUser) {
+            setIsLoading(false);
+            toast({
+                variant: 'destructive',
+                title: 'Login Failed',
+                description: 'Please check your email and password.',
+            });
+        }
     }, 2000);
   }
 

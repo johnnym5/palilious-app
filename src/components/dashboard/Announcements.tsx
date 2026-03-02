@@ -1,12 +1,23 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { mockAnnouncements, mockCurrentUser } from "@/lib/placeholder-data";
+import { mockAnnouncements } from "@/lib/placeholder-data";
 import { Button } from "../ui/button";
 import { Pin, PinOff, PlusCircle } from "lucide-react";
 import { Badge } from "../ui/badge";
+import { useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 export function Announcements() {
-    const user = mockCurrentUser;
-    const canManage = user.role === 'HR' || user.role === 'MD';
+    const { user } = useUser();
+    const firestore = useFirestore();
+
+    const userProfileQuery = useMemoFirebase(() => {
+        if (!firestore || !user) return null;
+        return doc(firestore, 'users', user.uid);
+    }, [firestore, user]);
+
+    const { data: userProfile } = useDoc(userProfileQuery);
+
+    const canManage = userProfile?.role === 'HR' || userProfile?.role === 'MD';
 
     return (
         <Card>

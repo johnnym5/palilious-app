@@ -22,10 +22,10 @@ export const mockCompanyGoals: CompanyGoal[] = [
   { id: '3', title: 'New Feature Adoption', progress: 60, target: 100, description: 'Reach 75% user adoption for the new module.' },
 ];
 
-export const mockRequisitions: Requisition[] = [
-  { id: '1', serialNumber: 'REQ-00021', userId: '4', user: mockUsers[3], description: 'New ergonomic chairs for the design team', amount: 1200, status: 'PENDING_MD', createdAt: '2024-07-22T10:00:00Z' },
-  { id: '2', serialNumber: 'REQ-00020', userId: '5', user: mockUsers[4], description: 'Software license renewals (Adobe Suite)', amount: 850, status: 'PENDING_FINANCE', createdAt: '2024-07-21T15:20:00Z' },
-  { id: '3', serialNumber: 'REQ-00019', userId: '2', user: mockUsers[1], description: 'Catering for client meeting', amount: 300, status: 'PENDING_HR', createdAt: '2024-07-21T11:45:00Z' },
+export const mockRequisitions: Omit<Requisition, 'user'>[] = [
+  { id: '1', serialNumber: 'REQ-00021', userId: '4', description: 'New ergonomic chairs for the design team', amount: 1200, status: 'PENDING_MD', createdAt: '2024-07-22T10:00:00Z' },
+  { id: '2', serialNumber: 'REQ-00020', userId: '5', description: 'Software license renewals (Adobe Suite)', amount: 850, status: 'PENDING_FINANCE', createdAt: '2024-07-21T15:20:00Z' },
+  { id: '3', serialNumber: 'REQ-00019', userId: '2', description: 'Catering for client meeting', amount: 300, status: 'PENDING_HR', createdAt: '2024-07-21T11:45:00Z' },
 ];
 
 export const mockTasks = [

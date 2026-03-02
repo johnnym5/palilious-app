@@ -15,8 +15,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserRole } from "@/lib/types";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Loader2 } from "lucide-react";
+import { initiateEmailSignUp, setDocumentNonBlocking, useAuth, useFirestore, useUser } from "@/firebase";
+import { useRouter } from "next/navigation";
+import { doc, serverTimestamp } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
+import { updateProfile } from "firebase/auth";
 
 const roles: UserRole[] = ['STAFF', 'HR', 'FINANCE', 'MD'];
 
@@ -27,10 +32,19 @@ const formSchema = z.object({
   role: z.enum(roles, { required_error: "Role is required." }),
 });
 
+type FormData = z.infer<typeof formSchema>;
+
 export function RegisterForm() {
   const [isLoading, setIsLoading] = useState(false);
+  const [formData, setFormData] = useState<FormData | null>(null);
+  
+  const auth = useAuth();
+  const firestore = useFirestore();
+  const { user, isUserLoading } = useUser();
+  const router = useRouter();
+  const { toast } = useToast();
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
@@ -39,13 +53,54 @@ export function RegisterForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  // Effect to create user document after successful registration and user object is available
+  useEffect(() => {
+    if (user && formData && firestore) {
+      const userRef = doc(firestore, "users", user.uid);
+      const userData = {
+        id: user.uid,
+        fullName: formData.fullName,
+        email: formData.email,
+        role: formData.role,
+        joinedDate: new Date().toISOString().split('T')[0], // a string in 'YYYY-MM-DD' format
+        createdAt: serverTimestamp(),
+      };
+      
+      // Update Firebase Auth user profile
+      updateProfile(user, { displayName: formData.fullName }).then(() => {
+        // Set user document in Firestore
+        setDocumentNonBlocking(userRef, userData, { merge: true });
+        // Redirect to dashboard
+        router.push('/dashboard');
+      }).catch((error) => {
+        console.error("Error updating profile: ", error);
+        toast({
+          variant: "destructive",
+          title: "Profile Update Failed",
+          description: "Could not set your display name.",
+        });
+        setIsLoading(false);
+      });
+    }
+  }, [user, formData, firestore, router, toast]);
+
+  function onSubmit(values: FormData) {
     setIsLoading(true);
-    console.log(values);
-    // Simulate API call
+    setFormData(values); // Store form data to be used in useEffect
+    initiateEmailSignUp(auth, values.email, values.password);
+
+    // Handle potential registration errors
     setTimeout(() => {
-      setIsLoading(false);
-    }, 2000);
+        if (!auth.currentUser && !isUserLoading) {
+            setIsLoading(false);
+            setFormData(null);
+            toast({
+                variant: 'destructive',
+                title: 'Registration Failed',
+                description: 'An account with this email might already exist or the password is too weak.',
+            });
+        }
+    }, 3000);
   }
 
   return (

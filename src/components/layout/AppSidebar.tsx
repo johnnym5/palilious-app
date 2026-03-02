@@ -12,11 +12,14 @@ import {
   Users,
   Building2,
 } from "lucide-react";
+import { signOut } from "firebase/auth";
 
 import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
-import { mockCurrentUser, mockUsers } from "@/lib/placeholder-data";
+import { mockUsers } from "@/lib/placeholder-data";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { useAuth, useDoc, useFirestore, useMemoFirebase, useUser } from "@/firebase";
+import { doc } from "firebase/firestore";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -33,7 +36,20 @@ const adminNavItems = [
 
 export default function AppSidebar({ isMobile = false }) {
   const pathname = usePathname();
-  const user = mockCurrentUser;
+  const { user } = useUser();
+  const auth = useAuth();
+  const firestore = useFirestore();
+
+  const userProfileQuery = useMemoFirebase(() => {
+    if (!firestore || !user) return null;
+    return doc(firestore, 'users', user.uid);
+  }, [firestore, user]);
+
+  const { data: userProfile } = useDoc(userProfileQuery);
+
+  const handleLogout = () => {
+    signOut(auth);
+  };
 
   const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => {
     const isActive = pathname === href || (href === "/dashboard" && pathname.startsWith("/dashboard"));
@@ -52,6 +68,8 @@ export default function AppSidebar({ isMobile = false }) {
     );
   };
 
+  if (!user) return null;
+
   return (
     <aside className={cn("flex-col border-r bg-background", isMobile ? "flex w-full" : "hidden md:flex md:w-64")}>
       <div className="flex h-16 items-center border-b px-6">
@@ -63,7 +81,7 @@ export default function AppSidebar({ isMobile = false }) {
           
           <div className="my-4 h-px w-full bg-border" />
 
-          {adminNavItems.filter(item => item.roles.includes(user.role)).map((item) => (
+          {userProfile && adminNavItems.filter(item => item.roles.includes(userProfile.role)).map((item) => (
              <NavLink key={item.href} {...item} />
           ))}
         </nav>
@@ -88,16 +106,16 @@ export default function AppSidebar({ isMobile = false }) {
 
             <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-secondary">
                  <Avatar className="h-10 w-10">
-                    <AvatarImage src={user.avatarUrl} alt={user.fullName} />
-                    <AvatarFallback>{user.fullName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                    <AvatarImage src={user.photoURL || undefined} alt={user.displayName || ''} />
+                    <AvatarFallback>{user.displayName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                 </Avatar>
                 <div className="flex-1 truncate">
-                    <p className="font-semibold">{user.fullName}</p>
+                    <p className="font-semibold">{user.displayName}</p>
                     <p className="text-xs text-muted-foreground">{user.email}</p>
                 </div>
-                <Link href="/login">
+                <button onClick={handleLogout}>
                     <LogOut className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors"/>
-                </Link>
+                </button>
             </div>
         </div>
       </div>

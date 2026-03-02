@@ -3,6 +3,7 @@ import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTr
 import { Button } from "@/components/ui/button";
 import { Menu } from "lucide-react";
 import AppSidebar from "./AppSidebar";
+import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 
 export default function AppHeader() {
   return (
@@ -15,10 +16,12 @@ export default function AppHeader() {
           </Button>
         </SheetTrigger>
         <SheetContent side="left" className="flex flex-col p-0">
-          <SheetHeader className="sr-only">
-            <SheetTitle>Navigation Menu</SheetTitle>
-            <SheetDescription>Main navigation links for the application.</SheetDescription>
-          </SheetHeader>
+          <VisuallyHidden asChild>
+            <SheetHeader>
+              <SheetTitle>Navigation Menu</SheetTitle>
+              <SheetDescription>Main navigation links for the application.</SheetDescription>
+            </SheetHeader>
+          </VisuallyHidden>
           <AppSidebar isMobile />
         </SheetContent>
       </Sheet>
