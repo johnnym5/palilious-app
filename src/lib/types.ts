@@ -1,4 +1,4 @@
-export type UserRole = 'ORG_ADMIN' | 'STAFF' | 'HR' | 'FINANCE' | 'MD';
+export type UserPosition = 'Staff' | 'HR Manager' | 'Finance Manager' | 'Managing Director' | 'Organization Administrator';
 export type UserStatus = "ONLINE" | "OFFLINE" | "ON_LEAVE";
 
 export interface Organization {
@@ -14,7 +14,7 @@ export interface UserProfile {
   email: string;
   username: string;
   fullName: string;
-  role: UserRole;
+  position: UserPosition;
   avatarURL?: string;
   joinedDate: string; // ISO String for timestamp
   birthday?: string; // ISO String for timestamp
@@ -35,6 +35,7 @@ export type RequisitionStatus = "PENDING_HR" | "PENDING_FINANCE" | "PENDING_MD" 
 export interface ApprovalHistoryEntry {
     actorId: string;
     actorName: string;
+    actorPosition: string;
     action: 'CREATED' | 'APPROVED' | 'REJECTED' | 'PAID';
     timestamp: string; // ISO String for timestamp
     fromStatus: RequisitionStatus | 'N/A';

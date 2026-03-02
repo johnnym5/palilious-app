@@ -4,66 +4,71 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, Query, DocumentData } from "firebase/firestore";
 import type { Requisition, UserProfile } from "@/lib/types";
+import type { Permissions } from "@/hooks/usePermissions";
 import { RequisitionStatusBadge } from './RequisitionStatusBadge';
 import { format } from 'date-fns';
 import { Skeleton } from '../ui/skeleton';
 import { RequisitionDetailDialog } from './RequisitionDetailDialog';
-import { FileText } from 'lucide-react';
+import { Inbox } from 'lucide-react';
 
 interface RequisitionTableProps {
     filter: string;
     userProfile: UserProfile | null;
     isSuperAdmin: boolean;
+    permissions: Permissions;
 }
 
-const getQueryForFilter = (reqsRef: any, baseClauses: any[], filter: string, role: UserProfile['role'] | 'SUPER_ADMIN' | 'STAFF', userId: string) => {
-    const roleClauses: Record<string, any[]> = {
-        STAFF: {
-            "My Requests": [where('createdBy', '==', userId)],
-            "Pending": [where('createdBy', '==', userId), where('status', 'in', ['PENDING_HR', 'PENDING_FINANCE', 'PENDING_MD'])],
-            "Approved": [where('createdBy', '==', userId), where('status', '==', 'APPROVED')],
-            "Rejected": [where('createdBy', '==', userId), where('status', '==', 'REJECTED')],
-        },
-        HR: {
-            "Inbox": [where('status', '==', 'PENDING_HR')],
-            "Approved": [where('status', '==', 'APPROVED')],
-            "Rejected": [where('status', '==', 'REJECTED')],
-            "All": [],
-        },
-        FINANCE: {
-            "Inbox": [where('status', 'in', ['PENDING_FINANCE', 'APPROVED'])],
-            "Approved": [where('status', '==', 'APPROVED')],
-            "Paid": [where('status', '==', 'PAID')],
-            "Rejected": [where('status', '==', 'REJECTED')],
-            "All": [],
-        },
-        MD: {
-            "Inbox": [where('status', '==', 'PENDING_MD')],
-            "Approved": [where('status', '==', 'APPROVED')],
-            "Rejected": [where('status', '==', 'REJECTED')],
-            "All": [],
-        },
-        ORG_ADMIN: {
-            "All": [],
-            "Pending": [where('status', 'in', ['PENDING_HR', 'PENDING_FINANCE', 'PENDING_MD'])],
-            "Approved": [where('status', '==', 'APPROVED')],
-            "Paid": [where('status', '==', 'PAID')],
-            "Rejected": [where('status', '==', 'REJECTED')],
-        },
-        SUPER_ADMIN: { // Super admin sees across all orgs
-             "All": [],
-            "Pending": [where('status', 'in', ['PENDING_HR', 'PENDING_FINANCE', 'PENDING_MD'])],
-            "Approved": [where('status', '==', 'APPROVED')],
-            "Paid": [where('status', '==', 'PAID')],
-            "Rejected": [where('status', '==', 'REJECTED')],
-        }
-    };
+const getQueryForFilter = (
+    reqsRef: Query, 
+    baseClauses: any[], 
+    filter: string, 
+    permissions: Permissions,
+    userId: string
+): Query => {
+    let filterClauses: any[] = [];
+    const pendingStatuses = ['PENDING_HR', 'PENDING_FINANCE', 'PENDING_MD'];
+
+    switch (filter) {
+        case "My Requests":
+            filterClauses = [where('createdBy', '==', userId)];
+            break;
+        case "Inbox":
+            const inboxStatuses: string[] = [];
+            if (permissions.canApproveHR) inboxStatuses.push('PENDING_HR');
+            if (permissions.canApproveFinance) inboxStatuses.push('PENDING_FINANCE', 'APPROVED');
+            if (permissions.canApproveMD) inboxStatuses.push('PENDING_MD');
+            if (inboxStatuses.length > 0) {
+              filterClauses = [where('status', 'in', [...new Set(inboxStatuses)])];
+            } else {
+              // If user has an "Inbox" tab but no permissions, show nothing.
+              filterClauses = [where('status', '==', 'NO_RESULTS')]; 
+            }
+            break;
+        case "All":
+             // No extra filters needed for 'All' if permissions are high enough
+            break;
+        case "Pending":
+            filterClauses = [where('status', 'in', pendingStatuses)];
+            break;
+        case "Approved":
+            filterClauses = [where('status', '==', 'APPROVED')];
+            break;
+        case "Paid":
+            filterClauses = [where('status', '==', 'PAID')];
+            break;
+        case "Rejected":
+            filterClauses = [where('status', '==', 'REJECTED')];
+            break;
+        default:
+            // Default to my requests if filter is unknown
+             filterClauses = [where('createdBy', '==', userId)];
+            break;
+    }
     
-    const filterClauses = (roleClauses[role] || roleClauses['STAFF'])[filter] || [];
     return query(reqsRef, ...baseClauses, ...filterClauses, orderBy('createdAt', 'desc'));
 };
 
-export function RequisitionTable({ filter, userProfile, isSuperAdmin }: RequisitionTableProps) {
+export function RequisitionTable({ filter, userProfile, isSuperAdmin, permissions }: RequisitionTableProps) {
     const firestore = useFirestore();
     const [selectedRequest, setSelectedRequest] = useState<Requisition | null>(null);
 
@@ -71,11 +76,10 @@ export function RequisitionTable({ filter, userProfile, isSuperAdmin }: Requisit
         if (!firestore || !userProfile) return null;
         
         const reqsRef = collection(firestore, 'requisitions');
-        const role = isSuperAdmin ? 'SUPER_ADMIN' : userProfile.role;
         const baseClauses = isSuperAdmin ? [] : [where('orgId', '==', userProfile.orgId)];
         
-        return getQueryForFilter(reqsRef, baseClauses, filter, role, userProfile.id);
-    }, [firestore, filter, userProfile, isSuperAdmin]);
+        return getQueryForFilter(reqsRef, baseClauses, filter, permissions, userProfile.id);
+    }, [firestore, filter, userProfile, isSuperAdmin, permissions]);
 
     const { data: requisitions, isLoading } = useCollection<Requisition>(requisitionsQuery);
 
@@ -101,17 +105,21 @@ export function RequisitionTable({ filter, userProfile, isSuperAdmin }: Requisit
                         ))}
                         {!isLoading && requisitions?.length === 0 && (
                             <TableRow>
-                                <TableCell colSpan={6} className="h-32 text-center text-muted-foreground">
-                                    <div className="flex flex-col items-center justify-center gap-2">
-                                        <FileText className="h-8 w-8"/>
-                                        <p className="font-medium">No requisitions found.</p>
-                                        <p className="text-sm">This inbox is clear. Great job!</p>
+                                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                                    <div className="flex flex-col items-center justify-center gap-4">
+                                        <div className='rounded-full border-8 border-secondary p-4'>
+                                          <Inbox className="h-12 w-12 text-secondary-foreground"/>
+                                        </div>
+                                        <div className='space-y-1'>
+                                          <p className="font-semibold text-lg text-foreground">Inbox Clear</p>
+                                          <p className="text-sm">No requisitions found in this view.</p>
+                                        </div>
                                     </div>
                                 </TableCell>
                             </TableRow>
                         )}
                         {!isLoading && requisitions?.map(req => (
-                            <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer">
+                            <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer hover:bg-secondary/50">
                                 <TableCell className="font-mono text-xs text-muted-foreground">{req.serialNo}</TableCell>
                                 <TableCell className="font-medium">{req.title}</TableCell>
                                 <TableCell className="text-muted-foreground">{req.creatorName}</TableCell>
@@ -130,6 +138,7 @@ export function RequisitionTable({ filter, userProfile, isSuperAdmin }: Requisit
                     onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}
                     currentUserProfile={userProfile}
                     isSuperAdmin={isSuperAdmin}
+                    permissions={permissions}
                 />
             )}
         </>

@@ -5,6 +5,7 @@ import { PlusCircle } from "lucide-react";
 import { useUser, useDoc, useMemoFirebase } from "@/firebase";
 import { UserProfile } from "@/lib/types";
 import { doc, getFirestore } from "firebase/firestore";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export function Announcements() {
     const { user: authUser } = useUser();
@@ -15,14 +16,13 @@ export function Announcements() {
     [firestore, authUser]);
     
     const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
-    const canManage = userProfile?.role === 'HR' || userProfile?.role === 'ORG_ADMIN';
+    const permissions = usePermissions(userProfile);
 
     return (
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Announcements</CardTitle>
-                {canManage && (
+                {permissions.canManageStaff && (
                     <Button variant="ghost" size="sm" disabled>
                         <PlusCircle className="mr-2 h-4 w-4" />
                         Add New

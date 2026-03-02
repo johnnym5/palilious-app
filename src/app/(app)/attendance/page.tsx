@@ -1,9 +1,24 @@
+'use client';
 import { ClockControl } from "@/components/attendance/ClockControl";
 import { StatusFeed } from "@/components/attendance/StatusFeed";
 import { AttendanceHistory } from "@/components/attendance/AttendanceHistory";
-import { Separator } from "@/components/ui/separator";
+import { useUser, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
+import { doc } from "firebase/firestore";
+import type { UserProfile } from "@/lib/types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function AttendancePage() {
+  const { user: authUser } = useUser();
+  const firestore = useFirestore();
+
+  const userProfileRef = useMemoFirebase(() => 
+    authUser ? doc(firestore, "users", authUser.uid) : null
+  , [firestore, authUser]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+
+  const permissions = usePermissions(userProfile);
+
   return (
     <div className="space-y-8">
       <div>
@@ -11,15 +26,27 @@ export default function AttendancePage() {
         <p className="text-muted-foreground">Manage your work hours and see who's currently online.</p>
       </div>
       
-      <div className="grid gap-8 lg:grid-cols-3">
-        <div className="lg:col-span-1 space-y-8">
-            <ClockControl />
-            <StatusFeed />
+       {isProfileLoading ? (
+         <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-1 space-y-8">
+              <Skeleton className="h-40 w-full" />
+              <Skeleton className="h-96 w-full" />
+          </div>
+          <div className="lg:col-span-2">
+              <Skeleton className="h-80 w-full" />
+          </div>
         </div>
-        <div className="lg:col-span-2">
-            <AttendanceHistory />
+      ) : (
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-1 space-y-8">
+              <ClockControl userProfile={userProfile} permissions={permissions} />
+              <StatusFeed userProfile={userProfile} permissions={permissions} />
+          </div>
+          <div className="lg:col-span-2">
+              <AttendanceHistory userProfile={userProfile} />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }

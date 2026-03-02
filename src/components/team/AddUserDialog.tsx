@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserRole, UserProfile, Organization } from "@/lib/types";
+import { UserPosition, UserProfile, Organization } from "@/lib/types";
 import { useState, useMemo } from "react";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
@@ -20,16 +20,15 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
-const roles: Exclude<UserRole, 'ORG_ADMIN'>[] = ['STAFF', 'HR', 'FINANCE', 'MD'];
+const positions: UserPosition[] = ['Staff', 'HR Manager', 'Finance Manager', 'Managing Director', 'Organization Administrator'];
 
 const baseSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  role: z.enum(roles, { required_error: "Role is required." }),
+  position: z.enum(positions as [string, ...string[]], { required_error: "Position is required." }),
   birthday: z.date().optional(),
 });
 
@@ -75,7 +74,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       fullName: "",
       email: "",
       password: "",
-      role: "STAFF",
+      position: "Staff",
     },
   });
 
@@ -104,7 +103,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
         orgId: orgId,
         fullName: values.fullName,
         email: values.email,
-        role: values.role,
+        position: values.position,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
         avatarURL: `https://picsum.photos/seed/${newUser.uid}/48/48`,
@@ -226,19 +225,19 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
-                  name="role"
+                  name="position"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Role</FormLabel>
+                      <FormLabel>Position</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Select a role" />
+                            <SelectValue placeholder="Select a position" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {roles.map((role) => (
-                            <SelectItem key={role} value={role}>{role}</SelectItem>
+                          {positions.map((position) => (
+                            <SelectItem key={position} value={position}>{position}</SelectItem>
                           ))}
                         </SelectContent>
                       </Select>

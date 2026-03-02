@@ -22,7 +22,7 @@ import type { UserProfile, Organization } from "@/lib/types";
 import { useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { Skeleton } from "../ui/skeleton";
-import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "../ui/badge";
 
 const mainNavItems = [
@@ -34,21 +34,21 @@ const mainNavItems = [
 ];
 
 const adminNavItems = [
-    { href: "/team", icon: Users, label: "Team Management", roles: ['ORG_ADMIN', 'HR', 'MD'] },
-    { href: "/company", icon: Building2, label: "Company Settings", roles: ['ORG_ADMIN'] },
-]
+    { href: "/team", icon: Users, label: "Team Management", permission: 'canManageStaff' },
+    { href: "/company", icon: Building2, label: "Company Settings", permission: 'canManageCompany' },
+] as const;
 
 export default function AppSidebar({ isMobile = false }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
   const firestore = useFirestore();
-  const { isSuperAdmin } = useSuperAdmin();
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null,
   [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const permissions = usePermissions(userProfile);
   
   const orgRef = useMemoFirebase(() => 
     userProfile?.orgId ? doc(firestore, "organizations", userProfile.orgId) : null,
@@ -77,12 +77,6 @@ export default function AppSidebar({ isMobile = false }) {
     );
   };
   
-  const userCanSee = (itemRoles: string[]) => {
-    if (isSuperAdmin) return true;
-    if (!userProfile || !userProfile.role) return false;
-    return itemRoles.includes(userProfile.role);
-  }
-  
   const orgName = organization?.name ? organization.name.charAt(0).toUpperCase() + organization.name.slice(1) : "";
 
   if (!authUser) return null;
@@ -102,7 +96,7 @@ export default function AppSidebar({ isMobile = false }) {
           <div className="my-2 h-px w-full bg-border" />
           
           {isProfileLoading && <Skeleton className="h-8 w-full" />}
-          {userProfile && adminNavItems.filter(item => userCanSee(item.roles)).map((item) => (
+          {userProfile && adminNavItems.filter(item => permissions[item.permission]).map((item) => (
              <NavLink key={item.href} {...item} />
           ))}
         </nav>
@@ -119,7 +113,7 @@ export default function AppSidebar({ isMobile = false }) {
                 )}
                 <div className="flex-1 truncate">
                     <p className="font-semibold">{userProfile?.fullName}</p>
-                    <Badge variant="secondary" className="text-xs">{userProfile?.role}</Badge>
+                    <Badge variant="secondary" className="text-xs">{userProfile?.position}</Badge>
                 </div>
                 <button onClick={handleLogout} className="ml-auto">
                     <LogOut className="h-5 w-5 text-muted-foreground hover:text-primary transition-colors"/>

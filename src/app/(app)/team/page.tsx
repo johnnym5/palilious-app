@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { usePermissions } from '@/hooks/usePermissions';
 
 
 export default function TeamPage() {
@@ -26,9 +27,8 @@ export default function TeamPage() {
     [firestore, authUser]
   );
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
+  const permissions = usePermissions(userProfile);
   
-  const canManageUsers = isSuperAdmin || userProfile?.role === 'HR' || userProfile?.role === 'ORG_ADMIN' || userProfile?.role === 'MD';
-
   const usersQuery = useMemoFirebase(
     () => {
       if (!firestore) return null;
@@ -51,7 +51,7 @@ export default function TeamPage() {
           <h1 className="text-3xl font-bold font-headline tracking-tight">Staff Directory</h1>
           <p className="text-muted-foreground">Browse and manage team members.</p>
         </div>
-        {canManageUsers && (
+        {permissions.canManageStaff && (
           <AddUserDialog open={isAddUserOpen} onOpenChange={setAddUserOpen}>
             <Button onClick={() => setAddUserOpen(true)}>
               <PlusCircle className="mr-2" />
@@ -71,7 +71,7 @@ export default function TeamPage() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       {isSuperAdmin && <TableHead>Organization ID</TableHead>}
-                      <TableHead>Role</TableHead>
+                      <TableHead>Position</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Joined</TableHead>
                     </TableRow>
@@ -103,7 +103,7 @@ export default function TeamPage() {
                           </div>
                         </TableCell>
                         {isSuperAdmin && <TableCell><p className="text-xs text-muted-foreground font-mono">{user.orgId}</p></TableCell>}
-                        <TableCell><Badge variant="secondary">{user.role}</Badge></TableCell>
+                        <TableCell><Badge variant="secondary">{user.position}</Badge></TableCell>
                         <TableCell><Badge variant={user.status === 'ONLINE' ? 'default' : 'outline'}>{user.status}</Badge></TableCell>
                         <TableCell>{format(new Date(user.joinedDate), "PPP")}</TableCell>
                       </TableRow>

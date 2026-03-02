@@ -85,7 +85,7 @@ export function RegisterForm() {
         email: values.email.toLowerCase(),
         username: values.username.toLowerCase(),
         fullName: values.fullName,
-        role: 'ORG_ADMIN',
+        position: 'Organization Administrator',
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
         avatarURL: `https://picsum.photos/seed/${newUser.uid}/48/48`,

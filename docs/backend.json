@@ -21,11 +21,15 @@
           "type": "string",
           "description": "User's display name."
         },
-        "role": {
+        "position": {
           "type": "string",
+          "description": "The user's job position within the organization.",
           "enum": [
-            "ORG_ADMIN",
-            "STAFF"
+            "Staff",
+            "HR Manager",
+            "Finance Manager",
+            "Managing Director",
+            "Organization Administrator"
           ]
         },
         "status": {
@@ -42,7 +46,7 @@
         "username",
         "password",
         "displayName",
-        "role"
+        "position"
       ]
     },
     "Attendance": {
@@ -108,13 +112,14 @@
                 "properties": {
                     "actorId": { "type": "string", "description": "The user ID of the person who made the change." },
                     "actorName": { "type": "string", "description": "The name of the person who made the change." },
+                    "actorPosition": { "type": "string", "description": "The position of the user who made the change." },
                     "action": { "type": "string", "enum": ["CREATED", "APPROVED", "REJECTED", "PAID"]},
                     "timestamp": { "type": "string", "format": "date-time" },
                     "fromStatus": { "type": "string" },
                     "toStatus": { "type": "string" },
                     "reason": { "type": "string", "description": "Reason for rejection, if applicable." }
                 },
-                "required": ["actorId", "actorName", "action", "timestamp", "fromStatus", "toStatus"]
+                "required": ["actorId", "actorName", "actorPosition", "action", "timestamp", "fromStatus", "toStatus"]
             }
         }
       },

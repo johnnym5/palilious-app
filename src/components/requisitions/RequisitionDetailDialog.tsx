@@ -14,6 +14,7 @@ import {
   ApprovalHistoryEntry,
   RequisitionStatus,
 } from '@/lib/types'
+import { Permissions } from '@/hooks/usePermissions'
 import { RequisitionStatusBadge } from './RequisitionStatusBadge'
 import { format, formatDistanceToNow } from 'date-fns'
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
@@ -22,17 +23,13 @@ import {
   Banknote,
   Calendar,
   Check,
-  FileText,
   History,
   Info,
   User,
   X,
 } from 'lucide-react'
 import { Button } from '../ui/button'
-import {
-  doc,
-  arrayUnion,
-} from 'firebase/firestore'
+import { doc, arrayUnion } from 'firebase/firestore'
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase'
 import { useToast } from '@/hooks/use-toast'
 import {
@@ -55,20 +52,19 @@ interface RequisitionDetailDialogProps {
   onOpenChange: (isOpen: boolean) => void
   currentUserProfile: UserProfile
   isSuperAdmin: boolean
+  permissions: Permissions
 }
-
-type ActionRole = 'HR' | 'FINANCE' | 'MD'
 
 const WORKFLOW: Record<
   RequisitionStatus,
-  { next: RequisitionStatus; role: ActionRole }
+  { next: RequisitionStatus; permission: keyof Permissions }
 > = {
-  PENDING_HR: { next: 'PENDING_FINANCE', role: 'HR' },
-  PENDING_FINANCE: { next: 'PENDING_MD', role: 'FINANCE' },
-  PENDING_MD: { next: 'APPROVED', role: 'MD' },
-  APPROVED: { next: 'PAID', role: 'FINANCE' },
-  PAID: { next: 'PAID', role: 'FINANCE' }, // Terminal
-  REJECTED: { next: 'REJECTED', role: 'HR' }, // Terminal
+  PENDING_HR: { next: 'PENDING_FINANCE', permission: 'canApproveHR' },
+  PENDING_FINANCE: { next: 'PENDING_MD', permission: 'canApproveFinance' },
+  PENDING_MD: { next: 'APPROVED', permission: 'canApproveMD' },
+  APPROVED: { next: 'PAID', permission: 'canDisburse' },
+  PAID: { next: 'PAID', permission: 'canDisburse' }, // Terminal
+  REJECTED: { next: 'REJECTED', permission: 'canApproveHR' }, // Terminal
 }
 
 export function RequisitionDetailDialog({
@@ -77,19 +73,24 @@ export function RequisitionDetailDialog({
   onOpenChange,
   currentUserProfile,
   isSuperAdmin,
+  permissions,
 }: RequisitionDetailDialogProps) {
   const firestore = useFirestore()
   const { toast } = useToast()
   const [rejectionReason, setRejectionReason] = useState('')
 
   const canTakeAction = () => {
-    if (!currentUserProfile) return false
+    if (!currentUserProfile || !permissions) return false
     if (requisition.status === 'PAID' || requisition.status === 'REJECTED')
       return false
-    if (isSuperAdmin) return true
 
-    const requiredRole = WORKFLOW[requisition.status]?.role
-    return currentUserProfile.role === requiredRole
+    const requiredPermission = WORKFLOW[requisition.status]?.permission
+    return permissions[requiredPermission]
+  }
+
+  const canReject = () => {
+    if (!permissions) return false;
+    return permissions.canApproveHR || permissions.canApproveFinance || permissions.canApproveMD;
   }
 
   const handleAction = async (
@@ -126,11 +127,12 @@ export function RequisitionDetailDialog({
     const historyEntry: ApprovalHistoryEntry = {
       actorId: currentUserProfile.id,
       actorName: currentUserProfile.fullName,
+      actorPosition: currentUserProfile.position,
       action: actionVerb,
       timestamp: new Date().toISOString(),
       fromStatus: requisition.status,
       toStatus: nextStatus,
-      reason: action === 'REJECT-REASON' ? rejectionReason : undefined,
+      reason: action === 'REJECT' ? rejectionReason : undefined,
     }
 
     const requisitionRef = doc(firestore, 'requisitions', requisition.id)
@@ -141,6 +143,7 @@ export function RequisitionDetailDialog({
 
     toast({ title: 'Success', description: successMessage })
     onOpenChange(false)
+    setRejectionReason('');
   }
 
   const approvalActionText =
@@ -195,7 +198,7 @@ export function RequisitionDetailDialog({
                           <p className="text-sm font-medium">
                             {entry.actorName}{' '}
                             <span className="text-muted-foreground">
-                              {entry.action.toLowerCase()} the request.
+                              ({entry.actorPosition}) {entry.action.toLowerCase()} the request.
                             </span>
                           </p>
                           <p className="text-xs text-muted-foreground">
@@ -203,6 +206,7 @@ export function RequisitionDetailDialog({
                               addSuffix: true,
                             })}
                           </p>
+                           {entry.reason && <p className='text-xs text-destructive/80 mt-1'>Reason: {entry.reason}</p>}
                         </div>
                       </div>
                     ))}
@@ -243,36 +247,38 @@ export function RequisitionDetailDialog({
 
         {canTakeAction() && (
           <DialogFooter className="gap-2">
-            <AlertDialog>
-              <AlertDialogTrigger asChild>
-                <Button variant="destructive">
-                  <X className="mr-2 h-4 w-4" /> Reject
-                </Button>
-              </AlertDialogTrigger>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Provide a reason for rejecting this requisition. This action
-                    cannot be undone.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <Textarea
-                  placeholder="Type your reason here..."
-                  value={rejectionReason}
-                  onChange={e => setRejectionReason(e.target.value)}
-                />
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Cancel</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={() => handleAction('REJECT')}
-                    disabled={!rejectionReason}
-                  >
-                    Confirm Rejection
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+            {canReject() && (
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button variant="destructive">
+                    <X className="mr-2 h-4 w-4" /> Reject
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Provide a reason for rejecting this requisition. This action
+                      cannot be undone.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <Textarea
+                    placeholder="Type your reason here..."
+                    value={rejectionReason}
+                    onChange={e => setRejectionReason(e.target.value)}
+                  />
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction
+                      onClick={() => handleAction('REJECT')}
+                      disabled={!rejectionReason}
+                    >
+                      Confirm Rejection
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            )}
 
             <Button
               variant="default"
@@ -283,7 +289,7 @@ export function RequisitionDetailDialog({
                     : 'APPROVE'
                 )
               }
-              className="bg-emerald-600 hover:bg-emerald-500"
+              className="bg-emerald-600 hover:bg-emerald-700"
             >
               <Check className="mr-2 h-4 w-4" /> {approvalActionText}
             </Button>

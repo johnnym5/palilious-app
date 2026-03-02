@@ -10,23 +10,37 @@ import { useUser, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import type { UserProfile } from "@/lib/types";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
+import { usePermissions, type Permissions } from "@/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
 
-type UserRoleType = UserProfile['role'] | 'SUPER_ADMIN';
+const getVisibleTabs = (permissions: Permissions, isStaff: boolean) => {
+    const tabs = new Set<string>();
 
-const TABS: Record<UserRoleType, string[]> = {
-  STAFF: ["My Requests", "Pending", "Approved", "Rejected"],
-  HR: ["Inbox", "Approved", "Rejected", "All"],
-  FINANCE: ["Inbox", "Approved", "Paid", "Rejected", "All"],
-  MD: ["Inbox", "Approved", "Rejected", "All"],
-  ORG_ADMIN: ["All", "Pending", "Approved", "Paid", "Rejected"],
-  SUPER_ADMIN: ["All", "Pending", "Approved", "Paid", "Rejected"],
+    if (isStaff) {
+        tabs.add("My Requests");
+    }
+
+    if (permissions.canApproveHR || permissions.canApproveFinance || permissions.canApproveMD) {
+        tabs.add("Inbox");
+    }
+
+    if (permissions.canManageStaff) { // For Org Admins, Super Admins, etc.
+        tabs.add("All");
+        tabs.add("Pending");
+        tabs.add("Approved");
+        tabs.add("Paid");
+        tabs.add("Rejected");
+    } else { // Staff members see a simplified view
+        tabs.add("Pending");
+        tabs.add("Approved");
+        tabs.add("Rejected");
+    }
+    
+    // A consistent order for the tabs
+    const orderedTabs = ["My Requests", "Inbox", "All", "Pending", "Approved", "Paid", "Rejected"];
+    return orderedTabs.filter(tab => tabs.has(tab));
 };
 
-const getVisibleTabs = (role?: UserRoleType) => {
-  if (!role) return TABS.STAFF;
-  return TABS[role] || TABS.STAFF;
-};
 
 export default function RequisitionsPage() {
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
@@ -39,9 +53,18 @@ export default function RequisitionsPage() {
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const role = isSuperAdmin ? 'SUPER_ADMIN' : userProfile?.role;
-  const visibleTabs = getVisibleTabs(role);
+  const permissions = usePermissions(userProfile);
+  // A "staff" user is defined as someone without any special requisition approval or management permissions.
+  const isStaff = !permissions.canApproveHR && !permissions.canApproveFinance && !permissions.canApproveMD && !permissions.canManageStaff;
+  const visibleTabs = getVisibleTabs(permissions, isStaff);
   const [activeTab, setActiveTab] = useState(visibleTabs[0]);
+  
+  // Effect to reset tab if it's no longer visible after profile loads
+  useState(() => {
+    if (!visibleTabs.includes(activeTab)) {
+        setActiveTab(visibleTabs[0] || "My Requests");
+    }
+  });
 
   return (
     <div className="space-y-6 relative min-h-[calc(100vh-10rem)]">
@@ -63,7 +86,7 @@ export default function RequisitionsPage() {
                 </TabsList>
                 {visibleTabs.map(tab => (
                     <TabsContent key={tab} value={tab} className="mt-4">
-                        <RequisitionTable filter={tab} userProfile={userProfile} isSuperAdmin={isSuperAdmin} />
+                        <RequisitionTable filter={tab} userProfile={userProfile} isSuperAdmin={isSuperAdmin} permissions={permissions} />
                     </TabsContent>
                 ))}
             </Tabs>
