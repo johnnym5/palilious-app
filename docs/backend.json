@@ -127,6 +127,46 @@
         }
       },
       "required": ["serialNo", "orgId", "createdBy", "creatorName", "title", "amount", "description", "status", "createdAt", "approvalHistory"]
+    },
+     "Task": {
+      "title": "Task",
+      "type": "object",
+      "description": "Represents a single assignable task.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "assignedTo": { "type": "string", "description": "The user ID of the assignee." },
+        "assignedToName": { "type": "string", "description": "The name of the assignee." },
+        "priority": { "type": "string", "enum": ["URGENT", "NORMAL", "LOW"] },
+        "status": { "type": "string", "enum": ["PENDING", "IN_PROGRESS", "COMPLETED"] },
+        "dueDate": { "type": "string", "format": "date-time" },
+        "createdBy": { "type": "string", "description": "The user ID of the creator." },
+        "updates": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "status": { "type": "string" },
+              "time": { "type": "string", "format": "date-time" },
+              "updatedBy": { "type": "string" },
+              "note": { "type": "string" }
+            },
+            "required": ["status", "time", "updatedBy"]
+          }
+        }
+      },
+      "required": [
+        "orgId",
+        "title",
+        "assignedTo",
+        "assignedToName",
+        "priority",
+        "status",
+        "dueDate",
+        "createdBy",
+        "updates"
+      ]
     }
   },
   "auth": {
@@ -178,6 +218,22 @@
             {
               "name": "requisitionId",
               "description": "The requisition's unique ID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/tasks/{taskId}",
+        "definition": {
+          "entityName": "Task",
+          "schema": {
+            "$ref": "#/entities/Task"
+          },
+          "description": "Stores tasks assigned to users.",
+          "params": [
+            {
+              "name": "taskId",
+              "description": "The task's unique ID."
             }
           ]
         }

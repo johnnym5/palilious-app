@@ -63,28 +63,31 @@ export interface Requisition {
 }
 
 
-export interface AiFields {
-    phone?: string;
-    email?: string;
-    location?: string;
-}
+export type TaskStatus = "PENDING" | "IN_PROGRESS" | "COMPLETED";
+export type TaskPriority = "URGENT" | "NORMAL" | "LOW";
 
-export interface TaskTimelineEntry {
-    update: string;
-    timestamp: string; // ISO string for timestamp
+export interface TaskUpdate {
+  status: TaskStatus | 'CREATED';
+  time: string; // ISO String
+  updatedBy: string; // userId
+  note?: string;
 }
 
 export interface Task {
   id: string;
   orgId: string;
-  assignedTo: string; // userId
   title: string;
   description: string;
-  deadline: string; // ISO String for timestamp
-  aiFields?: AiFields;
-  isCompleted: boolean;
-  timeline?: TaskTimelineEntry[];
+  assignedTo: string; // userId
+  assignedToName: string;
+  priority: TaskPriority;
+  status: TaskStatus;
+  dueDate: string; // ISO String
+  createdBy: string; // userId
+  updates: TaskUpdate[];
+  createdAt: string; // ISO string
 }
+
 
 export interface Announcement {
   id: string;

@@ -3,7 +3,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { Briefcase, CheckCircle, Clock, Users } from "lucide-react";
 import { Announcements } from "@/components/dashboard/Announcements";
 import { TodaysCelebrations } from '@/components/dashboard/TodaysCelebrations';
-import { ActivityFeed } from "@/components/dashboard/ActivityFeed";
+import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { CompanyGoal } from "@/components/dashboard/CompanyGoal";
 
 export default function DashboardPage() {
@@ -18,7 +18,7 @@ export default function DashboardPage() {
 
             <div className="grid gap-6 lg:grid-cols-3">
                 <div className="lg:col-span-2 space-y-6">
-                    <ActivityFeed />
+                    <ActiveTasks />
                 </div>
                 <div className="space-y-6">
                     <Announcements />
