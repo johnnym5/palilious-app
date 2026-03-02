@@ -1,19 +1,46 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
+    
+    // This function gets the orgId stored in a user's profile document.
+    function getOrgIdForUser(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data.orgId;
+    }
 
-    // This rule allows anyone with your Firestore database reference to view, edit,
-    // and delete all data in your Firestore database. It is useful for getting
-    // started, but it is configured to expire after 30 days because it
-    // leaves your app open to attackers. At that time, all client
-    // requests to your Firestore database will be denied.
-    //
-    // Make sure to write security rules for your app before that time, or else
-    // all client requests to your Firestore database will be denied until you Update
-    // your rules
-    match /{document=**} {
-      allow read, write: if request.time < timestamp.date(2026, 4, 1);
+    // Allow organization lookups for the login page.
+    // Also allow creating a new organization during registration.
+    match /organizations/{orgId} {
+      allow read: if true;
+      allow create: if request.auth != null;
+    }
+
+    // Rules for user profiles.
+    match /users/{userId} {
+      // Allow a user to create their own profile during signup.
+      // Allow an admin to create a new user profile in their organization.
+      allow create: if request.auth.uid == userId || 
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ORG_ADMIN', 'HR', 'MD'] &&
+         getOrgIdForUser(request.auth.uid) == request.resource.data.orgId);
+         
+      // Allow a user to read their own profile.
+      // Allow an admin to read profiles within their own organization.
+      allow read: if request.auth.uid == userId ||
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ORG_ADMIN', 'HR', 'MD'] &&
+         getOrgIdForUser(request.auth.uid) == resource.data.orgId);
+         
+      // Allow a user to update their own profile.
+      // Allow an admin to update profiles within their own organization.
+      allow update: if request.auth.uid == userId ||
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role in ['ORG_ADMIN', 'HR', 'MD'] &&
+         getOrgIdForUser(request.auth.uid) == resource.data.orgId);
+    }
+    
+    // Generic rule for all other data (requisitions, tasks, etc.).
+    // It ensures a user can only access documents that belong to their own organization.
+    match /{collection}/{docId} {
+      allow read, write: if collection != 'users' && collection != 'organizations' &&
+                          request.auth != null && 
+                          resource.data.orgId == getOrgIdForUser(request.auth.uid);
     }
   }
 }
