@@ -148,7 +148,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                 </div>
                  <FormField control={form.control} name="dueDate" render={({ field }) => (
                     <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel>
-                        <Popover>
+                        <Popover modal={true}>
                             <PopoverTrigger asChild>
                                 <FormControl>
                                 <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
