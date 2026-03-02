@@ -46,7 +46,7 @@ export default function ChatPage() {
         )
     }
 
-    if (!systemConfig?.chat_enabled) {
+    if (!isConfigLoading && systemConfig?.chat_enabled === false) {
         return (
             <div className="flex flex-col items-center justify-center h-full text-center p-8">
                 <MessageSquareOff className="w-16 h-16 text-muted-foreground mb-4" />

@@ -53,34 +53,42 @@ export function Announcements() {
                 )}
             </CardHeader>
             <CardContent>
-                <div className="space-y-4">
-                    {isLoading && Array.from({length: 2}).map((_, i) => (
-                        <div key={i} className="flex gap-3">
-                            <Skeleton className="h-5 w-5 mt-1" />
-                            <div className="flex-1 space-y-1">
-                                <Skeleton className="h-4 w-3/4" />
-                                <Skeleton className="h-3 w-1/2" />
-                            </div>
-                        </div>
-                    ))}
-                    {!isLoading && sortedAnnouncements.length === 0 && (
-                        <p className="text-sm text-muted-foreground text-center">No announcements have been posted yet.</p>
-                    )}
-                    {!isLoading && sortedAnnouncements.map(announcement => (
-                        <div key={announcement.id} className="flex items-start gap-3">
-                            <Megaphone className="h-5 w-5 text-muted-foreground mt-0.5" />
-                            <div className="flex-1">
-                                <div className="flex items-center justify-between">
-                                    <p className="font-semibold text-sm">{announcement.title}</p>
-                                    {announcement.isPinned && <Pin className="h-4 w-4 text-primary" />}
+                <div className="flow-root">
+                    <ul role="list" className="-my-6 divide-y divide-border">
+                        {isLoading && Array.from({length: 2}).map((_, i) => (
+                            <li key={i} className="py-6">
+                                <div className="flex gap-3">
+                                    <Skeleton className="h-5 w-5 mt-1 shrink-0" />
+                                    <div className="flex-1 space-y-2">
+                                        <Skeleton className="h-4 w-3/4" />
+                                        <Skeleton className="h-3 w-1/2" />
+                                    </div>
                                 </div>
-                                <p className="text-sm text-muted-foreground">{announcement.content}</p>
-                                <p className="text-xs text-muted-foreground/70 mt-1">
-                                    {announcement.authorName} - {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
-                                </p>
-                            </div>
-                        </div>
-                    ))}
+                            </li>
+                        ))}
+                        {!isLoading && sortedAnnouncements.length === 0 && (
+                            <li className="py-6">
+                                <p className="text-sm text-muted-foreground text-center py-8">No announcements have been posted yet.</p>
+                            </li>
+                        )}
+                        {!isLoading && sortedAnnouncements.map(announcement => (
+                            <li key={announcement.id} className="py-6">
+                                <div className="flex items-start gap-4">
+                                    <Megaphone className="h-5 w-5 text-muted-foreground mt-0.5 shrink-0" />
+                                    <div className="flex-1">
+                                        <div className="flex items-center justify-between">
+                                            <p className="font-semibold text-sm">{announcement.title}</p>
+                                            {announcement.isPinned && <Pin className="h-4 w-4 text-primary" />}
+                                        </div>
+                                        <p className="text-sm text-muted-foreground">{announcement.content}</p>
+                                        <p className="text-xs text-muted-foreground/70 mt-1">
+                                            {announcement.authorName} - {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
+                                        </p>
+                                    </div>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
                 </div>
             </CardContent>
         </Card>
