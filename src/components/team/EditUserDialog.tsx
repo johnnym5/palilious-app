@@ -1,0 +1,131 @@
+"use client";
+
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { Button } from "@/components/ui/button";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
+import { UserProfile } from "@/lib/types";
+import { useState, useEffect } from "react";
+import { Loader2 } from "lucide-react";
+import { useFirestore, updateDocumentNonBlocking } from "@/firebase";
+import { doc } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+const formSchema = z.object({
+  fullName: z.string().min(1, { message: "Full name is required." }),
+  position: z.string().min(1, { message: "Position is required." }),
+});
+
+interface EditUserDialogProps {
+  userToEdit: UserProfile;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const firestore = useFirestore();
+  const { toast } = useToast();
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      fullName: userToEdit.fullName,
+      position: userToEdit.position,
+    },
+  });
+
+  // This effect will reset the form whenever the userToEdit prop changes.
+  useEffect(() => {
+    if (userToEdit) {
+      form.reset({
+        fullName: userToEdit.fullName,
+        position: userToEdit.position,
+      });
+    }
+  }, [userToEdit, form]);
+
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    setIsLoading(true);
+    try {
+      const userRef = doc(firestore, "users", userToEdit.id);
+      updateDocumentNonBlocking(userRef, {
+        fullName: values.fullName,
+        position: values.position,
+      });
+
+      toast({
+        title: "User Updated",
+        description: `${values.fullName}'s details have been updated.`,
+      });
+      onOpenChange(false);
+    } catch (error: any) {
+      console.error("Error updating user:", error);
+      toast({
+        variant: "destructive",
+        title: "Update Failed",
+        description: error.message || "An error occurred while updating the user.",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Edit Staff Member</DialogTitle>
+          <DialogDescription>
+            Update the details for {userToEdit.fullName}.
+          </DialogDescription>
+        </DialogHeader>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField
+              control={form.control}
+              name="fullName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Full Name</FormLabel>
+                  <FormControl>
+                    <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="position"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Position / Role</FormLabel>
+                  <FormControl>
+                    <Input placeholder="e.g., Staff, HR Manager" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+             <FormItem>
+                <FormLabel>Email</FormLabel>
+                <Input disabled value={userToEdit.email} />
+                <p className="text-[0.8rem] text-muted-foreground">Email address cannot be changed.</p>
+             </FormItem>
+            <DialogFooter>
+                <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button type="submit" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    Save Changes
+                </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+}

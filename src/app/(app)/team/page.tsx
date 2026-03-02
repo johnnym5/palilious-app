@@ -1,13 +1,14 @@
 'use client';
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Pencil } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from '@/firebase';
 import type { UserProfile } from '@/lib/types';
 import { collection, doc, query, where } from 'firebase/firestore';
 import { AddUserDialog } from '@/components/team/AddUserDialog';
+import { EditUserDialog } from '@/components/team/EditUserDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { format } from 'date-fns';
@@ -20,6 +21,7 @@ export default function TeamPage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const [isAddUserOpen, setAddUserOpen] = useState(false);
+  const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
   const { isSuperAdmin } = useSuperAdmin();
 
   const userProfileRef = useMemoFirebase(
@@ -74,6 +76,7 @@ export default function TeamPage() {
                       <TableHead>Position</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Joined</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
                     </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -85,6 +88,7 @@ export default function TeamPage() {
                           <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-8 w-24" /></TableCell>
                           <TableCell><Skeleton className="h-8 w-32" /></TableCell>
+                           <TableCell><Skeleton className="h-8 w-16" /></TableCell>
                         </TableRow>
                       ))
                     )}
@@ -106,11 +110,18 @@ export default function TeamPage() {
                         <TableCell><Badge variant="secondary">{user.position}</Badge></TableCell>
                         <TableCell><Badge variant={user.status === 'ONLINE' ? 'default' : 'outline'}>{user.status}</Badge></TableCell>
                         <TableCell>{format(new Date(user.joinedDate), "PPP")}</TableCell>
+                        <TableCell className="text-right">
+                          {permissions.canManageStaff && user.id !== authUser?.uid && (
+                              <Button variant="ghost" size="icon" onClick={() => setUserToEdit(user)}>
+                                <Pencil className="h-4 w-4" />
+                              </Button>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                     {!areUsersLoading && users?.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={isSuperAdmin ? 5 : 4} className="h-24 text-center">
+                        <TableCell colSpan={isSuperAdmin ? 6 : 5} className="h-24 text-center">
                             No staff members found.
                         </TableCell>
                       </TableRow>
@@ -119,6 +130,18 @@ export default function TeamPage() {
             </Table>
         </CardContent>
       </Card>
+      
+      {userToEdit && (
+        <EditUserDialog
+            userToEdit={userToEdit}
+            open={!!userToEdit}
+            onOpenChange={(isOpen) => {
+                if (!isOpen) {
+                    setUserToEdit(null);
+                }
+            }}
+        />
+      )}
     </div>
   );
 }
