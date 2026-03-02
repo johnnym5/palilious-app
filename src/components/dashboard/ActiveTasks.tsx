@@ -48,6 +48,8 @@ export function ActiveTasks() {
             if (a.status < b.status) return 1;
             
             // Then by due date ascending
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
             return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
         }).slice(0, 5);
     }, [tasks]);
@@ -80,7 +82,9 @@ export function ActiveTasks() {
                         <StatusIcon className={`h-5 w-5 ${colorClass}`} />
                         <div className="flex-1">
                             <p className="font-medium text-foreground text-sm">{task.title}</p>
-                            <p className="text-xs text-muted-foreground">Due {formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}</p>
+                            <p className="text-xs text-muted-foreground">
+                                {task.dueDate ? `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}` : 'No due date'}
+                            </p>
                         </div>
                         <TaskPriorityBadge priority={task.priority} />
                     </div>

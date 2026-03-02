@@ -61,7 +61,7 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad }: Task
                         <TaskPriorityBadge priority={task.priority} />
                     </div>
                     <CardDescription>
-                        Due {formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}
+                        {task.dueDate ? `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}` : 'No due date specified'}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>

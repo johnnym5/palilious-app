@@ -109,7 +109,7 @@ export interface Task {
   assignedToName: string;
   priority: TaskPriority;
   status: TaskStatus;
-  dueDate: string; // ISO String
+  dueDate?: string; // ISO String
   createdBy: string; // userId
   updates: TaskUpdate[];
   createdAt: string; // ISO string

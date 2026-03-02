@@ -54,7 +54,11 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
         }
 
         // Sort tasks by due date client-side
-        const sortedTasks = [...tasks].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+        const sortedTasks = [...tasks].sort((a, b) => {
+            if (!a.dueDate) return 1;
+            if (!b.dueDate) return -1;
+            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+        });
 
         sortedTasks.forEach(task => {
             if (task.status === 'ACTIVE') {

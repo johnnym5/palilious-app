@@ -25,7 +25,7 @@ const formSchema = z.object({
   description: z.string().optional(),
   assignedTo: z.string({ required_error: "Please select a staff member." }),
   priority: z.enum(["CRITICAL", "OPERATIONAL", "ROUTINE"]),
-  dueDate: z.date({ required_error: "A due date is required." }),
+  dueDate: z.date().optional(),
   attachmentUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
 
@@ -90,7 +90,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
             assignedToName: assignedUser.fullName,
             priority: values.priority,
             status: 'QUEUED',
-            dueDate: values.dueDate.toISOString(),
+            dueDate: values.dueDate?.toISOString(),
             createdBy: authUser.uid,
             updates: [firstUpdate],
             createdAt: now,
@@ -112,7 +112,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={onOpenChange} modal={false}>
       <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -156,7 +156,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                     )} />
                 </div>
                  <FormField control={form.control} name="dueDate" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>Due Date</FormLabel>
+                    <FormItem className="flex flex-col"><FormLabel>Due Date (Optional)</FormLabel>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <FormControl>

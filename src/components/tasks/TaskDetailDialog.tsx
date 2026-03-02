@@ -188,7 +188,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                   <Calendar className="h-4 w-4" /> Due Date
                 </span>
                 <span className="font-medium">
-                  {format(new Date(task.dueDate), 'PP')}
+                  {task.dueDate ? format(new Date(task.dueDate), 'PP') : 'N/A'}
                 </span>
               </div>
                {task.attachmentUrl && (
