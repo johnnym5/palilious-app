@@ -1,6 +1,6 @@
 'use client';
 import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
-import { collection, query, where, orderBy, Query } from 'firebase/firestore';
+import { collection, query, where, Query } from 'firebase/firestore';
 import type { Task, UserProfile, TaskStatus } from '@/lib/types';
 import type { Permissions } from '@/hooks/usePermissions';
 import { TaskCard } from './TaskCard';
@@ -23,17 +23,17 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
         
         const tasksRef = collection(firestore, 'tasks');
 
+        // Queries are simplified to avoid needing a composite index.
+        // Sorting will be handled on the client-side.
         if (permissions.canManageStaff || isSuperAdmin) {
             return query(
                 tasksRef, 
-                where('orgId', '==', userProfile.orgId), 
-                orderBy('dueDate', 'asc')
+                where('orgId', '==', userProfile.orgId)
             );
         } else {
             return query(
                 tasksRef, 
-                where('assignedTo', '==', userProfile.id), 
-                orderBy('dueDate', 'asc')
+                where('assignedTo', '==', userProfile.id)
             );
         }
     }, [firestore, userProfile, permissions.canManageStaff, isSuperAdmin]);
@@ -49,20 +49,25 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
         };
         const load: Record<string, number> = {};
 
-        if (tasks) {
-            tasks.forEach(task => {
-                if (task.status === 'ACTIVE') {
-                    load[task.assignedTo] = (load[task.assignedTo] || 0) + 1;
-                }
-            });
+        if (!tasks) {
+            return { groupedTasks: initialGroups, personnelLoad: load };
         }
 
-        const grouped = tasks?.reduce((acc, task) => {
+        // Sort tasks by due date client-side
+        const sortedTasks = [...tasks].sort((a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime());
+
+        sortedTasks.forEach(task => {
+            if (task.status === 'ACTIVE') {
+                load[task.assignedTo] = (load[task.assignedTo] || 0) + 1;
+            }
+        });
+
+        const grouped = sortedTasks.reduce((acc, task) => {
             if (acc[task.status]) {
                 acc[task.status].push(task);
             }
             return acc;
-        }, initialGroups) || initialGroups;
+        }, initialGroups);
         
         return { groupedTasks: grouped, personnelLoad: load };
     }, [tasks]);
