@@ -1,58 +1,9 @@
 rules_version = '2';
-
 service cloud.firestore {
   match /databases/{database}/documents {
-    
-    // --- Helper Functions ---
-    function isSignedIn() {
-      return request.auth != null;
-    }
-
-    // Get the profile of the user making the request
-    function getRequestingUserProfile() {
-      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
-    }
-
-    // Check if the user's role is one of the provided roles
-    function userHasRole(roles) {
-      return isSignedIn() && getRequestingUserProfile().role in roles;
-    }
-
-    // Check if the user belongs to a specific organization
-    function isUserInOrg(orgId) {
-      return isSignedIn() && getRequestingUserProfile().orgId == orgId;
-    }
-
-    // --- Collection Rules ---
-
-    // Organizations can be read by any user (needed for login).
-    // They can be created by any authenticated user (the registration flow).
-    // They can only be updated by an admin of that specific organization.
-    match /organizations/{orgId} {
-      allow read, create: if isSignedIn();
-      allow update: if isUserInOrg(orgId) && userHasRole(['ORG_ADMIN', 'MD']);
-      allow delete: if false; // Prevent accidental deletion
-    }
-
-    // A user can create their own profile.
-    // A user can read/update their own profile.
-    // An admin or HR user can read/update any user profile WITHIN THEIR OWN ORG.
-    match /users/{userId} {
-      allow create: if isSignedIn() && request.auth.uid == userId;
-      
-      allow read, update: if isSignedIn() && 
-                          (request.auth.uid == userId || 
-                          (userHasRole(['ORG_ADMIN', 'HR', 'MD']) && isUserInOrg(get(/databases/$(database)/documents/users/$(userId)).data.orgId)));
-                          
-      allow delete: if userHasRole(['ORG_ADMIN', 'MD']) && isUserInOrg(get(/databases/$(database)/documents/users/$(userId)).data.orgId);
-    }
-    
-    // This is a generic, fallback rule for all other data collections like
-    // attendance, requisitions, tasks, etc.
-    // It ensures that users can only access documents tagged with their own orgId.
-    match /{collection}/{docId} {
-       allow read, write: if isSignedIn() && 
-                          isUserInOrg(resource.data.orgId);
+    match /{document=**} {
+      // This allows anyone to read or write any data forever.
+      allow read, write: if true;
     }
   }
 }
