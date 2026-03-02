@@ -1,9 +1,57 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This allows anyone to read or write any data forever.
-      allow read, write: if true;
+
+    function isSuperAdmin() {
+      // The email to identify the super admin.
+      return request.auth.token.email == 'superadmin@palilious.com';
+    }
+
+    // Helper function to get user's data from their profile document.
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    // Helper function to check if a user belongs to the org of the resource.
+    function isOrgMember(orgId) {
+        return getUserData(request.auth.uid).orgId == orgId;
+    }
+
+    // ORG_ADMIN, HR, or MD roles are considered managers within their org.
+    function isOrgManager() {
+        return getUserData(request.auth.uid).role in ['ORG_ADMIN', 'HR', 'MD'];
+    }
+
+    // --- Rules ---
+
+    // Rule for Organization documents
+    match /organizations/{orgId} {
+      // Any authenticated user can read org data (needed for login).
+      allow read: if request.auth != null;
+      // Any authenticated user can create an org.
+      allow create: if request.auth != null;
+      // Only org managers of that org or a super admin can update.
+      allow update: if isSuperAdmin() || (isOrgManager() && isOrgMember(orgId));
+      // Deleting orgs is disabled for now.
+      allow delete: if false;
+    }
+
+    // Rule for User Profile documents
+    match /users/{userId} {
+      // A user can create their own profile.
+      allow create: if request.auth.uid == userId;
+      // A user can read their own profile. Org managers can read profiles in their org. Super admin can read all.
+      allow read: if isSuperAdmin() || request.auth.uid == userId || (isOrgManager() && isOrgMember(resource.data.orgId));
+      // A user can update their own profile. Org managers can update profiles in their org. Super admin can update all.
+      allow update: if isSuperAdmin() || request.auth.uid == userId || (isOrgManager() && isOrgMember(resource.data.orgId));
+      // Deleting users is disabled for now.
+      allow delete: if false;
+    }
+
+    // Generic rule for all other data collections (e.g., requisitions, tasks, etc.)
+    match /{collection}/{docId} {
+      // This rule applies to any collection not explicitly matched above.
+      allow read, write: if isSuperAdmin() || (collection != 'users' && collection != 'organizations' && request.auth != null && isOrgMember(resource.data.orgId));
     }
   }
 }

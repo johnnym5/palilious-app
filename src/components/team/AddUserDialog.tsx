@@ -7,12 +7,12 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserRole, UserProfile } from "@/lib/types";
-import { useState } from "react";
+import { UserRole, UserProfile, Organization } from "@/lib/types";
+import { useState, useMemo } from "react";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase } from "@/firebase";
+import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { firebaseConfig } from "@/firebase/config";
-import { doc } from "firebase/firestore";
+import { doc, collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
@@ -21,10 +21,11 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 const roles: Exclude<UserRole, 'ORG_ADMIN'>[] = ['STAFF', 'HR', 'FINANCE', 'MD'];
 
-const formSchema = z.object({
+const baseSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
@@ -32,7 +33,6 @@ const formSchema = z.object({
   birthday: z.date().optional(),
 });
 
-type FormData = z.infer<typeof formSchema>;
 
 interface AddUserDialogProps {
   children: React.ReactNode;
@@ -45,13 +45,31 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
   const firestore = useFirestore();
   const { user: authUser } = useUser();
   const { toast } = useToast();
+  const { isSuperAdmin } = useSuperAdmin();
+  
+  const orgsQuery = useMemoFirebase(
+    () => (isSuperAdmin ? collection(firestore, 'organizations') : null),
+    [firestore, isSuperAdmin]
+  );
+  const { data: organizations, isLoading: areOrgsLoading } = useCollection<Organization>(orgsQuery);
+
 
   const adminProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null
   , [firestore, authUser]);
   const { data: adminProfile } = useDoc<UserProfile>(adminProfileRef);
 
-  const form = useForm<FormData>({
+  const formSchema = useMemo(() => {
+    if (isSuperAdmin) {
+      return baseSchema.extend({
+        orgId: z.string({ required_error: "Organization is required." }).min(1, { message: "Organization is required." }),
+      });
+    }
+    return baseSchema;
+  }, [isSuperAdmin]);
+
+
+  const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
@@ -61,8 +79,10 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     },
   });
 
-  async function onSubmit(values: FormData) {
-    if (!firestore || !adminProfile?.orgId) {
+  async function onSubmit(values: z.infer<typeof formSchema>) {
+    const orgId = isSuperAdmin ? (values as { orgId: string }).orgId : adminProfile?.orgId;
+    
+    if (!firestore || !orgId) {
         toast({
             variant: "destructive",
             title: "Error",
@@ -81,7 +101,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const newUser = userCredential.user;
 
       const userData: Omit<UserProfile, 'id' | 'username'> = {
-        orgId: adminProfile.orgId,
+        orgId: orgId,
         fullName: values.fullName,
         email: values.email,
         role: values.role,
@@ -136,6 +156,34 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+              {isSuperAdmin && (
+                <FormField
+                  control={form.control}
+                  name="orgId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Organization</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value as string | undefined}>
+                        <FormControl>
+                          <SelectTrigger disabled={areOrgsLoading}>
+                            <SelectValue placeholder="Select an organization" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {areOrgsLoading ? (
+                             <SelectItem value="loading" disabled>Loading...</SelectItem>
+                          ) : (
+                            organizations?.map((org) => (
+                              <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>
+                            ))
+                          )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="fullName"

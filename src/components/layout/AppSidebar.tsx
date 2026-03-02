@@ -22,6 +22,7 @@ import type { UserProfile } from "@/lib/types";
 import { useUser } from "@/firebase";
 import { signOut } from "firebase/auth";
 import { Skeleton } from "../ui/skeleton";
+import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -41,6 +42,7 @@ export default function AppSidebar({ isMobile = false }) {
   const auth = useAuth();
   const { user: authUser } = useUser();
   const firestore = useFirestore();
+  const { isSuperAdmin } = useSuperAdmin();
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null,
@@ -70,6 +72,7 @@ export default function AppSidebar({ isMobile = false }) {
   };
   
   const userCanSee = (itemRoles: string[]) => {
+    if (isSuperAdmin) return true;
     if (!userProfile || !userProfile.role) return false;
     return itemRoles.includes(userProfile.role);
   }
