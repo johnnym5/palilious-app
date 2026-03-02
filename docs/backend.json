@@ -19,14 +19,7 @@
         },
         "position": {
           "type": "string",
-          "description": "The user's job position within the organization.",
-          "enum": [
-            "Staff",
-            "HR Manager",
-            "Finance Manager",
-            "Managing Director",
-            "Organization Administrator"
-          ]
+          "description": "The user's job position within the organization."
         },
         "status": {
           "type": "string",

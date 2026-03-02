@@ -1,4 +1,4 @@
-export type UserPosition = 'Staff' | 'HR Manager' | 'Finance Manager' | 'Managing Director' | 'Organization Administrator';
+export type UserPosition = string;
 export type UserStatus = "ONLINE" | "OFFLINE" | "ON_LEAVE";
 
 export interface Organization {
@@ -17,7 +17,6 @@ export interface UserProfile {
   position: UserPosition;
   avatarURL?: string;
   joinedDate: string; // ISO String for timestamp
-  birthday?: string; // ISO String for timestamp
   status?: UserStatus;
   notificationPreferences?: {
     requisitionUpdates?: boolean;
