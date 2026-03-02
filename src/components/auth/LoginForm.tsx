@@ -46,9 +46,9 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
-      // 1. Find organization by name
+      // 1. Find organization by name, using lowercase for case-insensitive search
       const orgsRef = collection(firestore, "organizations");
-      const orgQuery = query(orgsRef, where("name", "==", values.organizationName));
+      const orgQuery = query(orgsRef, where("name", "==", values.organizationName.toLowerCase()));
       const orgSnapshot = await getDocs(orgQuery);
 
       if (orgSnapshot.empty) {
@@ -57,9 +57,9 @@ export function LoginForm() {
       const orgData = orgSnapshot.docs[0];
       const orgId = orgData.id;
 
-      // 2. Find user by username and orgId
+      // 2. Find user by username and orgId, using lowercase for case-insensitive search
       const usersRef = collection(firestore, "users");
-      const userQuery = query(usersRef, where("username", "==", values.username), where("orgId", "==", orgId));
+      const userQuery = query(usersRef, where("username", "==", values.username.toLowerCase()), where("orgId", "==", orgId));
       const userSnapshot = await getDocs(userQuery);
 
       if (userSnapshot.empty) {
@@ -69,7 +69,7 @@ export function LoginForm() {
       const userDoc = userSnapshot.docs[0];
       const userData = userDoc.data() as UserProfile;
 
-      // 3. Sign in with email and password
+      // 3. Sign in with email and password. Email is already stored in lowercase.
       await signInWithEmailAndPassword(auth, userData.email, values.password);
 
       // Successful login will be handled by the layout redirect

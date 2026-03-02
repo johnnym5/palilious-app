@@ -60,14 +60,14 @@ export function RegisterForm() {
   async function onSubmit(values: FormData) {
     setIsSubmitting(true);
     try {
-      // 1. Create the Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(auth, values.email, values.password);
+      // 1. Create the Firebase Auth user, use lowercase email for consistency
+      const userCredential = await createUserWithEmailAndPassword(auth, values.email.toLowerCase(), values.password);
       const newUser = userCredential.user;
 
-      // 2. Create the Organization document
+      // 2. Create the Organization document, store name as lowercase for case-insensitive lookup
       const orgsCollection = collection(firestore, "organizations");
       const orgData: Omit<Organization, 'id'> = {
-        name: values.organizationName,
+        name: values.organizationName.toLowerCase(),
         ownerId: newUser.uid,
         createdAt: new Date().toISOString(),
       };
@@ -79,10 +79,11 @@ export function RegisterForm() {
 
       // 3. Create the UserProfile document for the ORG_ADMIN
       const userDocRef = doc(firestore, "users", newUser.uid);
+      // Store email and username as lowercase for case-insensitive lookup
       const userProfileData: Omit<UserProfile, 'id'> = {
         orgId: orgDocRef.id,
-        email: values.email,
-        username: values.username,
+        email: values.email.toLowerCase(),
+        username: values.username.toLowerCase(),
         fullName: values.fullName,
         role: 'ORG_ADMIN',
         joinedDate: new Date().toISOString(),
