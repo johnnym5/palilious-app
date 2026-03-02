@@ -24,6 +24,7 @@ import { signOut } from "firebase/auth";
 import { Skeleton } from "../ui/skeleton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "../ui/badge";
+import { useSystemConfig } from "@/hooks/useSystemConfig";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -49,6 +50,7 @@ export default function AppSidebar({ isMobile = false }) {
   [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
+  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile);
   
   const orgRef = useMemoFirebase(() => 
     userProfile?.orgId ? doc(firestore, "organizations", userProfile.orgId) : null,
@@ -91,14 +93,28 @@ export default function AppSidebar({ isMobile = false }) {
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <nav className="grid items-start gap-1 p-4 text-sm font-medium">
-          {mainNavItems.map((item) => <NavLink key={item.href} {...item} />)}
+          {mainNavItems.map((item) => {
+            if (item.href === "/requisitions" && !isConfigLoading && !systemConfig?.finance_access) {
+                return null;
+            }
+            return <NavLink key={item.href} {...item} />
+          })}
           
           <div className="my-2 h-px w-full bg-border" />
           
-          {isProfileLoading && <Skeleton className="h-8 w-full" />}
-          {userProfile && adminNavItems.filter(item => permissions[item.permission]).map((item) => (
-             <NavLink key={item.href} {...item} />
-          ))}
+          {isProfileLoading || isConfigLoading ? <Skeleton className="h-8 w-full" /> : (
+            userProfile && adminNavItems
+              .filter(item => {
+                  if (item.permission === 'canManageStaff') {
+                      // ORG_ADMIN can always see this. Others depend on the toggle.
+                      return userProfile.position === 'Organization Administrator' || (systemConfig?.admin_tools && permissions.canManageStaff);
+                  }
+                  return permissions[item.permission];
+              })
+              .map((item) => (
+                  <NavLink key={item.href} {...item} />
+              ))
+          )}
         </nav>
 
         <div className="mt-auto border-t p-4">

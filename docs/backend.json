@@ -19,7 +19,8 @@
         },
         "position": {
           "type": "string",
-          "description": "The user's job position within the organization."
+          "description": "The user's job position within the organization.",
+          "enum": ["Staff", "HR Manager", "Finance Manager", "Managing Director", "Organization Administrator"]
         },
         "status": {
           "type": "string",
@@ -167,6 +168,35 @@
         "createdBy",
         "updates"
       ]
+    },
+    "SystemConfig": {
+      "title": "SystemConfig",
+      "type": "object",
+      "description": "Stores system-wide configuration toggles for an organization.",
+      "properties": {
+        "orgId": {
+          "type": "string",
+          "description": "The ID of the organization this config applies to."
+        },
+        "finance_access": {
+          "type": "boolean",
+          "description": "Toggles visibility of the Requisitions module."
+        },
+        "admin_tools": {
+          "type": "boolean",
+          "description": "Toggles visibility of the Team Management module for non-admins."
+        },
+        "attendance_strict": {
+          "type": "boolean",
+          "description": "Toggles strict mode for attendance (e.g., Geofencing)."
+        }
+      },
+      "required": [
+        "orgId",
+        "finance_access",
+        "admin_tools",
+        "attendance_strict"
+      ]
     }
   },
   "auth": {
@@ -234,6 +264,22 @@
             {
               "name": "taskId",
               "description": "The task's unique ID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/system_configs/{configId}",
+        "definition": {
+          "entityName": "SystemConfig",
+          "schema": {
+            "$ref": "#/entities/SystemConfig"
+          },
+          "description": "Stores feature toggle configurations for each organization.",
+          "params": [
+            {
+              "name": "configId",
+              "description": "The unique ID for the configuration document."
             }
           ]
         }

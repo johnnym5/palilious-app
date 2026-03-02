@@ -1,4 +1,4 @@
-export type UserPosition = string;
+export type UserPosition = "Staff" | "HR Manager" | "Finance Manager" | "Managing Director" | "Organization Administrator";
 export type UserStatus = "ONLINE" | "OFFLINE" | "ON_LEAVE";
 
 export interface Organization {
@@ -6,6 +6,14 @@ export interface Organization {
   name: string;
   ownerId: string;
   createdAt: string;
+}
+
+export interface SystemConfig {
+  id: string;
+  orgId: string;
+  finance_access: boolean;
+  admin_tools: boolean;
+  attendance_strict: boolean;
 }
 
 export interface UserProfile {

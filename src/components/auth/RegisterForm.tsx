@@ -20,7 +20,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { collection, doc } from "firebase/firestore";
-import type { Organization, UserProfile } from "@/lib/types";
+import type { Organization, UserProfile, SystemConfig } from "@/lib/types";
 
 const formSchema = z.object({
   organizationName: z.string().min(1, { message: "Organization name is required." }),
@@ -76,6 +76,16 @@ export function RegisterForm() {
       if (!orgDocRef) {
         throw new Error("Failed to create organization document.");
       }
+      
+      // 2.5 Create the default SystemConfig for the new organization
+      const configCollection = collection(firestore, "system_configs");
+      const configData: Omit<SystemConfig, 'id'> = {
+          orgId: orgDocRef.id,
+          finance_access: true,
+          admin_tools: true,
+          attendance_strict: false, // Default to false as it's not implemented
+      };
+      await addDocumentNonBlocking(configCollection, configData);
 
       // 3. Create the UserProfile document for the ORG_ADMIN
       const userDocRef = doc(firestore, "users", newUser.uid);
