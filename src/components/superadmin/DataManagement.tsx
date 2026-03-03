@@ -147,94 +147,106 @@ export function DataManagement() {
         <Card>
             <CardHeader>
                 <CardTitle>Data Management</CardTitle>
-                <CardDescription>Backup, restore, and export your application data.</CardDescription>
+                <CardDescription>Backup, restore, and manage your application data.</CardDescription>
             </CardHeader>
             <CardContent>
-                 <Tabs defaultValue="export" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3">
-                        <TabsTrigger value="export">Export to JSON</TabsTrigger>
-                        <TabsTrigger value="backup">Cloud Backup</TabsTrigger>
-                        <TabsTrigger value="import">Import from JSON</TabsTrigger>
+                 <Tabs defaultValue="offline" className="w-full">
+                    <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="offline">Offline Backup</TabsTrigger>
+                        <TabsTrigger value="online">Online Backup</TabsTrigger>
                     </TabsList>
-                    <TabsContent value="export" className="mt-4">
-                        <p className="text-sm text-muted-foreground mb-4">Download collections as JSON files. This is useful for local analysis but is not a complete, restorable backup.</p>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                            {exportOptions.map(option => (
-                                <Button 
-                                    key={option.id}
-                                    variant="outline"
-                                    onClick={() => handleExport(option.id)}
-                                    disabled={!!loading}
-                                >
-                                    {loading === option.id ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
-                                    {option.name}
-                                </Button>
-                            ))}
-                        </div>
-                        <div className="border-t pt-4 mt-4">
-                            <Button 
-                                className="w-full"
-                                onClick={() => handleExportAll()}
-                                disabled={!!loading}
-                            >
-                                {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
-                                Export All Data (Full Snapshot)
-                            </Button>
-                        </div>
+                    
+                    <TabsContent value="offline" className="mt-4 space-y-6">
+                        <Card>
+                           <CardHeader>
+                               <CardTitle>Export to JSON</CardTitle>
+                               <CardDescription>Download collections as JSON files for local analysis or manual backup.</CardDescription>
+                           </CardHeader>
+                           <CardContent>
+                                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                                    {exportOptions.map(option => (
+                                        <Button 
+                                            key={option.id}
+                                            variant="outline"
+                                            onClick={() => handleExport(option.id)}
+                                            disabled={!!loading}
+                                        >
+                                            {loading === option.id ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
+                                            {option.name}
+                                        </Button>
+                                    ))}
+                                </div>
+                                <div className="border-t pt-4 mt-4">
+                                    <Button 
+                                        className="w-full"
+                                        onClick={() => handleExportAll()}
+                                        disabled={!!loading}
+                                    >
+                                        {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
+                                        Export All Data (Full Snapshot)
+                                    </Button>
+                                </div>
+                           </CardContent>
+                        </Card>
+                        
+                        <Card>
+                           <CardHeader>
+                               <CardTitle>Import from JSON</CardTitle>
+                               <CardDescription>Select a JSON backup file to preview its contents. The final import step is destructive and will overwrite existing data.</CardDescription>
+                           </CardHeader>
+                           <CardContent>
+                                <div className="space-y-4">
+                                    <div className="space-y-4">
+                                        <Input type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || !!loading}/>
+                                        {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
+                                        {importPreview && (
+                                            <Card>
+                                                <CardHeader><CardTitle className="text-base">Import Preview</CardTitle></CardHeader>
+                                                <CardContent>
+                                                    <p className="text-sm font-medium mb-2">The following data will be imported:</p>
+                                                    <ul className="text-sm text-muted-foreground list-disc pl-5 max-h-48 overflow-y-auto">
+                                                        {Object.entries(importPreview).map(([key, value]) => (
+                                                            <li key={key}><strong>{value}</strong> document(s) in <strong>{key}</strong></li>
+                                                        ))}
+                                                    </ul>
+                                                </CardContent>
+                                            </Card>
+                                        )}
+                                    </div>
+                                    <div className="border-t pt-4">
+                                        <AlertDialog>
+                                            <AlertDialogTrigger asChild>
+                                                <Button className="w-full" disabled={!importPreview || !!loading || isParsing}>
+                                                    {loading === 'import' ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
+                                                    Import Data
+                                                </Button>
+                                            </AlertDialogTrigger>
+                                            <AlertDialogContent>
+                                                <AlertDialogHeader>
+                                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                                    <AlertDialogDescription>
+                                                        This is a destructive action that cannot be undone. It will overwrite any existing documents with the same ID. Are you sure you want to proceed?
+                                                    </AlertDialogDescription>
+                                                </AlertDialogHeader>
+                                                <AlertDialogFooter>
+                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                    <AlertDialogAction onClick={handleImport} className="bg-destructive hover:bg-destructive/90">Yes, Start Import</AlertDialogAction>
+                                                </AlertDialogFooter>
+                                            </AlertDialogContent>
+                                        </AlertDialog>
+                                    </div>
+                                </div>
+                           </CardContent>
+                        </Card>
                     </TabsContent>
-                    <TabsContent value="backup" className="mt-4">
+
+                     <TabsContent value="online" className="mt-4">
                          <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
                             <CloudCog className="mx-auto h-12 w-12 text-muted-foreground" />
-                            <h3 className="mt-4 text-lg font-semibold">Cloud Backup & Restore</h3>
+                            <h3 className="mt-4 text-lg font-semibold">Online Backup & Restore</h3>
                             <p className="mt-1 text-sm text-muted-foreground">This feature will allow you to create and restore from automated Google Cloud backups. The full implementation is coming soon.</p>
-                            <p className="text-xs text-muted-foreground mt-4">Note: The application uses Firestore, not Realtime Database. Backups will be managed for the Firestore instance.</p>
+                            <p className="text-xs text-muted-foreground mt-4">Note: The application uses Firestore. Backups will be managed for the Firestore instance.</p>
                          </div>
-                    </TabsContent>
-                     <TabsContent value="import" className="mt-4">
-                         <div className="space-y-4">
-                            <p className="text-sm text-muted-foreground">
-                                Select a JSON backup file to preview its contents. The final import step is destructive and will overwrite existing data.
-                            </p>
-                            <div className="space-y-4">
-                                <Input type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || !!loading}/>
-                                {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
-                                {importPreview && (
-                                    <Card>
-                                        <CardHeader><CardTitle className="text-base">Import Preview</CardTitle></CardHeader>
-                                        <CardContent>
-                                            <p className="text-sm font-medium mb-2">The following data will be imported:</p>
-                                            <ul className="text-sm text-muted-foreground list-disc pl-5 max-h-48 overflow-y-auto">
-                                                {Object.entries(importPreview).map(([key, value]) => (
-                                                    <li key={key}><strong>{value}</strong> document(s) in <strong>{key}</strong></li>
-                                                ))}
-                                            </ul>
-                                        </CardContent>
-                                    </Card>
-                                )}
-                            </div>
-                            <div className="border-t pt-4">
-                                <AlertDialog>
-                                    <AlertDialogTrigger asChild>
-                                        <Button className="w-full" disabled={!importPreview || !!loading || isParsing}>
-                                            {loading === 'import' ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
-                                            Import Data
-                                        </Button>
-                                    </AlertDialogTrigger>
-                                    <AlertDialogContent>
-                                        <AlertDialogHeader>
-                                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                            <AlertDialogDescription>
-                                                This is a destructive action that cannot be undone. It will overwrite any existing documents with the same ID. Are you sure you want to proceed?
-                                            </AlertDialogDescription>
-                                        </AlertDialogHeader>
-                                        <AlertDialogFooter>
-                                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                            <AlertDialogAction onClick={handleImport} className="bg-destructive hover:bg-destructive/90">Yes, Start Import</AlertDialogAction>
-                                        </AlertDialogFooter>
-                                    </AlertDialogContent>
-                                </AlertDialog>
-                            </div>
-                        </div>
                     </TabsContent>
                 </Tabs>
             </CardContent>
