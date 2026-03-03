@@ -69,22 +69,57 @@ export default function DashboardPage() {
     
 
     const isLoading = isProfileLoading || tasksLoading || reqsLoading || staffLoading;
+    
+    // Progress bar calculations
+    const tasksProgress = Math.min((activeTaskCount / 5) * 100, 100);
+    const clockInStatusProgress = userProfile?.status === 'ONLINE' ? 100 : 0;
+    const reqsProgress = Math.min((pendingReqsCount / 3) * 100, 100);
+    const onlineStaffProgress = allStaff && allStaff.length > 0 ? (onlineStaffCount / allStaff.length) * 100 : 0;
+
 
     const StatCards = () => (
          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {isLoading ? (
                 <>
-                    <Skeleton className="h-[98px]" />
-                    <Skeleton className="h-[98px]" />
-                    <Skeleton className="h-[98px]" />
-                    <Skeleton className="h-[98px]" />
+                    <Skeleton className="h-[124px]" />
+                    <Skeleton className="h-[124px]" />
+                    <Skeleton className="h-[124px]" />
+                    <Skeleton className="h-[124px]" />
                 </>
             ) : (
                 <>
-                    <StatCard title="Active Tasks" value={activeTaskCount} icon={CheckCircle} />
-                    <StatCard title="Clock-in Status" value={userProfile?.status || "OFFLINE"} icon={Clock} />
-                    <StatCard title="Pending Requisitions" value={pendingReqsCount} icon={Briefcase} />
-                    <StatCard title="Staff Online" value={onlineStaffCount} icon={Users} />
+                    <StatCard 
+                        title="Active Tasks" 
+                        value={activeTaskCount} 
+                        icon={CheckCircle} 
+                        href="/tasks"
+                        progress={tasksProgress}
+                        color="text-sky-500"
+                    />
+                    <StatCard 
+                        title="Clock-in Status" 
+                        value={userProfile?.status || "OFFLINE"} 
+                        icon={Clock} 
+                        href="/attendance"
+                        progress={clockInStatusProgress}
+                        color={userProfile?.status === 'ONLINE' ? "text-emerald-500" : "text-muted-foreground"}
+                    />
+                    <StatCard 
+                        title="Pending Requisitions" 
+                        value={pendingReqsCount} 
+                        icon={Briefcase} 
+                        href="/requisitions"
+                        progress={reqsProgress}
+                        color="text-amber-500"
+                    />
+                    <StatCard 
+                        title="Staff Online" 
+                        value={onlineStaffCount} 
+                        icon={Users}
+                        href="/team"
+                        progress={onlineStaffProgress}
+                        color="text-violet-500"
+                    />
                 </>
             )}
         </div>
