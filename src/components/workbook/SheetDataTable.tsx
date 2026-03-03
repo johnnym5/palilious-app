@@ -4,12 +4,13 @@ import { useState, useEffect } from 'react';
 import type { Sheet } from '@/lib/types';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
+import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, MoreVertical } from 'lucide-react';
+import { Plus, Trash2, MoreVertical, FileDown } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -108,6 +109,19 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
         setColumnToDelete(null);
     }
     
+    const handleExport = () => {
+        const sheetData = [
+            headers, // First row is headers
+            ...data.map(row => headers.map(header => row[header])) // Subsequent rows are data
+        ];
+
+        const ws = XLSX.utils.aoa_to_sheet(sheetData);
+        const wb = XLSX.utils.book_new();
+        XLSX.utils.book_append_sheet(wb, ws, sheet.name);
+        XLSX.writeFile(wb, `${sheet.workbookId}-${sheet.name}.xlsx`);
+        toast({ title: 'Exporting...', description: `The sheet "${sheet.name}" is being downloaded.` });
+    };
+
     if (!headers || headers.length === 0) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 space-y-4">
@@ -225,6 +239,10 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
                          Add Column
                      </Button>
                 </AddColumnDialog>
+                <Button variant="outline" size="sm" onClick={handleExport}>
+                    <FileDown className="mr-2 h-4 w-4" />
+                    Export as Excel
+                </Button>
             </div>
 
             {columnToDelete && (
