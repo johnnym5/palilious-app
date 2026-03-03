@@ -4,15 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Plus, ShieldAlert } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RequisitionTable } from "@/components/requisitions/RequisitionTable";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { NewRequisitionDialog } from "@/components/requisitions/NewRequisitionDialog";
 import { useUser, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
-import type { UserProfile } from "@/lib/types";
+import type { Requisition, UserProfile } from "@/lib/types";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { usePermissions, type Permissions } from "@/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
+import { RequisitionDetailDialog } from "@/components/requisitions/RequisitionDetailDialog";
+import { useSystemConfig } from "@/hooks/useSystemConfig";
 
 
 const getVisibleTabs = (permissions: Permissions, isStaff: boolean) => {
@@ -49,22 +51,46 @@ export default function RequisitionsPage() {
   const firestore = useFirestore();
   const { isSuperAdmin } = useSuperAdmin();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [selectedRequest, setSelectedRequest] = useState<Requisition | null>(null);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
+  const { config: systemConfig } = useSystemConfig(userProfile?.orgId);
+
+  const reqIdFromUrl = searchParams.get('reqId');
+  const reqFromUrlRef = useMemoFirebase(() => 
+    reqIdFromUrl ? doc(firestore, 'requisitions', reqIdFromUrl) : null
+  , [firestore, reqIdFromUrl]);
+  const { data: reqFromUrl } = useDoc<Requisition>(reqFromUrlRef);
+
+  useEffect(() => {
+    if (reqFromUrl) {
+      setSelectedRequest(reqFromUrl);
+    }
+  }, [reqFromUrl]);
+  
+  const handleDialogClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      setSelectedRequest(null);
+      // Remove query param from URL without reloading
+      router.replace(pathname, {scroll: false}); 
+    }
+  }
 
   const isStaff = !permissions.canApproveHR && !permissions.canApproveFinance && !permissions.canApproveMD && !permissions.canManageStaff;
   const visibleTabs = getVisibleTabs(permissions, isStaff);
   const [activeTab, setActiveTab] = useState(visibleTabs[0]);
   
-  useState(() => {
+  useEffect(() => {
     if (!visibleTabs.includes(activeTab)) {
         setActiveTab(visibleTabs[0] || "My Requests");
     }
-  });
+  }, [visibleTabs, activeTab]);
 
   if (!isProfileLoading && !permissions.canAccessRequisitions) {
     return (
@@ -76,6 +102,8 @@ export default function RequisitionsPage() {
           </div>
     )
   }
+
+  const currencySymbol = systemConfig?.currency_symbol || '$';
 
   return (
     <div className="space-y-6 min-h-[calc(100vh-10rem)]">
@@ -95,7 +123,13 @@ export default function RequisitionsPage() {
                     </TabsList>
                     {visibleTabs.map(tab => (
                         <TabsContent key={tab} value={tab} className="mt-4">
-                            <RequisitionTable filter={tab} userProfile={userProfile} isSuperAdmin={isSuperAdmin} permissions={permissions} />
+                            <RequisitionTable 
+                              filter={tab} 
+                              userProfile={userProfile} 
+                              isSuperAdmin={isSuperAdmin} 
+                              permissions={permissions} 
+                              onSelectRequest={setSelectedRequest}
+                            />
                         </TabsContent>
                     ))}
                 </Tabs>
@@ -111,6 +145,18 @@ export default function RequisitionsPage() {
               <Plus className="h-8 w-8" />
             </Button>
           </NewRequisitionDialog>
+
+          {selectedRequest && userProfile && (
+                <RequisitionDetailDialog
+                    requisition={selectedRequest}
+                    isOpen={!!selectedRequest}
+                    onOpenChange={handleDialogClose}
+                    currentUserProfile={userProfile}
+                    isSuperAdmin={isSuperAdmin}
+                    permissions={permissions}
+                    currencySymbol={currencySymbol}
+                />
+            )}
         </>
       )}
     </div>

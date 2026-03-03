@@ -17,7 +17,6 @@ import {
   BarChart,
 } from "lucide-react";
 
-import { Logo } from "@/components/Logo";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useAuth, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
@@ -91,10 +90,9 @@ export default function AppSidebar({ isMobile = false }) {
 
   return (
     <aside className={cn("flex-col border-r bg-background", isMobile ? "flex w-full" : "hidden md:flex md:w-72")}>
-      <div className="flex h-16 items-center border-b px-4 gap-2">
-        <Logo />
-         {isOrgLoading ? <Skeleton className="h-4 w-24" /> : 
-          <span className="font-semibold text-md text-muted-foreground truncate">{orgName}</span>
+      <div className="flex h-16 items-center border-b px-6">
+        {isOrgLoading ? <Skeleton className="h-6 w-3/4" /> :
+          <h2 className="truncate font-bold text-xl text-foreground">{orgName}</h2>
         }
       </div>
       <div className="flex flex-1 flex-col justify-between">

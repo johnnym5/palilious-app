@@ -12,7 +12,6 @@ import { doc, arrayUnion } from 'firebase/firestore';
 import { CompletionBriefDialog } from './CompletionBriefDialog';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
-import { TaskDetailDialog } from './TaskDetailDialog';
 import { useToast } from '@/hooks/use-toast';
 
 interface TaskCardProps {
@@ -20,6 +19,7 @@ interface TaskCardProps {
     userProfile: UserProfile;
     permissions: Permissions;
     personnelLoad: number;
+    onSelect: (task: Task) => void;
 }
 
 const priorityBorders: Record<Task['priority'], string> = {
@@ -28,11 +28,10 @@ const priorityBorders: Record<Task['priority'], string> = {
     LEVEL_3: 'border-l-rose-500'
 }
 
-export function TaskCard({ task, userProfile, permissions, personnelLoad }: TaskCardProps) {
+export function TaskCard({ task, userProfile, permissions, personnelLoad, onSelect }: TaskCardProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [isBriefOpen, setIsBriefOpen] = useState(false);
-    const [isDetailOpen, setIsDetailOpen] = useState(false);
 
     const isAssistanceRequest = task.type === 'ASSISTANCE_REQUEST';
 
@@ -118,7 +117,7 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad }: Task
         <>
             <Card 
                 className={cn("bg-card/50 backdrop-blur-xl hover:bg-card transition-colors border-l-4 cursor-pointer", priorityBorders[task.priority])}
-                onClick={() => setIsDetailOpen(true)}
+                onClick={() => onSelect(task)}
             >
                 <CardHeader>
                     <div className="flex justify-between items-start">
@@ -176,16 +175,6 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad }: Task
                     onOpenChange={setIsBriefOpen}
                     task={task}
                     userProfile={userProfile}
-                />
-            )}
-            
-            {isDetailOpen && (
-                <TaskDetailDialog
-                    task={task}
-                    isOpen={isDetailOpen}
-                    onOpenChange={setIsDetailOpen}
-                    currentUserProfile={userProfile}
-                    permissions={permissions}
                 />
             )}
         </>

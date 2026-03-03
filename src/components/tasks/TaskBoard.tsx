@@ -10,11 +10,12 @@ import { useMemo } from 'react';
 interface TaskBoardProps {
     userProfile: UserProfile;
     permissions: Permissions;
+    onTaskSelect: (task: Task) => void;
 }
 
 const statusColumns: TaskStatus[] = ["QUEUED", "ACTIVE", "AWAITING_REVIEW", "ARCHIVED"];
 
-export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
+export function TaskBoard({ userProfile, permissions, onTaskSelect }: TaskBoardProps) {
     const firestore = useFirestore();
     const { isSuperAdmin } = useSuperAdmin();
 
@@ -98,6 +99,7 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
                                 userProfile={userProfile} 
                                 permissions={permissions}
                                 personnelLoad={personnelLoad[task.assignedTo] || 0}
+                                onSelect={() => onTaskSelect(task)}
                             />
                         ))}
                     </div>

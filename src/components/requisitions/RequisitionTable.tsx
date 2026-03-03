@@ -1,5 +1,4 @@
 'use client';
-import { useState } from 'react';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where, orderBy, Query, DocumentData } from "firebase/firestore";
@@ -8,7 +7,6 @@ import type { Permissions } from "@/hooks/usePermissions";
 import { RequisitionStatusBadge } from './RequisitionStatusBadge';
 import { format, differenceInHours } from 'date-fns';
 import { Skeleton } from '../ui/skeleton';
-import { RequisitionDetailDialog } from './RequisitionDetailDialog';
 import { Inbox, ShieldAlert } from 'lucide-react';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
 
@@ -17,6 +15,7 @@ interface RequisitionTableProps {
     userProfile: UserProfile | null;
     isSuperAdmin: boolean;
     permissions: Permissions;
+    onSelectRequest: (req: Requisition) => void;
 }
 
 const getQueryForFilter = (
@@ -66,9 +65,8 @@ const getQueryForFilter = (
     return query(reqsRef, ...baseClauses, ...filterClauses, orderBy('createdAt', 'desc'));
 };
 
-export function RequisitionTable({ filter, userProfile, isSuperAdmin, permissions }: RequisitionTableProps) {
+export function RequisitionTable({ filter, userProfile, isSuperAdmin, permissions, onSelectRequest }: RequisitionTableProps) {
     const firestore = useFirestore();
-    const [selectedRequest, setSelectedRequest] = useState<Requisition | null>(null);
     const { config: systemConfig } = useSystemConfig(userProfile?.orgId);
 
     const requisitionsQuery = useMemoFirebase((): Query<DocumentData> | null => {
@@ -85,71 +83,58 @@ export function RequisitionTable({ filter, userProfile, isSuperAdmin, permission
     const currencySymbol = systemConfig?.currency_symbol || '$';
 
     return (
-        <>
-            <div className="rounded-md border">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Serial No.</TableHead>
-                            <TableHead>Title</TableHead>
-                            <TableHead>Created By</TableHead>
-                            <TableHead className="text-right">Amount</TableHead>
-                            <TableHead>Date</TableHead>
-                            <TableHead>Status</TableHead>
+        <div className="rounded-md border">
+            <Table>
+                <TableHeader>
+                    <TableRow>
+                        <TableHead>Serial No.</TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Created By</TableHead>
+                        <TableHead className="text-right">Amount</TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Status</TableHead>
+                    </TableRow>
+                </TableHeader>
+                <TableBody>
+                    {isLoading && Array.from({ length: 3 }).map((_, i) => (
+                        <TableRow key={i}>
+                            <TableCell colSpan={6}><Skeleton className="h-8 w-full bg-secondary/50" /></TableCell>
                         </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading && Array.from({ length: 3 }).map((_, i) => (
-                            <TableRow key={i}>
-                                <TableCell colSpan={6}><Skeleton className="h-8 w-full bg-secondary/50" /></TableCell>
-                            </TableRow>
-                        ))}
-                        {!isLoading && requisitions?.length === 0 && (
-                            <TableRow>
-                                <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
-                                    <div className="flex flex-col items-center justify-center gap-4">
-                                        <div className='rounded-full border-8 border-secondary p-4'>
-                                          <Inbox className="h-12 w-12 text-secondary-foreground"/>
-                                        </div>
-                                        <div className='space-y-1'>
-                                          <p className="font-semibold text-lg text-foreground">Inbox Clear</p>
-                                          <p className="text-sm">No requisitions found in this view.</p>
-                                        </div>
+                    ))}
+                    {!isLoading && requisitions?.length === 0 && (
+                        <TableRow>
+                            <TableCell colSpan={6} className="h-48 text-center text-muted-foreground">
+                                <div className="flex flex-col items-center justify-center gap-4">
+                                    <div className='rounded-full border-8 border-secondary p-4'>
+                                        <Inbox className="h-12 w-12 text-secondary-foreground"/>
                                     </div>
-                                </TableCell>
-                            </TableRow>
-                        )}
-                        {!isLoading && requisitions?.map(req => {
-                            const isUrgent = req.status === 'PENDING_HR' && differenceInHours(new Date(), new Date(req.createdAt)) > 24;
-                            return (
-                            <TableRow key={req.id} onClick={() => setSelectedRequest(req)} className="cursor-pointer hover:bg-secondary/50">
-                                <TableCell className="font-mono text-xs text-muted-foreground">
-                                    <div className="flex items-center gap-2">
-                                        {isUrgent && <ShieldAlert className="h-4 w-4 text-destructive animate-pulse" title="This request is overdue for HR approval" />}
-                                        {req.serialNo}
+                                    <div className='space-y-1'>
+                                        <p className="font-semibold text-lg text-foreground">Inbox Clear</p>
+                                        <p className="text-sm">No requisitions found in this view.</p>
                                     </div>
-                                </TableCell>
-                                <TableCell className="font-medium">{req.title}</TableCell>
-                                <TableCell className="text-muted-foreground">{req.creatorName}</TableCell>
-                                <TableCell className="text-right font-semibold text-primary">{currencySymbol}{req.amount.toFixed(2)}</TableCell>
-                                <TableCell className="text-muted-foreground">{format(new Date(req.createdAt), "dd MMM, yyyy")}</TableCell>
-                                <TableCell><RequisitionStatusBadge status={req.status} /></TableCell>
-                            </TableRow>
-                        )})}
-                    </TableBody>
-                </Table>
-            </div>
-            {selectedRequest && userProfile && (
-                <RequisitionDetailDialog
-                    requisition={selectedRequest}
-                    isOpen={!!selectedRequest}
-                    onOpenChange={(isOpen) => !isOpen && setSelectedRequest(null)}
-                    currentUserProfile={userProfile}
-                    isSuperAdmin={isSuperAdmin}
-                    permissions={permissions}
-                    currencySymbol={currencySymbol}
-                />
-            )}
-        </>
+                                </div>
+                            </TableCell>
+                        </TableRow>
+                    )}
+                    {!isLoading && requisitions?.map(req => {
+                        const isUrgent = req.status === 'PENDING_HR' && differenceInHours(new Date(), new Date(req.createdAt)) > 24;
+                        return (
+                        <TableRow key={req.id} onClick={() => onSelectRequest(req)} className="cursor-pointer hover:bg-secondary/50">
+                            <TableCell className="font-mono text-xs text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                    {isUrgent && <ShieldAlert className="h-4 w-4 text-destructive animate-pulse" title="This request is overdue for HR approval" />}
+                                    {req.serialNo}
+                                </div>
+                            </TableCell>
+                            <TableCell className="font-medium">{req.title}</TableCell>
+                            <TableCell className="text-muted-foreground">{req.creatorName}</TableCell>
+                            <TableCell className="text-right font-semibold text-primary">{currencySymbol}{req.amount.toFixed(2)}</TableCell>
+                            <TableCell className="text-muted-foreground">{format(new Date(req.createdAt), "dd MMM, yyyy")}</TableCell>
+                            <TableCell><RequisitionStatusBadge status={req.status} /></TableCell>
+                        </TableRow>
+                    )})}
+                </TableBody>
+            </Table>
+        </div>
     );
 }

@@ -1,19 +1,25 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
 import { doc } from 'firebase/firestore';
-import type { UserProfile } from '@/lib/types';
+import type { Task, UserProfile } from '@/lib/types';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { TaskBoard } from '@/components/tasks/TaskBoard';
 import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
+import { useSearchParams, useRouter, usePathname } from 'next/navigation';
+import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
 
 export default function TasksPage() {
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
   const { user: authUser } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, 'users', authUser.uid) : null
@@ -21,6 +27,26 @@ export default function TasksPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   const permissions = usePermissions(userProfile);
+
+  const taskIdFromUrl = searchParams.get('taskId');
+  const taskFromUrlRef = useMemoFirebase(() => 
+    taskIdFromUrl ? doc(firestore, 'tasks', taskIdFromUrl) : null
+  , [firestore, taskIdFromUrl]);
+  const { data: taskFromUrl } = useDoc<Task>(taskFromUrlRef);
+
+  useEffect(() => {
+    if (taskFromUrl) {
+      setSelectedTask(taskFromUrl);
+    }
+  }, [taskFromUrl]);
+
+  const handleDialogClose = (isOpen: boolean) => {
+    if (!isOpen) {
+      setSelectedTask(null);
+      router.replace(pathname, {scroll: false}); 
+    }
+  };
+
 
   return (
     <div className="space-y-6 h-full flex flex-col">
@@ -43,7 +69,7 @@ export default function TasksPage() {
           </div>
         </div>
       ) : userProfile && (
-        <TaskBoard userProfile={userProfile} permissions={permissions} />
+        <TaskBoard userProfile={userProfile} permissions={permissions} onTaskSelect={setSelectedTask} />
       )}
       
       {userProfile && (
@@ -61,6 +87,16 @@ export default function TasksPage() {
             <Plus className="h-8 w-8" />
           </Button>
         </AssignTaskDialog>
+      )}
+
+      {selectedTask && userProfile && (
+        <TaskDetailDialog
+          task={selectedTask}
+          isOpen={!!selectedTask}
+          onOpenChange={handleDialogClose}
+          currentUserProfile={userProfile}
+          permissions={permissions}
+        />
       )}
     </div>
   );
