@@ -1,0 +1,9 @@
+{
+  "name": "Palilious ControlFlow",
+  "short_name": "ControlFlow",
+  "description": "Staff Internal Control & Automation",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1f2937",
+  "theme_color": "#1f2937"
+}

@@ -5,8 +5,10 @@ import { FirebaseClientProvider } from '@/firebase';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'palilious',
+  title: 'Palilious ControlFlow',
   description: 'Staff Internal Control & Automation',
+  manifest: '/manifest.json',
+  themeColor: '#1f2937',
 };
 
 export default function RootLayout({
