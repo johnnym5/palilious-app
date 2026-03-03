@@ -122,6 +122,10 @@ export interface Task {
   attachmentUrl?: string;
   sharedWith?: string[];
   subTasks?: SubTask[];
+  type?: 'STANDARD' | 'ASSISTANCE_REQUEST';
+  relatedTaskId?: string;
+  requesterId?: string;
+  requesterName?: string;
 }
 
 
@@ -173,3 +177,5 @@ export interface Workbook {
   creatorName: string;
   createdAt: string; // ISO String
 }
+
+    

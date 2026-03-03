@@ -208,6 +208,23 @@
                 },
                 "required": ["id", "text", "completed"]
             }
+        },
+        "type": {
+          "type": "string",
+          "enum": ["STANDARD", "ASSISTANCE_REQUEST"],
+          "description": "The type of the task."
+        },
+        "relatedTaskId": {
+          "type": "string",
+          "description": "The ID of the original task for assistance requests."
+        },
+        "requesterId": {
+          "type": "string",
+          "description": "The ID of the user requesting assistance."
+        },
+        "requesterName": {
+          "type": "string",
+          "description": "The name of the user requesting assistance."
         }
       },
       "required": [
@@ -491,3 +508,5 @@
     ]
   }
 }
+
+    
