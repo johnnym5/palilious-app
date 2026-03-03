@@ -137,9 +137,17 @@ export function NewWorkbookDialog({ children, open, onOpenChange, userProfile }:
                     headers: sheet.headers,
                     createdAt: now,
                 };
-                // Don't await this to speed up UI, it's non-blocking
                 addDocumentNonBlocking(collection(firestore, `workbooks/${workbookDocRef.id}/sheets`), sheetData);
             }
+        } else if (activeTab === 'blank') {
+            const defaultSheet: Omit<Sheet, 'id'> = {
+                workbookId: workbookDocRef.id,
+                name: 'Sheet1',
+                data: [],
+                headers: [],
+                createdAt: now,
+            };
+            await addDocumentNonBlocking(collection(firestore, `workbooks/${workbookDocRef.id}/sheets`), defaultSheet);
         }
 
 
