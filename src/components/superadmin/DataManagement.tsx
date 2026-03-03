@@ -113,7 +113,7 @@ export function DataManagement() {
     const handleCreateBackup = async () => {
         if (!firestore || !database) return;
         setLoading('cloud-backup');
-        const backupTimestamp = new Date().toISOString();
+        const backupTimestamp = new Date().toISOString().replace(/\./g, '_');
 
         try {
             toast({ title: 'Starting cloud backup...', description: 'Fetching all data from Firestore.' });
@@ -551,7 +551,7 @@ export function DataManagement() {
                                                 <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
                                                     <div className="flex items-center gap-2">
                                                         <Server className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="font-mono text-xs">{new Date(key).toLocaleString()}</span>
+                                                        <span className="font-mono text-xs">{new Date(key.replace(/_/g, '.')).toLocaleString()}</span>
                                                     </div>
                                                     {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
                                                 </div>
