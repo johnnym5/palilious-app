@@ -45,6 +45,24 @@ export const COLLECTIONS = [
     { id: 'organizations', name: 'Organizations' },
 ];
 
+const sanitizeRtdbKey = (key: string) => key.replace(/[.#$[\]/]/g, '_');
+
+const sanitizeSheetData = (sheet: any) => {
+    if (sheet.data && Array.isArray(sheet.data)) {
+        const sanitizedData = sheet.data.map(row => {
+            if (typeof row !== 'object' || row === null) return row;
+            const newRow: Record<string, any> = {};
+            for (const key in row) {
+                newRow[sanitizeRtdbKey(key)] = row[key];
+            }
+            return newRow;
+        });
+        const sanitizedHeaders = sheet.headers.map((header: string) => sanitizeRtdbKey(header));
+        return { ...sheet, data: sanitizedData, headers: sanitizedHeaders };
+    }
+    return sheet;
+};
+
 export function DataManagement() {
     const firestore = useFirestore();
     const database = useDatabase();
@@ -113,7 +131,7 @@ export function DataManagement() {
     const handleCreateBackup = async () => {
         if (!firestore || !database) return;
         setLoading('cloud-backup');
-        const backupTimestamp = new Date().toISOString().replace(/\./g, '_');
+        const backupTimestamp = new Date().toISOString().replace(/\./g, '_').replace(/:/g, '-');
 
         try {
             toast({ title: 'Starting cloud backup...', description: 'Fetching all data from Firestore.' });
@@ -141,7 +159,8 @@ export function DataManagement() {
             
             if (collectionsToProcess.includes('workbooks') && dataToBackup['workbooks']?.length > 0) {
                 const workbookIds = dataToBackup['workbooks'].map(wb => wb.id);
-                dataToBackup['sheets'] = await getSubCollectionData('workbooks', 'sheets', workbookIds);
+                const sheets = await getSubCollectionData('workbooks', 'sheets', workbookIds);
+                dataToBackup['sheets'] = sheets.map(sanitizeSheetData);
             }
             if (collectionsToProcess.includes('chats') && dataToBackup['chats']?.length > 0) {
                 const chatIds = dataToBackup['chats'].map(c => c.id);
@@ -200,7 +219,8 @@ export function DataManagement() {
             
             if (collectionsToProcess.includes('workbooks') && dataToExport['workbooks']?.length > 0) {
                 const workbookIds = dataToExport['workbooks'].map(wb => wb.id);
-                dataToExport['sheets'] = await getSubCollectionData('workbooks', 'sheets', workbookIds);
+                const sheets = await getSubCollectionData('workbooks', 'sheets', workbookIds);
+                dataToExport['sheets'] = sheets.map(sanitizeSheetData);
             }
 
             if (collectionsToProcess.includes('chats') && dataToExport['chats']?.length > 0) {
@@ -586,7 +606,7 @@ export function DataManagement() {
                                                 <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
                                                     <div className="flex items-center gap-2">
                                                         <Server className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="font-mono text-xs">{new Date(key.replace(/_/g, '.')).toLocaleString()}</span>
+                                                        <span className="font-mono text-xs">{new Date(key.replace(/_/g, '.').replace(/-/g, ':')).toLocaleString()}</span>
                                                     </div>
                                                     {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
                                                 </div>
