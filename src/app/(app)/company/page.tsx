@@ -20,6 +20,7 @@ import { useSystemConfig } from '@/hooks/useSystemConfig';
 import { SystemConfigForm } from '@/components/company/SystemConfigForm';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { DepartmentManager } from '@/components/team/DepartmentManager';
 
 const orgFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
@@ -96,6 +97,8 @@ export default function CompanySettingsPage() {
   // Use the refactored hook with the target orgId
   const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(targetOrgId);
   
+  const isLoading = isProfileLoading || isOrgLoading || isConfigLoading;
+
   if (!isProfileLoading && !permissions.canManageCompany) {
       return (
            <div className="flex flex-col items-center justify-center h-full text-center p-8">
@@ -107,7 +110,22 @@ export default function CompanySettingsPage() {
       )
   }
 
-  const isLoading = isProfileLoading || isOrgLoading || isConfigLoading;
+  if (isLoading) {
+    return (
+      <div className="space-y-6">
+        <div className="space-y-2">
+          <Skeleton className="h-8 w-1/2" />
+          <Skeleton className="h-5 w-3/4" />
+        </div>
+        <Skeleton className="h-48 w-full" />
+        <div className="grid gap-6 lg:grid-cols-2 items-start">
+          <Skeleton className="h-56 w-full" />
+          <Skeleton className="h-96 w-full" />
+        </div>
+      </div>
+    );
+  }
+
 
   return (
     <div className="space-y-6">
@@ -115,30 +133,33 @@ export default function CompanySettingsPage() {
             <h1 className="text-3xl font-bold font-headline tracking-tight">Company Settings</h1>
             <p className="text-muted-foreground">Manage your organization's details and settings.</p>
         </div>
-      <div className="grid gap-6 lg:grid-cols-2 items-start">
-        <Card>
-            <CardHeader>
-            <CardTitle>Organization Profile</CardTitle>
-            <CardDescription>Manage your organization's public name.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? <Skeleton className="h-40 w-full" /> : (organization ? <CompanySettingsForm organization={organization} /> : <p>Organization not found.</p>)}
-            </CardContent>
-        </Card>
-        <Card>
-            <CardHeader>
-            <CardTitle>System Configuration</CardTitle>
-            <CardDescription>Manage global feature toggles and operational settings.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isLoading ? <Skeleton className="h-96 w-full" /> : (systemConfig ? (
-                    <ScrollArea className="h-96 pr-6">
-                        <SystemConfigForm systemConfig={systemConfig} />
-                    </ScrollArea>
-                ) : <p>System configuration not found.</p>)}
-            </CardContent>
-        </Card>
-      </div>
+        
+        {userProfile && <DepartmentManager userProfile={userProfile} />}
+
+        <div className="grid gap-6 lg:grid-cols-2 items-start">
+            <Card>
+                <CardHeader>
+                <CardTitle>Organization Profile</CardTitle>
+                <CardDescription>Manage your organization's public name.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {organization ? <CompanySettingsForm organization={organization} /> : <p>Organization not found.</p>}
+                </CardContent>
+            </Card>
+            <Card>
+                <CardHeader>
+                <CardTitle>System Configuration</CardTitle>
+                <CardDescription>Manage global feature toggles and operational settings.</CardDescription>
+                </CardHeader>
+                <CardContent>
+                    {systemConfig ? (
+                        <ScrollArea className="h-96 pr-6">
+                            <SystemConfigForm systemConfig={systemConfig} />
+                        </ScrollArea>
+                    ) : <p>System configuration not found.</p>}
+                </CardContent>
+            </Card>
+        </div>
     </div>
   );
 }

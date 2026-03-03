@@ -24,9 +24,9 @@ const getBaseRoleForPermissions = (position: UserPosition): 'Staff' | 'HR Manage
     switch (position) {
         case "CEO / Managing Director":
             return "Managing Director";
-        case "Finance Manager":
+        case "Chief Financial Officer (CFO) / Finance Manager":
             return "Finance Manager";
-        case "HR Manager":
+        case "HR Manager / Director":
             return "HR Manager";
         case "Organization Administrator":
             return "Organization Administrator";

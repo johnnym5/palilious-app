@@ -76,6 +76,21 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     },
   });
   
+  const orgIdForQuery = isSuperAdmin ? form.watch('orgId') : adminProfile?.orgId;
+
+  const departmentsQuery = useMemoFirebase(() => 
+      orgIdForQuery ? query(collection(firestore, 'departments'), where('orgId', '==', orgIdForQuery)) : null
+  , [firestore, orgIdForQuery]);
+
+  const { data: customDepartments, isLoading: areDeptsLoading } = useCollection<Department>(departmentsQuery);
+
+  const allDepartments = useMemo(() => {
+      if (areDeptsLoading) return [];
+      const customDeptNames = customDepartments?.map(d => d.name) || [];
+      const combined = new Set([...PREDEFINED_DEPARTMENTS, ...customDeptNames]);
+      return Array.from(combined).sort();
+  }, [customDepartments, areDeptsLoading]);
+  
   useEffect(() => {
     form.reset({
         fullName: "",
@@ -277,7 +292,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="__NONE__">No Department</SelectItem>
-                            {PREDEFINED_DEPARTMENTS?.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                            {areDeptsLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : allDepartments?.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />

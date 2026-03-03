@@ -6,11 +6,11 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserProfile, UserPosition } from "@/lib/types";
-import { useState, useEffect } from "react";
+import { UserProfile, UserPosition, Department } from "@/lib/types";
+import { useState, useEffect, useMemo } from "react";
 import { Loader2 } from "lucide-react";
-import { useFirestore, updateDocumentNonBlocking, useAuth } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useFirestore, updateDocumentNonBlocking, useAuth, useCollection, useMemoFirebase } from "@/firebase";
+import { doc, collection, query, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -41,6 +41,19 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
   const firestore = useFirestore();
   const auth = useAuth();
   const { toast } = useToast();
+
+  const departmentsQuery = useMemoFirebase(() => 
+    userToEdit ? query(collection(firestore, 'departments'), where('orgId', '==', userToEdit.orgId)) : null
+  , [firestore, userToEdit]);
+
+  const { data: customDepartments, isLoading: areDeptsLoading } = useCollection<Department>(departmentsQuery);
+
+  const allDepartments = useMemo(() => {
+      if (areDeptsLoading) return [];
+      const customDeptNames = customDepartments?.map(d => d.name) || [];
+      const combined = new Set([...PREDEFINED_DEPARTMENTS, ...customDeptNames]);
+      return Array.from(combined).sort();
+  }, [customDepartments, areDeptsLoading]);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -174,7 +187,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="__NONE__">No Department</SelectItem>
-                            {PREDEFINED_DEPARTMENTS?.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                            {areDeptsLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : allDepartments?.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
