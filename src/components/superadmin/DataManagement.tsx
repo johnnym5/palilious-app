@@ -1,11 +1,12 @@
 'use client';
 
-import { useState } from 'react';
-import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { useState, useEffect } from 'react';
+import { useFirestore, useCollection, useMemoFirebase, useDatabase } from '@/firebase';
 import { collection, getDocs, collectionGroup, writeBatch, doc, query, where } from 'firebase/firestore';
+import { ref, get, child, set, onValue } from 'firebase/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Download, Upload, CloudCog, Trash2, ShieldAlert, PlusCircle } from 'lucide-react';
+import { Loader2, Download, Upload, CloudCog, Trash2, ShieldAlert, PlusCircle, Server } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -22,8 +23,8 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 
 
 const COLLECTIONS = [
@@ -42,15 +43,24 @@ const COLLECTIONS = [
 
 export function DataManagement() {
     const firestore = useFirestore();
+    const database = useDatabase();
     const { toast } = useToast();
     const [loading, setLoading] = useState<string | null>(null);
+
+    // Offline state
     const [fileToImport, setFileToImport] = useState<File | null>(null);
     const [importPreview, setImportPreview] = useState<Record<string, number> | null>(null);
     const [collectionsToImport, setCollectionsToImport] = useState<string[]>([]);
     const [isParsing, setIsParsing] = useState(false);
-    const [isCreatingBackup, setIsCreatingBackup] = useState(false);
     
-    // State for destructive actions
+    // Online state
+    const [onlineBackups, setOnlineBackups] = useState<string[]>([]);
+    const [selectedOnlineBackup, setSelectedOnlineBackup] = useState<string | null>(null);
+    const [onlineBackupPreview, setOnlineBackupPreview] = useState<Record<string, number> | null>(null);
+    const [collectionsToRestore, setCollectionsToRestore] = useState<string[]>([]);
+
+
+    // Destructive actions state
     const [targetOrg, setTargetOrg] = useState<string>('__ALL__');
     const [collectionToDelete, setCollectionToDelete] = useState<string>('');
     const [deleteConfirmation, setDeleteConfirmation] = useState('');
@@ -59,22 +69,55 @@ export function DataManagement() {
     const { data: organizations, isLoading: areOrgsLoading } = useCollection<Organization>(
         useMemoFirebase(() => collection(firestore, 'organizations'), [firestore])
     );
-
-    const handleCreateBackup = () => {
-        setIsCreatingBackup(true);
-        toast({
-            title: "Backup In Progress...",
-            description: "Your request to create a cloud backup has been received. This is a backend operation and may take several minutes.",
+    
+    useEffect(() => {
+        if (!database) return;
+        const backupsRef = ref(database, 'backups');
+        const unsubscribe = onValue(backupsRef, (snapshot) => {
+            const data = snapshot.val();
+            if (data) {
+                const backupKeys = Object.keys(data).sort().reverse();
+                setOnlineBackups(backupKeys);
+            } else {
+                setOnlineBackups([]);
+            }
         });
 
-        setTimeout(() => {
-            setIsCreatingBackup(false);
-            toast({
-                title: "Backend Not Implemented",
-                description: "The backend service for creating cloud backups is not yet available.",
-                variant: "destructive",
-            });
-        }, 3000);
+        return () => unsubscribe();
+    }, [database]);
+
+    const handleCreateBackup = async () => {
+        if (!firestore || !database) return;
+        setLoading('cloud-backup');
+        const backupTimestamp = new Date().toISOString();
+
+        try {
+            toast({ title: 'Starting cloud backup...', description: 'Fetching all data from Firestore.' });
+
+            const allData: Record<string, any[]> = {};
+            for (const name of COLLECTIONS.map(c => c.id)) {
+                 const querySnapshot = await getDocs(collection(firestore, name));
+                 allData[name] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            }
+
+            const sheetsSnapshot = await getDocs(collectionGroup(firestore, 'sheets'));
+            allData['sheets'] = sheetsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            const messagesSnapshot = await getDocs(collectionGroup(firestore, 'messages'));
+            allData['chat_messages'] = messagesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+            toast({ title: 'Data fetched', description: 'Writing data to Realtime Database. This may take a moment.' });
+
+            const backupRef = ref(database, `backups/${backupTimestamp}`);
+            await set(backupRef, allData);
+
+            toast({ title: 'Cloud Backup Complete', description: `Snapshot created successfully.` });
+
+        } catch (e: any) {
+             toast({ variant: 'destructive', title: 'Backup Failed', description: e.message });
+        } finally {
+            setLoading(null);
+        }
     }
 
     const downloadJson = (filename: string, data: any) => {
@@ -151,6 +194,36 @@ export function DataManagement() {
             reader.readAsText(file);
         }
     };
+    
+    const handleSelectOnlineBackup = async (backupId: string) => {
+        if (!database) return;
+        setLoading('preview-online');
+        setSelectedOnlineBackup(backupId);
+        setOnlineBackupPreview(null);
+        setCollectionsToRestore([]);
+
+        try {
+            const backupRef = ref(database, `backups/${backupId}`);
+            const snapshot = await get(backupRef);
+            if(snapshot.exists()) {
+                const data = snapshot.val();
+                const preview: Record<string, number> = {};
+                const collectionsFromBackup: string[] = [];
+                for(const key in data) {
+                    if (Array.isArray(data[key])) {
+                        preview[key] = data[key].length;
+                        collectionsFromBackup.push(key);
+                    }
+                }
+                setOnlineBackupPreview(preview);
+                setCollectionsToRestore(collectionsFromBackup);
+            }
+        } catch(e: any) {
+             toast({ variant: 'destructive', title: 'Preview Failed', description: e.message });
+        } finally {
+            setLoading(null);
+        }
+    }
 
     const handleImport = async () => {
         if (!fileToImport || collectionsToImport.length === 0) return;
@@ -250,14 +323,14 @@ export function DataManagement() {
         }
     };
 
-    const anyLoading = !!loading || isCreatingBackup || areOrgsLoading;
+    const anyLoading = !!loading || areOrgsLoading;
 
     return (
         <div className="space-y-8">
             <Card>
                 <CardHeader>
                     <CardTitle>Backup & Export</CardTitle>
-                    <CardDescription>Create offline (JSON) or online (Cloud) backups of your Firestore data.</CardDescription>
+                    <CardDescription>Create offline (JSON) or online (Realtime Database) backups of your Firestore data.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <Button className="w-full" onClick={handleExportAll} disabled={anyLoading}>
@@ -265,7 +338,7 @@ export function DataManagement() {
                         Export All to JSON (Offline)
                     </Button>
                      <Button onClick={handleCreateBackup} disabled={anyLoading}>
-                        {isCreatingBackup ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
+                        {loading === 'cloud-backup' ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
                         Create Cloud Snapshot (Online)
                     </Button>
                 </CardContent>
@@ -276,26 +349,31 @@ export function DataManagement() {
                     <CardTitle>Restore & Import</CardTitle>
                     <CardDescription>Restore data from an offline JSON backup or an online cloud snapshot.</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-6">
-                    <div>
-                        <h3 className="font-semibold mb-2">Import from JSON (Offline)</h3>
-                        <div className="p-4 border rounded-lg space-y-4">
-                            <Input type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || anyLoading}/>
+                <CardContent>
+                   <Tabs defaultValue="offline">
+                     <TabsList className="grid w-full grid-cols-2">
+                        <TabsTrigger value="offline">Offline</TabsTrigger>
+                        <TabsTrigger value="online">Online</TabsTrigger>
+                     </TabsList>
+                     <TabsContent value="offline" className="pt-4">
+                         <div className="p-4 border rounded-lg space-y-4">
+                            <Label htmlFor="import-file">Import from JSON</Label>
+                            <Input id="import-file" type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || anyLoading}/>
                             {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
                             {importPreview && (
                                 <Card>
                                     <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Import Preview</CardTitle>
                                         <div className="flex items-center space-x-2">
-                                            <Checkbox id="select-all" checked={collectionsToImport.length === Object.keys(importPreview).length} onCheckedChange={(checked) => setCollectionsToImport(checked ? Object.keys(importPreview) : [])}/>
-                                            <label htmlFor="select-all" className="text-sm font-medium">Select All</label>
+                                            <Checkbox id="select-all-import" checked={collectionsToImport.length === Object.keys(importPreview).length} onCheckedChange={(checked) => setCollectionsToImport(checked ? Object.keys(importPreview) : [])}/>
+                                            <label htmlFor="select-all-import" className="text-sm font-medium">Select All</label>
                                         </div>
                                     </CardHeader>
                                     <CardContent>
                                         <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
                                             {Object.entries(importPreview).map(([key, value]) => (
                                                 <div key={key} className="flex items-center space-x-2">
-                                                    <Checkbox id={key} checked={collectionsToImport.includes(key)} onCheckedChange={(checked) => setCollectionsToImport(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
-                                                    <label htmlFor={key} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
+                                                    <Checkbox id={`import-${key}`} checked={collectionsToImport.includes(key)} onCheckedChange={(checked) => setCollectionsToImport(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
+                                                    <label htmlFor={`import-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
                                                 </div>
                                             ))}
                                         </div>
@@ -314,14 +392,48 @@ export function DataManagement() {
                                 </AlertDialogContent>
                             </AlertDialog>
                         </div>
-                    </div>
-                     <Separator />
-                    <div>
-                        <h3 className="font-semibold mb-2">Restore from Cloud Snapshot (Online)</h3>
-                        <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
-                            <CloudCog className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Cloud restore feature coming soon.</p>
-                        </div>
-                    </div>
+                     </TabsContent>
+                     <TabsContent value="online" className="pt-4">
+                         <div className="p-4 border rounded-lg space-y-4">
+                            <h3 className="font-semibold text-sm">Available Cloud Backups</h3>
+                            {onlineBackups.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No cloud backups found.</p>}
+                            <div className="max-h-60 overflow-y-auto space-y-2">
+                                {onlineBackups.map(key => (
+                                    <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
+                                        <div className="flex items-center gap-2">
+                                            <Server className="h-4 w-4 text-muted-foreground" />
+                                            <span className="font-mono text-xs">{new Date(key).toLocaleString()}</span>
+                                        </div>
+                                        {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
+                                    </div>
+                                ))}
+                            </div>
+                            {onlineBackupPreview && (
+                                <Card>
+                                     <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Restore Preview</CardTitle>
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox id="select-all-restore" checked={collectionsToRestore.length === Object.keys(onlineBackupPreview).length} onCheckedChange={(checked) => setCollectionsToRestore(checked ? Object.keys(onlineBackupPreview) : [])}/>
+                                            <label htmlFor="select-all-restore" className="text-sm font-medium">Select All</label>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                       <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
+                                            {Object.entries(onlineBackupPreview).map(([key, value]) => (
+                                                <div key={key} className="flex items-center space-x-2">
+                                                    <Checkbox id={`restore-${key}`} checked={collectionsToRestore.includes(key)} onCheckedChange={(checked) => setCollectionsToRestore(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
+                                                    <label htmlFor={`restore-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                            <Button disabled className="w-full">
+                                <CloudCog className="mr-2" /> Restore from Cloud (Coming Soon)
+                            </Button>
+                         </div>
+                     </TabsContent>
+                   </Tabs>
                 </CardContent>
             </Card>
 
@@ -365,7 +477,7 @@ export function DataManagement() {
                                 <AlertDialogTitle>Are you absolutely, positively sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
                                     This is your final confirmation. This action is irreversible. To proceed, please type the following phrase exactly: <br />
-                                    <code className="font-mono bg-muted text-destructive-foreground px-2 py-1 rounded-sm mt-2 block text-center">{getDeleteConfirmationPhrase()}</code>
+                                    <code className="font-mono bg-muted text-foreground px-2 py-1 rounded-sm mt-2 block text-center">{getDeleteConfirmationPhrase()}</code>
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
                              <Input placeholder="Type confirmation phrase here" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} />

@@ -5,6 +5,7 @@ import { initializeApp, getApps, getApp, FirebaseApp } from 'firebase/app';
 import { getAuth } from 'firebase/auth';
 import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import { getDatabase } from 'firebase/database';
 
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
@@ -41,6 +42,7 @@ export function getSdks(firebaseApp: FirebaseApp) {
     auth: getAuth(firebaseApp),
     firestore: firestore,
     storage: getStorage(firebaseApp),
+    database: getDatabase(firebaseApp),
   };
 }
 
