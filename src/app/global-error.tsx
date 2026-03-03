@@ -36,14 +36,14 @@ export default function GlobalError({
                 
                 <div className="mt-8 flex flex-wrap justify-center gap-4">
                     <Button
-                        onClick={() => window.history.back()}
+                        onClick={() => window.location.reload()}
                         variant="outline"
                     >
                         <Undo className="mr-2 h-4 w-4" />
                         Go Back
                     </Button>
                     <Button
-                        onClick={() => reset()}
+                        onClick={() => window.location.reload()}
                         variant="outline"
                     >
                         <RotateCw className="mr-2 h-4 w-4" />
