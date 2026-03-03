@@ -90,9 +90,9 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
                             </p>
                         </CardContent>
                          <CardFooter>
-                            <Link href={`/workbook/${workbook.id}`} passHref legacyBehavior>
-                                <Button as="a" variant="outline" className="w-full">View Workbook</Button>
-                            </Link>
+                            <Button asChild variant="outline" className="w-full">
+                                <Link href={`/workbook/${workbook.id}`}>View Workbook</Link>
+                            </Button>
                         </CardFooter>
                     </Card>
                 ))}
