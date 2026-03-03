@@ -95,10 +95,10 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
         departmentId: isNoDepartment ? null : values.departmentId,
         departmentName: selectedDepartment?.name || null,
         customPermissions: {
-            canAccessRequisitions: values.canAccessRequisitions,
-            canAccessChat: values.canAccessChat,
-            canAccessAllTasks: values.canAccessAllTasks,
-            canAccessAllWorkbooks: values.canAccessAllWorkbooks,
+            canAccessRequisitions: values.canAccessRequisitions || false,
+            canAccessChat: values.canAccessChat || false,
+            canAccessAllTasks: values.canAccessAllTasks || false,
+            canAccessAllWorkbooks: values.canAccessAllWorkbooks || false,
         }
       };
 
