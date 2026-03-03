@@ -78,7 +78,7 @@ export default function RequisitionsPage() {
   }
 
   return (
-    <div className="space-y-6 relative min-h-[calc(100vh-10rem)]">
+    <div className="space-y-6 min-h-[calc(100vh-10rem)]">
       {isProfileLoading ? (
         <Skeleton className="h-[calc(100vh-12rem)] w-full" />
       ) : (
@@ -104,7 +104,7 @@ export default function RequisitionsPage() {
 
           <NewRequisitionDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen} userProfile={userProfile}>
             <Button 
-                className="absolute bottom-0 right-0 h-16 w-16 rounded-full shadow-lg shadow-primary/30" 
+                className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-10" 
                 onClick={() => setIsNewRequestOpen(true)}
                 aria-label="New Requisition"
             >

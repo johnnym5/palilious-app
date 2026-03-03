@@ -1,20 +1,17 @@
 'use client';
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "../ui/button";
-import { Megaphone, Pin, PlusCircle, Eye } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Megaphone, Pin, Eye } from "lucide-react";
 import { useUser, useDoc, useMemoFirebase, useCollection, useFirestore, updateDocumentNonBlocking } from "@/firebase";
 import { UserProfile, Announcement } from "@/lib/types";
-import { collection, doc, query, where, orderBy, arrayUnion } from "firebase/firestore";
+import { collection, doc, query, where, orderBy, arrayUnion, limit } from "firebase/firestore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Skeleton } from "../ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
-import { useMemo, useEffect, useState } from "react";
-import { NewAnnouncementDialog } from "./NewAnnouncementDialog";
+import { useMemo, useEffect } from "react";
 
 export function Announcements() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
-    const [isAddOpen, setIsAddOpen] = useState(false);
     
     const userProfileRef = useMemoFirebase(() => 
         authUser ? doc(firestore, "users", authUser.uid) : null,
@@ -28,7 +25,8 @@ export function Announcements() {
         return query(
             collection(firestore, 'announcements'),
             where('orgId', '==', userProfile.orgId),
-            orderBy('createdAt', 'desc')
+            orderBy('createdAt', 'desc'),
+            limit(5)
         );
     }, [firestore, userProfile]);
 
@@ -58,16 +56,9 @@ export function Announcements() {
 
     return (
         <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
                 <CardTitle>Announcements</CardTitle>
-                {permissions.canManageStaff && userProfile && (
-                    <NewAnnouncementDialog open={isAddOpen} onOpenChange={setIsAddOpen} userProfile={userProfile}>
-                        <Button variant="ghost" size="sm" onClick={() => setIsAddOpen(true)}>
-                            <PlusCircle className="mr-2 h-4 w-4" />
-                            Add New
-                        </Button>
-                    </NewAnnouncementDialog>
-                )}
+                <CardDescription>The latest broadcasts for your organization.</CardDescription>
             </CardHeader>
             <CardContent>
                 <div className="flow-root">

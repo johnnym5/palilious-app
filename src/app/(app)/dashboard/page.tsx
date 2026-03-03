@@ -1,23 +1,29 @@
 'use client';
 import { StatCard } from "@/components/dashboard/StatCard";
-import { Briefcase, CheckCircle, Clock, Users } from "lucide-react";
+import { Briefcase, CheckCircle, Clock, Users, Plus } from "lucide-react";
 import { Announcements } from "@/components/dashboard/Announcements";
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
 import type { UserProfile, Task, Requisition, TaskStatus, RequisitionStatus } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { RecentConversations } from "@/components/dashboard/RecentConversations";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Button } from "@/components/ui/button";
+import { NewAnnouncementDialog } from "@/components/dashboard/NewAnnouncementDialog";
+
 
 export default function DashboardPage() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
+    const [isAddOpen, setIsAddOpen] = useState(false);
 
     const userProfileRef = useMemoFirebase(() => 
         authUser ? doc(firestore, 'users', authUser.uid) : null, 
     [firestore, authUser]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+    const permissions = usePermissions(userProfile);
 
     // Query for user's tasks
     const tasksQuery = useMemoFirebase(() => {
@@ -137,6 +143,17 @@ export default function DashboardPage() {
                     <RecentConversations />
                 </div>
             </div>
+             {permissions.canManageStaff && userProfile && (
+                <NewAnnouncementDialog open={isAddOpen} onOpenChange={setIsAddOpen} userProfile={userProfile}>
+                    <Button 
+                        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-10" 
+                        onClick={() => setIsAddOpen(true)}
+                        aria-label="New Announcement"
+                    >
+                        <Plus className="h-8 w-8" />
+                    </Button>
+                </NewAnnouncementDialog>
+            )}
         </div>
     );
 }

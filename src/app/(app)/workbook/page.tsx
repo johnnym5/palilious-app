@@ -181,7 +181,7 @@ export default function WorkbookPage() {
   }
 
   return (
-    <div className="space-y-6 relative min-h-[calc(100vh-10rem)]">
+    <div className="space-y-6 min-h-[calc(100vh-10rem)]">
        <div className="flex items-center justify-between">
          <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">Master Workbook</h1>
