@@ -1,8 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { useFirestore, setDocumentNonBlocking } from '@/firebase';
-import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
+import { useFirestore } from '@/firebase';
+import { collection, getDocs, doc, getDoc, writeBatch, setDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -13,6 +13,13 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
 import {
   AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
@@ -54,6 +61,7 @@ export function DatabaseExplorer() {
     const [editedJson, setEditedJson] = useState<string>('');
     const [isLoadingDoc, setIsLoadingDoc] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const fetchDocuments = useCallback(async (collectionName: string) => {
         setIsLoadingDocs(true);
@@ -108,13 +116,11 @@ export function DatabaseExplorer() {
         setIsSaving(true);
         try {
             const updatedData = JSON.parse(editedJson);
-            // Ensure ID is not part of the data being written
             const { id, ...dataToWrite } = updatedData;
             const docRef = doc(firestore, selectedCollection, viewedDocument.id);
-            setDocumentNonBlocking(docRef, dataToWrite, { merge: false });
+            await setDoc(docRef, dataToWrite, { merge: false });
             toast({ title: 'Success', description: `Document ${viewedDocument.id} has been saved.` });
             
-            // Refresh the document list to show changes
             await fetchDocuments(selectedCollection);
 
         } catch (e: any) {
@@ -122,6 +128,34 @@ export function DatabaseExplorer() {
             toast({ variant: 'destructive', title: 'Save Failed', description: e.message || 'Invalid JSON format.' });
         } finally {
             setIsSaving(false);
+        }
+    };
+
+     const handleDeleteSelected = async () => {
+        if (!selectedCollection || selectedDocIds.length === 0) return;
+        setIsDeleting(true);
+        try {
+            const batch = writeBatch(firestore);
+            selectedDocIds.forEach(id => {
+                const docRef = doc(firestore, selectedCollection, id);
+                batch.delete(docRef);
+            });
+            await batch.commit();
+
+            toast({
+                title: 'Success',
+                description: `${selectedDocIds.length} document(s) have been deleted.`
+            });
+
+            setViewedDocument(null);
+            setEditedJson('');
+            setSelectedDocIds([]);
+            fetchDocuments(selectedCollection);
+
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+        } finally {
+            setIsDeleting(false);
         }
     };
     
@@ -205,11 +239,25 @@ export function DatabaseExplorer() {
                 <div className="p-2 border-t flex gap-2">
                      <AlertDialog>
                         <AlertDialogTrigger asChild>
-                             <Button variant="destructive" className="flex-1" disabled={selectedDocIds.length === 0}>
-                                <Trash2 className="mr-2" /> Delete ({selectedDocIds.length})
+                             <Button variant="destructive" className="flex-1" disabled={selectedDocIds.length === 0 || isDeleting}>
+                                {isDeleting ? <Loader2 className="mr-2 animate-spin" /> : <Trash2 className="mr-2" />}
+                                Delete ({selectedDocIds.length})
                             </Button>
                         </AlertDialogTrigger>
-                        {/* AlertDialogContent for delete confirmation - not implemented yet */}
+                        <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    This action cannot be undone. This will permanently delete the selected {selectedDocIds.length} document(s).
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteSelected} className="bg-destructive hover:bg-destructive/90">
+                                    Yes, delete
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
                     </AlertDialog>
                     <Button variant="outline" className="flex-1" disabled>
                         <PlusCircle className="mr-2" /> Add New
