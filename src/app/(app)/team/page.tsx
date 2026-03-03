@@ -12,7 +12,7 @@ import { AddUserDialog } from '@/components/team/AddUserDialog';
 import { EditUserDialog } from '@/components/team/EditUserDialog';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { Badge } from '@/components/ui/badge';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -143,7 +143,19 @@ export default function TeamPage() {
                         </TableCell>
                         {showOrgIdColumn && <TableCell><p className="text-xs text-muted-foreground font-mono">{user.orgId}</p></TableCell>}
                         <TableCell><Badge variant="secondary">{user.position}</Badge></TableCell>
-                        <TableCell><Badge variant={user.status === 'ONLINE' ? 'default' : 'outline'}>{user.status}</Badge></TableCell>
+                        <TableCell>
+                            {user.status === 'ONLINE' ? (
+                                <Badge variant={'default'}>{user.status}</Badge>
+                            ) : (
+                                user.lastSeen ? (
+                                    <span className="text-xs text-muted-foreground" title={new Date(user.lastSeen).toLocaleString()}>
+                                        {formatDistanceToNow(new Date(user.lastSeen), { addSuffix: true })}
+                                    </span>
+                                ) : (
+                                    <Badge variant={'outline'}>{user.status || 'OFFLINE'}</Badge>
+                                )
+                            )}
+                        </TableCell>
                         <TableCell>{format(new Date(user.joinedDate), "PPP")}</TableCell>
                         <TableCell className="text-right">
                           {permissions.canManageStaff && user.id !== authUser?.uid && (

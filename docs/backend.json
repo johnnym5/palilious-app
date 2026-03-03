@@ -46,6 +46,11 @@
           ],
           "description": "User's current status."
         },
+        "lastSeen": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The ISO timestamp when the user's status was last updated."
+        },
         "notificationPreferences": {
             "type": "object",
             "properties": {

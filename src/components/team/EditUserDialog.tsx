@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserProfile } from "@/lib/types";
+import { UserProfile, UserPosition } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useFirestore, updateDocumentNonBlocking, useAuth } from "@/firebase";
@@ -14,6 +14,9 @@ import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { sendPasswordResetEmail } from "firebase/auth";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
+const positions: UserPosition[] = ["Staff", "HR Manager", "Finance Manager", "Managing Director", "Organization Administrator"];
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
@@ -116,15 +119,22 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                 </FormItem>
               )}
             />
-            <FormField
+             <FormField
               control={form.control}
               name="position"
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Position / Role</FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g., Staff, HR Manager" {...field} />
-                  </FormControl>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a position" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {positions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}

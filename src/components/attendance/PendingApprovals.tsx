@@ -41,7 +41,7 @@ export function PendingApprovals({ userProfile }: PendingApprovalsProps) {
 
     if (decision === 'APPROVED') {
         const userRef = doc(firestore, 'users', record.userId);
-        updateDocumentNonBlocking(userRef, { status: 'ONLINE' });
+        updateDocumentNonBlocking(userRef, { status: 'ONLINE', lastSeen: new Date().toISOString() });
     }
 
     toast({

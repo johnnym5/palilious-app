@@ -38,6 +38,7 @@ export interface UserProfile {
   avatarURL?: string;
   joinedDate: string; // ISO String for timestamp
   status?: UserStatus;
+  lastSeen?: string; // ISO String
   notificationPreferences?: {
     requisitionUpdates?: boolean;
     taskAssignments?: boolean;

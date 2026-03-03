@@ -118,13 +118,13 @@ export function ClockControl({ userProfile, permissions, systemConfig }: ClockCo
         setIsSubmitting(true);
 
         try {
+            const clockOutTime = new Date();
             const userRef = doc(firestore, 'users', userProfile.id);
-            updateDocumentNonBlocking(userRef, { status: 'OFFLINE' });
+            updateDocumentNonBlocking(userRef, { status: 'OFFLINE', lastSeen: clockOutTime.toISOString() });
             
             const attendanceRef = doc(firestore, 'attendance', attendanceRecord.id);
             
             const clockInTime = new Date(attendanceRecord.clockIn);
-            const clockOutTime = new Date();
             const durationInSeconds = differenceInSeconds(clockOutTime, clockInTime);
 
             let overtime = 0;
