@@ -114,12 +114,11 @@ export function RegisterForm() {
         position: position,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
-        avatarURL: `https://picsum.photos/seed/${newUser.uid}/48/48`,
       };
       
       await updateProfile(newUser, { 
         displayName: values.fullName,
-        photoURL: userProfileData.avatarURL
+        photoURL: null
       });
       
       setDocumentNonBlocking(userDocRef, {id: newUser.uid, ...userProfileData}, { merge: false });

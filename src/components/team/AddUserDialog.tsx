@@ -112,12 +112,11 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
         position: position,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
-        avatarURL: `https://picsum.photos/seed/${newUser.uid}/48/48`,
       };
 
       await updateProfile(newUser, { 
         displayName: values.fullName,
-        photoURL: userData.avatarURL
+        photoURL: null
       });
 
       const userRef = doc(firestore, "users", newUser.uid);
