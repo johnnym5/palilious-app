@@ -1,9 +1,103 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This allows anyone to read or write any data forever.
-      allow read, write: if true;
+    
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      // This email MUST match the one in `src/hooks/useSuperAdmin.ts`
+      return isSignedIn() && request.auth.token.email == 'superadmin@palilious.com';
+    }
+
+    function getUser(userId) {
+      return get(/databases/$(database)/documents/users/$(userId));
+    }
+    
+    function isUserInOrg(orgId) {
+      return isSignedIn() && getUser(request.auth.uid).data.orgId == orgId;
+    }
+    
+    function isUserPosition(userId, position) {
+      return getUser(userId).data.position == position;
+    }
+    
+    function isOrgAdmin(userId) {
+      return isUserPosition(userId, "Organization Administrator");
+    }
+
+    function isManager(userId) {
+      let userPos = getUser(userId).data.position;
+      return userPos == "Organization Administrator" || 
+             userPos == "CEO / Managing Director" ||
+             userPos == "Finance Manager" ||
+             userPos == "HR Manager";
+    }
+    
+    // --- Public Collections ---
+    // Anyone can submit feedback, but only super admins can see it.
+    match /feedback/{feedbackId} {
+      allow create: if true;
+      allow read, update, delete: if isSuperAdmin();
+    }
+    
+    // Orgs can be read by their members or super admins.
+    // They can only be managed by their own org admins or super admins.
+    match /organizations/{orgId} {
+      allow read: if isSuperAdmin() || isUserInOrg(orgId);
+      allow create: if isSuperAdmin();
+      allow update: if isSuperAdmin() || (isUserInOrg(orgId) && isOrgAdmin(request.auth.uid));
+      allow delete: if false; // Don't allow org deletion
+    }
+
+    // --- User-specific Data ---
+    match /users/{userId} {
+      allow read: if isSuperAdmin() || isSignedIn(); // Any signed-in user can read profiles for simplicity (e.g., for chat)
+      allow create: if isSuperAdmin() || (isSignedIn() && isOrgAdmin(request.auth.uid));
+      allow update: if isSuperAdmin() || request.auth.uid == userId || (isUserInOrg(getUser(userId).data.orgId) && isManager(request.auth.uid));
+      allow delete: if isSuperAdmin() || (isUserInOrg(getUser(userId).data.orgId) && isOrgAdmin(request.auth.uid));
+    }
+
+    // --- Organization-Scoped Data ---
+    // All data below this point requires a user to be signed in and belong to the org.
+    match /requisitions/{reqId} {
+      allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
+    }
+    match /tasks/{taskId} {
+      allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
+    }
+    match /attendance/{attendanceId} {
+      allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
+    }
+    match /announcements/{announcementId} {
+      allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
+    }
+    match /system_configs/{configId} {
+      allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
+    }
+     match /departments/{deptId} {
+      allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
+    }
+    
+    // Chats are only accessible by participants
+    match /chats/{chatId} {
+      allow read, write: if isSignedIn() && request.auth.uid in resource.data.participants;
+      
+      match /messages/{messageId} {
+        allow read, write: if isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid]);
+      }
+    }
+    
+    // Workbooks can only be accessed by users in the `visibleTo` array
+    match /workbooks/{workbookId} {
+      allow read, create, update, delete: if isSuperAdmin() || (isSignedIn() && resource.data != null && request.auth.uid in resource.data.visibleTo);
+
+      match /sheets/{sheetId} {
+         allow read, create, update, delete: if isSuperAdmin() || (isSignedIn() && get(/databases/$(database)/documents/workbooks/$(workbookId)).data.visibleTo.hasAny([request.auth.uid]));
+      }
     }
   }
 }
