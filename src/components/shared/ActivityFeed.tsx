@@ -53,7 +53,7 @@ export function ActivityFeed({
     <div className="flex h-full flex-col">
       <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
         <div className="space-y-4">
-          {activity.map((entry, index) => (
+          {(activity || []).map((entry, index) => (
             <div key={index} className="flex items-start gap-3">
               <Avatar className="h-8 w-8 border">
                 <AvatarImage src={entry.actorAvatarUrl} />
@@ -86,7 +86,7 @@ export function ActivityFeed({
               </div>
             </div>
           ))}
-          {activity.length === 0 && !isLoading && (
+          {(!activity || activity.length === 0) && !isLoading && (
             <div className="py-8 text-center text-sm text-muted-foreground">
               No activity yet.
             </div>
