@@ -7,7 +7,7 @@ import type { Workbook, Sheet, UserProfile, WorkbookRole } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, Plus, MoreVertical, Trash2, Edit } from 'lucide-react';
+import { ShieldAlert, Plus, MoreVertical, Trash2, Edit, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SheetDataTable } from '@/components/workbook/SheetDataTable';
 import { useState, useMemo } from 'react';
@@ -15,6 +15,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddSheetDialog } from '@/components/workbook/AddSheetDialog';
 import { RenameSheetDialog } from '@/components/workbook/RenameSheetDialog';
+import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
 
 interface WorkbookPermissions {
     canView: boolean;
@@ -57,6 +58,7 @@ export default function WorkbookDetailPage() {
     const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
     const [sheetToRename, setSheetToRename] = useState<Sheet | null>(null);
     const [sheetToDelete, setSheetToDelete] = useState<Sheet | null>(null);
+    const [sheetToMakeTask, setSheetToMakeTask] = useState<Sheet | null>(null);
 
     const userProfileRef = useMemoFirebase(() => 
         authUser ? doc(firestore, 'users', authUser.uid) : null,
@@ -127,7 +129,7 @@ export default function WorkbookDetailPage() {
                                         {sheets.map(sheet => (
                                             <div key={sheet.id} className="flex items-center group">
                                                 <TabsTrigger value={sheet.id}>{sheet.name}</TabsTrigger>
-                                                 {permissions.canEdit && (
+                                                 {permissions.canManage && (
                                                      <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity">
@@ -137,6 +139,9 @@ export default function WorkbookDetailPage() {
                                                         <DropdownMenuContent align="end">
                                                             <DropdownMenuItem onSelect={() => setSheetToRename(sheet)}>
                                                                 <Edit className="mr-2 h-4 w-4" /> Rename
+                                                            </DropdownMenuItem>
+                                                             <DropdownMenuItem onSelect={() => setSheetToMakeTask(sheet)}>
+                                                                <ListTodo className="mr-2 h-4 w-4" /> Create Task
                                                             </DropdownMenuItem>
                                                             <DropdownMenuItem onSelect={() => setSheetToDelete(sheet)} className="text-destructive focus:text-destructive">
                                                                 <Trash2 className="mr-2 h-4 w-4" /> Delete
@@ -186,6 +191,18 @@ export default function WorkbookDetailPage() {
                     open={!!sheetToRename}
                     onOpenChange={(isOpen) => !isOpen && setSheetToRename(null)}
                     sheet={sheetToRename}
+                />
+            )}
+
+            {sheetToMakeTask && (
+                <AssignTaskDialog
+                    open={!!sheetToMakeTask}
+                    onOpenChange={(isOpen) => !isOpen && setSheetToMakeTask(null)}
+                    initialData={{
+                        title: `From Workbook: ${'\'\'\'\'\'\'\'\'\'\''}${sheetToMakeTask.name}`,
+                        description: `Complete the tasks outlined in the workbook sheet "${'\'\'\'\'\'\'\'\'\'\''}${sheetToMakeTask.name}". See attached link for the workbook.`,
+                        attachmentUrl: `${window.location.origin}/workbook/${workbookId}`
+                    }}
                 />
             )}
 

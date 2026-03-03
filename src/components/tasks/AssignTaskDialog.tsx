@@ -11,7 +11,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useFirestore, useUser, useCollection, addDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase";
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
@@ -32,12 +32,17 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface AssignTaskDialogProps {
-  children: React.ReactNode;
+  children?: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
+  initialData?: {
+      title: string;
+      description?: string;
+      attachmentUrl?: string;
+  }
 }
 
-export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDialogProps) {
+export function AssignTaskDialog({ children, open, onOpenChange, initialData }: AssignTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { user: authUser } = useUser();
@@ -62,6 +67,20 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
       attachmentUrl: "",
     },
   });
+
+    useEffect(() => {
+        if (open) {
+            form.reset({
+                title: initialData?.title || "",
+                description: initialData?.description || "",
+                priority: "LEVEL_1",
+                attachmentUrl: initialData?.attachmentUrl || "",
+                assignedTo: undefined,
+                dueDate: undefined,
+            });
+        }
+  }, [initialData, open, form]);
+
 
   async function onSubmit(values: FormData) {
     if (!firestore || !authUser || !userProfile) return;
@@ -88,7 +107,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                 toast({ 
                     variant: 'destructive', 
                     title: 'Assignment Failed', 
-                    description: `${assignedUser.fullName} already has a High Priority (Level 3) task. Only one is allowed.` 
+                    description: `${'\'\'\'\'\'\'\'\'\'\''}${assignedUser.fullName} already has a High Priority (Level 3) task. Only one is allowed.` 
                 });
                 return;
             }
@@ -100,7 +119,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                 toast({ 
                     variant: 'destructive', 
                     title: 'Assignment Failed', 
-                    description: `${assignedUser.fullName} already has two Medium Priority (Level 2) tasks. Only two are allowed.` 
+                    description: `${'\'\'\'\'\'\'\'\'\'\''}${assignedUser.fullName} already has two Medium Priority (Level 2) tasks. Only two are allowed.` 
                 });
                 return;
             }
@@ -142,7 +161,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
 
         await addDocumentNonBlocking(collection(firestore, 'tasks'), newTask);
         
-        toast({ title: "Task Assigned", description: `${values.title} has been assigned to ${assignedUser.fullName}.`});
+        toast({ title: "Task Assigned", description: `${'\'\'\'\'\'\'\'\'\'\''}${values.title} has been assigned to ${assignedUser.fullName}.`});
         form.reset();
         onOpenChange(false);
     } catch (error: any) {
@@ -154,7 +173,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
+      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Assign New Directive</DialogTitle>
@@ -177,7 +196,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="assignedTo" render={({ field }) => (
                         <FormItem><FormLabel>Assign To</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value}>
                             <FormControl><SelectTrigger disabled={areUsersLoading}><SelectValue placeholder="Select Personnel" /></SelectTrigger></FormControl>
                             <SelectContent>{users?.map(user => <SelectItem key={user.id} value={user.id}>{user.fullName}</SelectItem>)}</SelectContent>
                         </Select>
