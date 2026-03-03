@@ -416,6 +416,21 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["workbookId", "name", "data", "headers", "createdAt"]
+    },
+    "Feedback": {
+      "title": "Feedback",
+      "type": "object",
+      "description": "Represents a user feedback submission.",
+      "properties": {
+        "orgId": { "type": "string", "description": "The ID of the user's organization." },
+        "organizationName": { "type": "string", "description": "The organization name the user entered." },
+        "name": { "type": "string" },
+        "contactInfo": { "type": "string", "description": "User's email for contact." },
+        "message": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "status": { "type": "string", "enum": ["NEW", "READ"] }
+      },
+      "required": ["organizationName", "name", "contactInfo", "message", "createdAt", "status"]
     }
   },
   "auth": {
@@ -603,6 +618,22 @@
                 {
                     "name": "sheetId",
                     "description": "The sheet's unique ID."
+                }
+            ]
+        }
+    },
+    {
+        "path": "/feedback/{feedbackId}",
+        "definition": {
+            "entityName": "Feedback",
+            "schema": {
+                "$ref": "#/entities/Feedback"
+            },
+            "description": "Stores user feedback submissions.",
+            "params": [
+                {
+                    "name": "feedbackId",
+                    "description": "The unique ID for the feedback."
                 }
             ]
         }

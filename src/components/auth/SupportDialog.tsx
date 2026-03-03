@@ -12,8 +12,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { HelpCircle, Loader2, Send } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
-import { useAuth } from '@/firebase';
+import { useAuth, useFirestore, addDocumentNonBlocking } from '@/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 
 const formSchema = z.object({
   name: z.string().min(1, 'Name is required.'),
@@ -29,6 +30,7 @@ export function SupportDialog() {
   const { toast } = useToast();
   const { superAdminEmail } = useSuperAdmin();
   const auth = useAuth();
+  const firestore = useFirestore();
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
@@ -81,18 +83,44 @@ export function SupportDialog() {
           title: 'Admin Login Failed',
           description: 'Invalid credentials.',
         });
+      } finally {
+        setIsSubmitting(false);
       }
     } else {
-      // Simulate feedback submission
-      console.log('Feedback submitted:', values);
-      toast({
-        title: 'Feedback Submitted',
-        description: "Thank you! We've received your message.",
-      });
-      setOpen(false);
-    }
+      // Handle feedback submission
+      try {
+        const orgsRef = collection(firestore, "organizations");
+        const orgQuery = query(orgsRef, where("name", "==", values.organization.toLowerCase()));
+        const orgSnapshot = await getDocs(orgQuery);
+        const orgId = orgSnapshot.empty ? 'unknown' : orgSnapshot.docs[0].id;
 
-    setIsSubmitting(false);
+        const feedbackData = {
+            name: values.name,
+            organizationName: values.organization,
+            orgId: orgId,
+            contactInfo: values.emailOrPassword,
+            message: values.message,
+            createdAt: new Date().toISOString(),
+            status: 'NEW',
+        };
+
+        await addDocumentNonBlocking(collection(firestore, 'feedback'), feedbackData);
+
+        toast({
+            title: 'Feedback Submitted',
+            description: "Thank you! We've received your message.",
+        });
+        setOpen(false);
+      } catch (e: any) {
+          toast({
+            variant: "destructive",
+            title: 'Submission Failed',
+            description: "Could not submit your feedback. Please try again later.",
+          });
+      } finally {
+        setIsSubmitting(false);
+      }
+    }
   }
 
   return (

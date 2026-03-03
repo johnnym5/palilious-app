@@ -207,3 +207,14 @@ export interface Sheet {
   headers: string[];
   createdAt: string; // ISO String
 }
+
+export interface Feedback {
+  id: string;
+  orgId: string;
+  organizationName: string;
+  name: string;
+  contactInfo: string;
+  message: string;
+  createdAt: string; // ISO String
+  status: 'NEW' | 'READ';
+}

@@ -1,18 +1,19 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
-import { Loader2, Building, Users, ArrowRight, LogOut } from 'lucide-react';
+import { Loader2, Building, Users, ArrowRight, LogOut, Bell } from 'lucide-react';
 import { signOut } from 'firebase/auth';
-import { collection, getDocs } from 'firebase/firestore';
-import type { Organization, UserProfile } from '@/lib/types';
+import { collection, getDocs, query, where } from 'firebase/firestore';
+import type { Organization, UserProfile, Feedback } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Logo } from '@/components/Logo';
+import { FeedbackViewer } from '@/components/superadmin/FeedbackViewer';
 
 interface OrgStats {
     userCount: number;
@@ -27,10 +28,17 @@ export default function SuperAdminPage() {
 
     const [orgStats, setOrgStats] = useState<Record<string, OrgStats>>({});
     const [isStatsLoading, setIsStatsLoading] = useState(true);
+    const [showFeedback, setShowFeedback] = useState(false);
 
     const orgsQuery = useMemoFirebase(() => collection(firestore, 'organizations'), [firestore]);
     const { data: organizations, isLoading: areOrgsLoading } = useCollection<Organization>(orgsQuery);
     
+    const newFeedbackQuery = useMemoFirebase(() => 
+        query(collection(firestore, 'feedback'), where('status', '==', 'NEW')), 
+        [firestore]
+    );
+    const { data: newFeedback } = useCollection<Feedback>(newFeedbackQuery);
+
     useEffect(() => {
         if (!isUserLoading && user && !isSuperAdmin) {
             router.replace('/dashboard');
@@ -88,10 +96,21 @@ export default function SuperAdminPage() {
                 <div className="flex-1">
                     <h1 className="text-lg font-semibold font-headline">Super Admin Console</h1>
                 </div>
-                <Button variant="ghost" onClick={() => signOut(auth)}>
-                    <LogOut className="mr-2"/>
-                    Logout
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button variant="ghost" onClick={() => setShowFeedback(true)} className="relative">
+                        <Bell className="mr-2"/>
+                        Feedback
+                        {newFeedback && newFeedback.length > 0 && (
+                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
+                                {newFeedback.length}
+                            </span>
+                        )}
+                    </Button>
+                    <Button variant="ghost" onClick={() => signOut(auth)}>
+                        <LogOut className="mr-2"/>
+                        Logout
+                    </Button>
+                </div>
             </header>
             <main className="p-6">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
@@ -131,6 +150,7 @@ export default function SuperAdminPage() {
                     )}
                 </div>
             </main>
+            <FeedbackViewer open={showFeedback} onOpenChange={setShowFeedback} />
         </div>
     );
 }
