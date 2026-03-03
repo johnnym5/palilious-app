@@ -1,8 +1,8 @@
 'use client';
 
-import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking, useCollection } from '@/firebase';
-import { collection, doc, query, where } from 'firebase/firestore';
-import type { Organization, UserProfile, SystemConfig } from '@/lib/types';
+import { useUser, useDoc, useFirestore, useMemoFirebase, updateDocumentNonBlocking } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { Organization, UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
@@ -15,9 +15,10 @@ import { Loader2, ShieldAlert } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { usePermissions } from '@/hooks/usePermissions';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
 import { SystemConfigForm } from '@/components/company/SystemConfigForm';
+import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 
 const orgFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
@@ -72,7 +73,10 @@ export default function CompanySettingsPage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
-  
+  const searchParams = useSearchParams();
+  const { isSuperAdmin } = useSuperAdmin();
+  const impersonatedOrgId = searchParams.get('orgId');
+
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, 'users', authUser.uid) : null
   , [firestore, authUser]);
@@ -80,12 +84,16 @@ export default function CompanySettingsPage() {
   
   const permissions = usePermissions(userProfile);
 
+  // Determine the target orgId based on user role and URL params
+  const targetOrgId = (isSuperAdmin && impersonatedOrgId) ? impersonatedOrgId : userProfile?.orgId;
+
   const orgRef = useMemoFirebase(() => 
-    userProfile?.orgId ? doc(firestore, "organizations", userProfile.orgId) : null,
-  [firestore, userProfile?.orgId]);
+    targetOrgId ? doc(firestore, "organizations", targetOrgId) : null,
+  [firestore, targetOrgId]);
   const { data: organization, isLoading: isOrgLoading } = useDoc<Organization>(orgRef);
   
-  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile);
+  // Use the refactored hook with the target orgId
+  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(targetOrgId);
   
   if (!isProfileLoading && !permissions.canManageCompany) {
       return (

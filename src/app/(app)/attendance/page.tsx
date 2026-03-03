@@ -19,7 +19,7 @@ export default function AttendancePage() {
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile);
+  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile?.orgId);
   const permissions = usePermissions(userProfile);
 
   const isLoading = isProfileLoading || isConfigLoading;

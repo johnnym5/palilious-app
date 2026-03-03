@@ -22,7 +22,7 @@ export default function ChatPage() {
         authUser ? doc(firestore, 'users', authUser.uid) : null,
     [firestore, authUser]);
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-    const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(currentUserProfile);
+    const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(currentUserProfile?.orgId);
 
 
     if (isProfileLoading || isConfigLoading) {

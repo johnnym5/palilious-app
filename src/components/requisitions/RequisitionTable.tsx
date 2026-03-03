@@ -69,7 +69,7 @@ const getQueryForFilter = (
 export function RequisitionTable({ filter, userProfile, isSuperAdmin, permissions }: RequisitionTableProps) {
     const firestore = useFirestore();
     const [selectedRequest, setSelectedRequest] = useState<Requisition | null>(null);
-    const { config: systemConfig } = useSystemConfig(userProfile);
+    const { config: systemConfig } = useSystemConfig(userProfile?.orgId);
 
     const requisitionsQuery = useMemoFirebase((): Query<DocumentData> | null => {
         if (!firestore || !userProfile) return null;

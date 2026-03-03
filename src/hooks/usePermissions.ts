@@ -52,7 +52,7 @@ const defaultPermissions: Permissions = {
 
 export function usePermissions(userProfile: UserProfile | null): Permissions {
   const { isSuperAdmin } = useSuperAdmin();
-  const { config: systemConfig } = useSystemConfig(userProfile);
+  const { config: systemConfig } = useSystemConfig(userProfile?.orgId);
 
   const permissions = useMemo(() => {
     if (isSuperAdmin) {

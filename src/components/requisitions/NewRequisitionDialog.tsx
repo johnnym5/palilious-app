@@ -35,7 +35,7 @@ export function NewRequisitionDialog({ children, open, onOpenChange, userProfile
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { config: systemConfig } = useSystemConfig(userProfile);
+  const { config: systemConfig } = useSystemConfig(userProfile?.orgId);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),

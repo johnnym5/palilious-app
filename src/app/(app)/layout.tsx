@@ -19,7 +19,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-  const { config } = useSystemConfig(userProfile);
+  const { config } = useSystemConfig(userProfile?.orgId);
   
   useEffect(() => {
     if (!isUserLoading && !user) {

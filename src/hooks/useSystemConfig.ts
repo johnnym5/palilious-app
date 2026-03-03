@@ -2,30 +2,31 @@
 import { useMemo, useEffect, useState } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, addDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, limit } from 'firebase/firestore';
-import type { SystemConfig, UserProfile } from '@/lib/types';
+import type { SystemConfig } from '@/lib/types';
 
-export function useSystemConfig(userProfile: UserProfile | null) {
+export function useSystemConfig(orgId: string | null | undefined) {
   const firestore = useFirestore();
   const [isCreating, setIsCreating] = useState(false);
 
   const configQuery = useMemoFirebase(() => {
-    if (!firestore || !userProfile?.orgId) return null;
+    if (!firestore || !orgId) return null;
     return query(
       collection(firestore, 'system_configs'),
-      where('orgId', '==', userProfile.orgId),
+      where('orgId', '==', orgId),
       limit(1)
     );
-  }, [firestore, userProfile?.orgId]);
+  }, [firestore, orgId]);
 
   const { data: configData, isLoading: isCollectionLoading } = useCollection<SystemConfig>(configQuery);
 
   useEffect(() => {
-    if (!isCollectionLoading && (!configData || configData.length === 0) && userProfile?.orgId && !isCreating) {
+    // Check if we are done loading, no config was found, we have an orgId, and we're not already trying to create one.
+    if (!isCollectionLoading && (!configData || configData.length === 0) && orgId && !isCreating) {
       setIsCreating(true);
       
       const configCollection = collection(firestore, "system_configs");
       const defaultConfig: Omit<SystemConfig, 'id'> = {
-          orgId: userProfile.orgId,
+          orgId: orgId,
           finance_access: true,
           admin_tools: true,
           attendance_strict: false,
@@ -37,11 +38,12 @@ export function useSystemConfig(userProfile: UserProfile | null) {
           branding_color: null,
       };
       
+      // We don't need to wait for this, it can happen in the background.
       addDocumentNonBlocking(configCollection, defaultConfig).finally(() => {
           setIsCreating(false);
       });
     }
-  }, [isCollectionLoading, configData, userProfile, firestore, isCreating]);
+  }, [isCollectionLoading, configData, orgId, firestore, isCreating]);
 
   const config = useMemo(() => (configData && configData.length > 0 ? configData[0] : null), [configData]);
   

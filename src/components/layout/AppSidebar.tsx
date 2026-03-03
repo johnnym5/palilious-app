@@ -52,7 +52,7 @@ export default function AppSidebar({ isMobile = false }) {
   [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
-  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile);
+  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile?.orgId);
   
   const orgRef = useMemoFirebase(() => 
     userProfile?.orgId ? doc(firestore, "organizations", userProfile.orgId) : null,
