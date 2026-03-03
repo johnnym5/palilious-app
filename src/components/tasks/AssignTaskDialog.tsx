@@ -13,7 +13,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useState } from "react";
 import { useFirestore, useUser, useCollection, addDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase";
-import { collection, query, where, doc } from "firebase/firestore";
+import { collection, query, where, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, UserProfile, ActivityEntry } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
@@ -24,7 +24,7 @@ const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
   description: z.string().optional(),
   assignedTo: z.string({ required_error: "Please select a staff member." }),
-  priority: z.enum(["CRITICAL", "OPERATIONAL", "ROUTINE"]),
+  priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
   dueDate: z.date().optional(),
   attachmentUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
 });
@@ -58,7 +58,7 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
     defaultValues: {
       title: "",
       description: "",
-      priority: "ROUTINE",
+      priority: "LEVEL_1",
       attachmentUrl: "",
     },
   });
@@ -71,6 +71,42 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
         toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
         return;
     }
+    
+    if (values.priority === 'LEVEL_3' || values.priority === 'LEVEL_2') {
+        const tasksRef = collection(firestore, 'tasks');
+        const q = query(
+            tasksRef,
+            where('assignedTo', '==', values.assignedTo),
+            where('status', 'in', ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW'])
+        );
+        const existingTasksSnapshot = await getDocs(q);
+        const existingTasks = existingTasksSnapshot.docs.map(doc => doc.data() as Task);
+
+        if (values.priority === 'LEVEL_3') {
+            const level3Tasks = existingTasks.filter(t => t.priority === 'LEVEL_3');
+            if (level3Tasks.length > 0) {
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'Assignment Failed', 
+                    description: `${assignedUser.fullName} already has a High Priority (Level 3) task. Only one is allowed.` 
+                });
+                return;
+            }
+        }
+
+        if (values.priority === 'LEVEL_2') {
+            const level2Tasks = existingTasks.filter(t => t.priority === 'LEVEL_2');
+            if (level2Tasks.length >= 2) {
+                toast({ 
+                    variant: 'destructive', 
+                    title: 'Assignment Failed', 
+                    description: `${assignedUser.fullName} already has two Medium Priority (Level 2) tasks. Only two are allowed.` 
+                });
+                return;
+            }
+        }
+    }
+
 
     setIsLoading(true);
 
@@ -152,9 +188,9 @@ export function AssignTaskDialog({ children, open, onOpenChange }: AssignTaskDia
                          <Select onValueChange={field.onChange} defaultValue={field.value}>
                             <FormControl><SelectTrigger><SelectValue placeholder="Select Priority" /></SelectTrigger></FormControl>
                             <SelectContent>
-                                <SelectItem value="ROUTINE">Routine</SelectItem>
-                                <SelectItem value="OPERATIONAL">Operational</SelectItem>
-                                <SelectItem value="CRITICAL">Critical</SelectItem>
+                                <SelectItem value="LEVEL_1">Low</SelectItem>
+                                <SelectItem value="LEVEL_2">Medium</SelectItem>
+                                <SelectItem value="LEVEL_3">High</SelectItem>
                             </SelectContent>
                          </Select>
                          <FormMessage /></FormItem>

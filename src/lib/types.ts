@@ -98,7 +98,7 @@ export interface Requisition {
   createdAt: string; // ISO String for timestamp
 }
 
-export type TaskPriority = "CRITICAL" | "OPERATIONAL" | "ROUTINE";
+export type TaskPriority = "LEVEL_1" | "LEVEL_2" | "LEVEL_3";
 
 export interface SubTask {
   id: string;

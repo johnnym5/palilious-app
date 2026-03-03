@@ -22,9 +22,9 @@ interface TaskCardProps {
 }
 
 const priorityBorders: Record<Task['priority'], string> = {
-    CRITICAL: 'border-l-rose-500',
-    OPERATIONAL: 'border-l-indigo-500',
-    ROUTINE: 'border-l-slate-500'
+    LEVEL_1: 'border-l-sky-500',
+    LEVEL_2: 'border-l-amber-500',
+    LEVEL_3: 'border-l-rose-500'
 }
 
 export function TaskCard({ task, userProfile, permissions, personnelLoad }: TaskCardProps) {

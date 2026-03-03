@@ -10,23 +10,32 @@ interface TaskPriorityBadgeProps {
 }
 
 const priorityStyles: Record<TaskPriority, string> = {
-  CRITICAL: "bg-rose-500/20 text-rose-500 border-rose-500/30 hover:bg-rose-500/30 animate-pulse",
-  OPERATIONAL: "bg-primary/20 text-primary border-primary/30 hover:bg-primary/30",
-  ROUTINE: "bg-secondary text-secondary-foreground border-border hover:bg-secondary/80",
+  LEVEL_1: "bg-sky-500/20 text-sky-400 border-sky-500/30 hover:bg-sky-500/30",
+  LEVEL_2: "bg-amber-500/20 text-amber-500 border-amber-500/30 hover:bg-amber-500/30",
+  LEVEL_3: "bg-rose-500/20 text-rose-500 border-rose-500/30 hover:bg-rose-500/30",
 };
 
 const priorityIcons: Record<TaskPriority, React.ElementType> = {
-    CRITICAL: Zap,
-    OPERATIONAL: Target,
-    ROUTINE: CheckSquare
-}
+    LEVEL_1: CheckSquare,
+    LEVEL_2: Target,
+    LEVEL_3: Zap,
+};
+
+const priorityLabels: Record<TaskPriority, string> = {
+    LEVEL_1: "Low",
+    LEVEL_2: "Medium",
+    LEVEL_3: "High",
+};
+
 
 export function TaskPriorityBadge({ priority, className }: TaskPriorityBadgeProps) {
   const Icon = priorityIcons[priority];
+  const label = priorityLabels[priority];
+
   return (
     <Badge variant="outline" className={cn("font-medium text-xs gap-1.5", priorityStyles[priority], className)}>
       <Icon className="h-3 w-3" />
-      {priority}
+      {label}
     </Badge>
   );
 }
