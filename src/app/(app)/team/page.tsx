@@ -27,6 +27,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { DepartmentManager } from '@/components/team/DepartmentManager';
 
 
 export default function TeamPage() {
@@ -97,6 +98,11 @@ export default function TeamPage() {
           </AddUserDialog>
         )}
       </div>
+
+      {permissions.canManageStaff && userProfile && (
+        <DepartmentManager userProfile={userProfile} />
+      )}
+      
       <Card>
         <CardHeader>
             <CardTitle>All Staff</CardTitle>
@@ -108,6 +114,7 @@ export default function TeamPage() {
                     <TableRow>
                       <TableHead>Name</TableHead>
                       {showOrgIdColumn && <TableHead>Organization ID</TableHead>}
+                      <TableHead>Department</TableHead>
                       <TableHead>Position</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>Joined</TableHead>
@@ -142,6 +149,7 @@ export default function TeamPage() {
                           </div>
                         </TableCell>
                         {showOrgIdColumn && <TableCell><p className="text-xs text-muted-foreground font-mono">{user.orgId}</p></TableCell>}
+                        <TableCell>{user.departmentName || '—'}</TableCell>
                         <TableCell><Badge variant="secondary">{user.position}</Badge></TableCell>
                         <TableCell>
                             {user.status === 'ONLINE' ? (
@@ -173,7 +181,7 @@ export default function TeamPage() {
                     ))}
                     {!areUsersLoading && users?.length === 0 && (
                       <TableRow>
-                        <TableCell colSpan={showOrgIdColumn ? 6 : 5} className="h-24 text-center">
+                        <TableCell colSpan={showOrgIdColumn ? 7 : 6} className="h-24 text-center">
                             No staff members found.
                         </TableCell>
                       </TableRow>

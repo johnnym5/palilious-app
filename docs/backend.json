@@ -33,6 +33,14 @@
           "type": "string",
           "description": "User's full name."
         },
+        "departmentId": {
+          "type": "string",
+          "description": "The ID of the department the user belongs to."
+        },
+        "departmentName": {
+            "type": "string",
+            "description": "The name of the department for easier display."
+        },
         "position": {
           "type": "string",
           "description": "The user's job position within the organization.",
@@ -76,6 +84,16 @@
         "fullName",
         "position"
       ]
+    },
+     "Department": {
+      "title": "Department",
+      "type": "object",
+      "description": "Represents a department within an organization.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "name": { "type": "string" }
+      },
+      "required": ["orgId", "name"]
     },
     "Attendance": {
       "title": "Attendance",
@@ -417,6 +435,22 @@
             {
               "name": "userId",
               "description": "The user's unique ID."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/departments/{departmentId}",
+        "definition": {
+          "entityName": "Department",
+          "schema": {
+            "$ref": "#/entities/Department"
+          },
+          "description": "Stores departments within an organization.",
+          "params": [
+            {
+              "name": "departmentId",
+              "description": "The unique ID for the department."
             }
           ]
         }

@@ -7,34 +7,28 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { UserProfile, Organization, UserPosition } from "@/lib/types";
-import { useState, useMemo } from "react";
+import { UserProfile, Organization, UserPosition, Department } from "@/lib/types";
+import { useState, useMemo, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useFirestore, setDocumentNonBlocking, useUser, useDoc, useMemoFirebase, useCollection } from "@/firebase";
 import { firebaseConfig } from "@/firebase/config";
-import { doc, collection } from "firebase/firestore";
+import { doc, collection, query, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 
+const positions: UserPosition[] = ["Staff", "HR Manager", "Finance Manager", "Managing Director", "Organization Administrator"];
+
 const baseSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  position: z.string().min(1, { message: "Position is required." }),
+  position: z.string({ required_error: "Position is required." }).min(1),
+  departmentId: z.string().optional(),
 });
-
-const getPositionFromKeywords = (title: string): UserPosition => {
-    const lowerCaseTitle = title.toLowerCase();
-    if (lowerCaseTitle.includes('admin')) return 'Organization Administrator';
-    if (lowerCaseTitle.includes('director')) return 'Managing Director';
-    if (lowerCaseTitle.includes('finance')) return 'Finance Manager';
-    if (lowerCaseTitle.includes('hr') || lowerCaseTitle.includes('human resource')) return 'HR Manager';
-    return 'Staff';
-};
 
 interface AddUserDialogProps {
   children: React.ReactNode;
@@ -54,7 +48,6 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     [firestore, isSuperAdmin]
   );
   const { data: organizations, isLoading: areOrgsLoading } = useCollection<Organization>(orgsQuery);
-
 
   const adminProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null
@@ -78,9 +71,29 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       username: "",
       email: "",
       password: "",
-      position: "",
+      position: undefined,
+      departmentId: undefined,
     },
   });
+  
+  const watchedOrgId = isSuperAdmin ? form.watch('orgId' as any) : adminProfile?.orgId;
+
+  const deptsQuery = useMemoFirebase(() => {
+    if (!firestore || !watchedOrgId) return null;
+    return query(collection(firestore, 'departments'), where('orgId', '==', watchedOrgId));
+  }, [firestore, watchedOrgId]);
+  const { data: departments, isLoading: areDeptsLoading } = useCollection<Department>(deptsQuery);
+
+  useEffect(() => {
+    form.reset({
+        fullName: "",
+        username: "",
+        email: "",
+        password: "",
+        position: undefined,
+        departmentId: undefined,
+    });
+  }, [open, form]);
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     const orgId = isSuperAdmin ? (values as { orgId: string }).orgId : adminProfile?.orgId;
@@ -103,13 +116,15 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
       const newUser = userCredential.user;
 
-      const position = getPositionFromKeywords(values.position);
+      const selectedDepartment = departments?.find(d => d.id === values.departmentId);
 
       const userData: Omit<UserProfile, 'id' | 'username'> = {
         orgId: orgId,
         fullName: values.fullName,
         email: values.email.toLowerCase(),
-        position: position,
+        position: values.position as UserPosition,
+        departmentId: values.departmentId || undefined,
+        departmentName: selectedDepartment?.name || undefined,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
       };
@@ -131,7 +146,6 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
         title: "User Created Successfully",
         description: `${values.fullName} has been added to the team.`,
       });
-      form.reset();
       onOpenChange(false);
 
     } catch (error: any) {
@@ -239,15 +253,40 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
                   </FormItem>
                 )}
               />
-              <FormField
+               <FormField
                 control={form.control}
                 name="position"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Position</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Staff, HR Manager" {...field} />
-                    </FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select a position" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {positions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="departmentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department (Optional)</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger disabled={areDeptsLoading}>
+                                <SelectValue placeholder={areDeptsLoading ? "Loading..." : "Select a department"} />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {departments?.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
                     <FormMessage />
                   </FormItem>
                 )}

@@ -32,15 +32,6 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-const getPositionFromKeywords = (title: string): UserPosition => {
-    const lowerCaseTitle = title.toLowerCase();
-    if (lowerCaseTitle.includes('admin')) return 'Organization Administrator';
-    if (lowerCaseTitle.includes('director')) return 'Managing Director';
-    if (lowerCaseTitle.includes('finance')) return 'Finance Manager';
-    if (lowerCaseTitle.includes('hr') || lowerCaseTitle.includes('human resource')) return 'HR Manager';
-    return 'Staff';
-};
-
 export function RegisterForm() {
   const auth = useAuth();
   const firestore = useFirestore();
@@ -104,14 +95,13 @@ export function RegisterForm() {
 
       // 3. Create the UserProfile document for the ORG_ADMIN
       const userDocRef = doc(firestore, "users", newUser.uid);
-      const position = getPositionFromKeywords(values.fullName); // Using fullName as a proxy for title
       
       const userProfileData: Omit<UserProfile, 'id'> = {
         orgId: orgDocRef.id,
         email: values.email.toLowerCase(),
         username: values.username.toLowerCase(),
         fullName: values.fullName,
-        position: position,
+        position: "Organization Administrator",
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
       };

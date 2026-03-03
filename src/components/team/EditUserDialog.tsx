@@ -6,11 +6,11 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserProfile, UserPosition } from "@/lib/types";
+import { UserProfile, UserPosition, Department } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useFirestore, updateDocumentNonBlocking, useAuth } from "@/firebase";
-import { doc } from "firebase/firestore";
+import { useFirestore, updateDocumentNonBlocking, useAuth, useMemoFirebase, useCollection } from "@/firebase";
+import { doc, query, collection, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { sendPasswordResetEmail } from "firebase/auth";
@@ -23,6 +23,7 @@ const positions: UserPosition[] = ["Staff", "HR Manager", "Finance Manager", "Ma
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
   position: z.string().min(1, { message: "Position is required." }),
+  departmentId: z.string().optional(),
   canAccessRequisitions: z.boolean().optional(),
   canAccessChat: z.boolean().optional(),
   canAccessAllTasks: z.boolean().optional(),
@@ -41,6 +42,11 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
   const auth = useAuth();
   const { toast } = useToast();
 
+  const deptsQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'departments'), where('orgId', '==', userToEdit.orgId))
+  , [firestore, userToEdit.orgId]);
+  const { data: departments, isLoading: areDeptsLoading } = useCollection<Department>(deptsQuery);
+
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
@@ -50,6 +56,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
       form.reset({
         fullName: userToEdit.fullName,
         position: userToEdit.position,
+        departmentId: userToEdit.departmentId || "",
         canAccessRequisitions: userToEdit.customPermissions?.canAccessRequisitions,
         canAccessChat: userToEdit.customPermissions?.canAccessChat,
         canAccessAllTasks: userToEdit.customPermissions?.canAccessAllTasks,
@@ -79,10 +86,13 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
     setIsLoading(true);
     try {
       const userRef = doc(firestore, "users", userToEdit.id);
+      const selectedDepartment = departments?.find(d => d.id === values.departmentId);
       
       const updateData = {
         fullName: values.fullName,
         position: values.position,
+        departmentId: values.departmentId || null,
+        departmentName: selectedDepartment?.name || null,
         customPermissions: {
             canAccessRequisitions: values.canAccessRequisitions,
             canAccessChat: values.canAccessChat,
@@ -140,7 +150,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Position / Role</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select a position" />
@@ -154,6 +164,27 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                 </FormItem>
               )}
             />
+            <FormField
+                control={form.control}
+                name="departmentId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Department</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                            <SelectTrigger disabled={areDeptsLoading}>
+                                <SelectValue placeholder={areDeptsLoading ? "Loading..." : "Select a department"} />
+                            </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            <SelectItem value="">No Department</SelectItem>
+                            {departments?.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
              <FormItem>
                 <FormLabel>Email</FormLabel>
                 <Input disabled value={userToEdit.email} />

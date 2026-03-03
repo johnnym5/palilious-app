@@ -8,6 +8,12 @@ export interface Organization {
   createdAt: string;
 }
 
+export interface Department {
+  id: string;
+  orgId: string;
+  name: string;
+}
+
 export interface SystemConfig {
   id:string;
   orgId: string;
@@ -35,6 +41,8 @@ export interface UserProfile {
   username: string;
   fullName: string;
   position: UserPosition;
+  departmentId?: string;
+  departmentName?: string;
   avatarURL?: string;
   joinedDate: string; // ISO String for timestamp
   status?: UserStatus;
