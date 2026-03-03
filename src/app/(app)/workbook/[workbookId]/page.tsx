@@ -1,16 +1,21 @@
 'use client';
 
 import { useParams, useRouter } from 'next/navigation';
-import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser } from '@/firebase';
+import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query } from 'firebase/firestore';
 import type { Workbook, Sheet, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { usePermissions } from '@/hooks/usePermissions';
-import { ShieldAlert } from 'lucide-react';
+import { ShieldAlert, Plus, MoreVertical, Trash2, Edit } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SheetDataTable } from '@/components/workbook/SheetDataTable';
+import { useState } from 'react';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { AddSheetDialog } from '@/components/workbook/AddSheetDialog';
+import { RenameSheetDialog } from '@/components/workbook/RenameSheetDialog';
 
 export default function WorkbookDetailPage() {
     const params = useParams();
@@ -19,6 +24,10 @@ export default function WorkbookDetailPage() {
     const { user: authUser } = useUser();
 
     const workbookId = params.workbookId as string;
+
+    const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
+    const [sheetToRename, setSheetToRename] = useState<Sheet | null>(null);
+    const [sheetToDelete, setSheetToDelete] = useState<Sheet | null>(null);
 
     const userProfileRef = useMemoFirebase(() => 
         authUser ? doc(firestore, 'users', authUser.uid) : null,
@@ -35,6 +44,13 @@ export default function WorkbookDetailPage() {
     const { data: sheets, isLoading: areSheetsLoading } = useCollection<Sheet>(sheetsQuery);
 
     const isLoading = isWorkbookLoading || areSheetsLoading || isProfileLoading;
+
+    const handleDeleteSheet = () => {
+        if (!sheetToDelete) return;
+        const sheetRef = doc(firestore, `workbooks/${workbookId}/sheets`, sheetToDelete.id);
+        deleteDocumentNonBlocking(sheetRef);
+        setSheetToDelete(null);
+    }
 
     if (!isLoading && userProfile && !permissions.canManageStaff) {
       return (
@@ -65,38 +81,96 @@ export default function WorkbookDetailPage() {
     }
 
     return (
-        <div className="space-y-4">
-            <div>
-                <h1 className="text-3xl font-bold font-headline tracking-tight">{workbook.title}</h1>
-                <p className="text-muted-foreground">{workbook.description || 'No description provided.'}</p>
-            </div>
+        <>
+            <div className="space-y-4">
+                <div>
+                    <h1 className="text-3xl font-bold font-headline tracking-tight">{workbook.title}</h1>
+                    <p className="text-muted-foreground">{workbook.description || 'No description provided.'}</p>
+                </div>
 
-            {sheets && sheets.length > 0 ? (
-                <Card>
-                    <Tabs defaultValue={sheets[0].id} className="h-full flex flex-col">
-                        <CardHeader>
-                            <TabsList>
+                {sheets && sheets.length > 0 ? (
+                    <Card>
+                        <Tabs defaultValue={sheets[0].id} className="h-full flex flex-col">
+                            <CardHeader>
+                                <div className='flex items-center gap-2'>
+                                    <TabsList>
+                                        {sheets.map(sheet => (
+                                            <div key={sheet.id} className="flex items-center group">
+                                                <TabsTrigger value={sheet.id}>{sheet.name}</TabsTrigger>
+                                                 <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onSelect={() => setSheetToRename(sheet)}>
+                                                            <Edit className="mr-2 h-4 w-4" /> Rename
+                                                        </DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setSheetToDelete(sheet)} className="text-destructive focus:text-destructive">
+                                                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                        </DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
+                                        ))}
+                                    </TabsList>
+                                    <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
+                                        <Button variant="outline" size="icon" className='h-10 w-10'>
+                                            <Plus className="h-4 w-4" />
+                                        </Button>
+                                    </AddSheetDialog>
+                                </div>
+                            </CardHeader>
+                            <CardContent className="flex-1">
                                 {sheets.map(sheet => (
-                                    <TabsTrigger key={sheet.id} value={sheet.id}>{sheet.name}</TabsTrigger>
+                                    <TabsContent key={sheet.id} value={sheet.id} className="h-full">
+                                        <SheetDataTable sheet={sheet} />
+                                    </TabsContent>
                                 ))}
-                            </TabsList>
-                        </CardHeader>
-                        <CardContent className="flex-1">
-                            {sheets.map(sheet => (
-                                <TabsContent key={sheet.id} value={sheet.id} className="h-full">
-                                    <SheetDataTable sheet={sheet} />
-                                </TabsContent>
-                            ))}
+                            </CardContent>
+                        </Tabs>
+                    </Card>
+                ) : (
+                    <Card>
+                        <CardContent className="p-8 text-center text-muted-foreground">
+                            This workbook has no sheets yet.
+                             <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
+                                <Button variant="outline" className="mt-4">
+                                    <Plus className="mr-2 h-4 w-4" /> Add First Sheet
+                                </Button>
+                            </AddSheetDialog>
                         </CardContent>
-                    </Tabs>
-                </Card>
-            ) : (
-                <Card>
-                    <CardContent className="p-8 text-center text-muted-foreground">
-                        This workbook has no sheets yet.
-                    </CardContent>
-                </Card>
+                    </Card>
+                )}
+            </div>
+            
+            {sheetToRename && (
+                <RenameSheetDialog
+                    open={!!sheetToRename}
+                    onOpenChange={(isOpen) => !isOpen && setSheetToRename(null)}
+                    sheet={sheetToRename}
+                />
             )}
-        </div>
+
+            {sheetToDelete && (
+                <AlertDialog open={!!sheetToDelete} onOpenChange={(isOpen) => !isOpen && setSheetToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Delete sheet "{sheetToDelete.name}"?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. All data in this sheet will be permanently deleted.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteSheet} className="bg-destructive hover:bg-destructive/90">
+                                Delete Sheet
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+        </>
     );
 }
