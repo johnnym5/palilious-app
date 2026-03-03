@@ -105,7 +105,7 @@ export default function SettingsPage() {
         <Card>
             <CardHeader>
                 <CardTitle>Preferences</CardTitle>
-                <CardDescription>Customize your ControlFlow experience.</CardDescription>
+                <CardDescription>Customize your Palilious experience.</CardDescription>
             </CardHeader>
             <CardContent>
                 {isProfileLoading ? (

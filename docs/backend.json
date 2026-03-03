@@ -19,7 +19,7 @@
     "UserProfile": {
       "title": "UserProfile",
       "type": "object",
-      "description": "Represents a user's profile for the ControlFlow app.",
+      "description": "Represents a user's profile for the Palilious app.",
       "properties": {
         "orgId": {
           "type": "string",
@@ -385,7 +385,7 @@
           "schema": {
             "$ref": "#/entities/UserProfile"
           },
-          "description": "Stores user profiles for the ControlFlow app.",
+          "description": "Stores user profiles for the Palilious app.",
           "params": [
             {
               "name": "userId",

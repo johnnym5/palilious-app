@@ -5,7 +5,7 @@ import { FirebaseClientProvider } from '@/firebase';
 import { ThemeProvider } from '@/components/ThemeProvider';
 
 export const metadata: Metadata = {
-  title: 'Palilious ControlFlow',
+  title: 'Palilious',
   description: 'Staff Internal Control & Automation',
   manifest: '/manifest.json',
   themeColor: '#1f2937',
