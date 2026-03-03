@@ -5,7 +5,7 @@ import { useFirestore } from '@/firebase';
 import { collection, getDocs, collectionGroup, writeBatch, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Download, Upload, CloudCog, Trash2, ShieldAlert } from 'lucide-react';
+import { Loader2, Download, Upload, CloudCog, Trash2, ShieldAlert, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
@@ -32,6 +32,25 @@ export function DataManagement() {
     const [collectionsToImport, setCollectionsToImport] = useState<string[]>([]);
     const [isParsing, setIsParsing] = useState(false);
     const [clearDbConfirmation, setClearDbConfirmation] = useState('');
+    const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+
+    const handleCreateBackup = () => {
+        setIsCreatingBackup(true);
+        toast({
+            title: "Backup In Progress...",
+            description: "Your request to create a cloud backup has been received. This may take several minutes.",
+        });
+
+        // Simulate a network request & backend unavailability
+        setTimeout(() => {
+            setIsCreatingBackup(false);
+            toast({
+                title: "Backend Not Implemented",
+                description: "The backend service for creating cloud backups is not yet available.",
+                variant: "destructive",
+            });
+        }, 3000);
+    }
 
     const downloadJson = (filename: string, data: any) => {
         const jsonStr = JSON.stringify(data, null, 2);
@@ -229,6 +248,7 @@ export function DataManagement() {
         }
     };
 
+    const anyLoading = !!loading || isCreatingBackup;
 
     const exportOptions = [
         { name: 'Organizations', id: 'organizations' },
@@ -242,7 +262,7 @@ export function DataManagement() {
         { name: 'Feedback', id: 'feedback' },
     ];
     
-    const isImportButtonDisabled = !importPreview || collectionsToImport.length === 0 || !!loading || isParsing;
+    const isImportButtonDisabled = !importPreview || collectionsToImport.length === 0 || anyLoading || isParsing;
 
 
     return (
@@ -272,7 +292,7 @@ export function DataManagement() {
                                                 key={option.id}
                                                 variant="outline"
                                                 onClick={() => handleExport(option.id)}
-                                                disabled={!!loading}
+                                                disabled={anyLoading}
                                             >
                                                 {loading === option.id ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
                                                 {option.name}
@@ -283,7 +303,7 @@ export function DataManagement() {
                                         <Button 
                                             className="w-full"
                                             onClick={() => handleExportAll()}
-                                            disabled={!!loading}
+                                            disabled={anyLoading}
                                         >
                                             {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
                                             Export All Data (Full Snapshot)
@@ -300,7 +320,7 @@ export function DataManagement() {
                             <CardContent>
                                     <div className="space-y-4">
                                         <div className="space-y-4">
-                                            <Input type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || !!loading}/>
+                                            <Input type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || anyLoading}/>
                                             {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
                                             {importPreview && (
                                                 <Card>
@@ -366,13 +386,31 @@ export function DataManagement() {
                             </Card>
                         </TabsContent>
 
-                        <TabsContent value="online" className="mt-4">
-                            <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
-                                <CloudCog className="mx-auto h-12 w-12 text-muted-foreground" />
-                                <h3 className="mt-4 text-lg font-semibold">Online Backup & Restore</h3>
-                                <p className="mt-1 text-sm text-muted-foreground">This feature will allow you to create and restore from automated Google Cloud backups. The full implementation is coming soon.</p>
-                                <p className="text-xs text-muted-foreground mt-4">Note: The application uses Firestore. Backups will be managed for the Firestore instance.</p>
-                            </div>
+                        <TabsContent value="online" className="mt-4 space-y-6">
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Cloud Snapshot Management</CardTitle>
+                                    <CardDescription>Create and manage automated backups of your entire Firestore database to a secure cloud bucket.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <Button onClick={handleCreateBackup} disabled={anyLoading}>
+                                        {isCreatingBackup ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
+                                        Create New Cloud Backup
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                            <Card>
+                                <CardHeader>
+                                    <CardTitle>Available Backups</CardTitle>
+                                    <CardDescription>List of available cloud backups. Select one to restore.</CardDescription>
+                                </CardHeader>
+                                <CardContent>
+                                    <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
+                                        <CloudCog className="mx-auto h-12 w-12 text-muted-foreground" />
+                                        <p className="mt-2 text-sm text-muted-foreground">Backup listing feature coming soon.</p>
+                                    </div>
+                                </CardContent>
+                            </Card>
                         </TabsContent>
                     </Tabs>
                 </CardContent>
@@ -390,7 +428,7 @@ export function DataManagement() {
                 <CardContent>
                     <AlertDialog>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" disabled={!!loading}>
+                            <Button variant="destructive" disabled={anyLoading}>
                                 {loading === 'clear_db' ? <Loader2 className="mr-2 animate-spin" /> : <Trash2 className="mr-2" />}
                                 Clear Entire Database
                             </Button>
