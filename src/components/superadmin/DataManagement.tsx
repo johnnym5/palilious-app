@@ -1,15 +1,17 @@
 'use client';
 
 import { useState } from 'react';
-import { useFirestore } from '@/firebase';
-import { collection, getDocs, collectionGroup, writeBatch, doc } from 'firebase/firestore';
+import { useFirestore, useCollection, useMemoFirebase } from '@/firebase';
+import { collection, getDocs, collectionGroup, writeBatch, doc, query, where } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Download, Upload, CloudCog, Trash2, ShieldAlert, PlusCircle } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
+import type { Organization } from '@/lib/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,9 +21,22 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 
+
+const COLLECTIONS = [
+    { id: 'requisitions', name: 'Requisitions' },
+    { id: 'tasks', name: 'Tasks' },
+    { id: 'attendance', name: 'Attendance' },
+    { id: 'announcements', name: 'Announcements' },
+    { id: 'workbooks', name: 'Workbooks' },
+    { id: 'feedback', name: 'Feedback' },
+    { id: 'chats', name: 'Chats' },
+    { id: 'departments', name: 'Departments' },
+    { id: 'users', name: 'Users' },
+    { id: 'system_configs', name: 'System Configs' },
+    { id: 'organizations', name: 'Organizations' },
+];
 
 export function DataManagement() {
     const firestore = useFirestore();
@@ -31,17 +46,25 @@ export function DataManagement() {
     const [importPreview, setImportPreview] = useState<Record<string, number> | null>(null);
     const [collectionsToImport, setCollectionsToImport] = useState<string[]>([]);
     const [isParsing, setIsParsing] = useState(false);
-    const [clearDbConfirmation, setClearDbConfirmation] = useState('');
     const [isCreatingBackup, setIsCreatingBackup] = useState(false);
+    
+    // State for destructive actions
+    const [targetOrg, setTargetOrg] = useState<string>('__ALL__');
+    const [collectionToDelete, setCollectionToDelete] = useState<string>('');
+    const [deleteConfirmation, setDeleteConfirmation] = useState('');
+    const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
+
+    const { data: organizations, isLoading: areOrgsLoading } = useCollection<Organization>(
+        useMemoFirebase(() => collection(firestore, 'organizations'), [firestore])
+    );
 
     const handleCreateBackup = () => {
         setIsCreatingBackup(true);
         toast({
             title: "Backup In Progress...",
-            description: "Your request to create a cloud backup has been received. This may take several minutes.",
+            description: "Your request to create a cloud backup has been received. This is a backend operation and may take several minutes.",
         });
 
-        // Simulate a network request & backend unavailability
         setTimeout(() => {
             setIsCreatingBackup(false);
             toast({
@@ -64,32 +87,12 @@ export function DataManagement() {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
-
-    const handleExport = async (collectionName: string) => {
-        if (!firestore) return;
-        setLoading(collectionName);
-        try {
-            const querySnapshot = await getDocs(collection(firestore, collectionName));
-            const data = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            downloadJson(`${collectionName}_export_${new Date().toISOString().split('T')[0]}`, data);
-            toast({ title: 'Export Successful', description: `Exported ${data.length} documents from ${collectionName}.` });
-        } catch (e: any) {
-            toast({ variant: 'destructive', title: 'Export Failed', description: e.message });
-        } finally {
-            setLoading(null);
-        }
-    };
     
     const handleExportAll = async () => {
         if (!firestore) return;
         setLoading('all');
         try {
-            const collectionsToExport = [
-                'organizations', 'users', 'system_configs', 'departments',
-                'requisitions', 'tasks', 'attendance', 'announcements', 
-                'workbooks', 'feedback', 'chats'
-            ];
-
+            const collectionsToExport = COLLECTIONS.map(c => c.id);
             const allData: Record<string, any[]> = {};
             
             for (const name of collectionsToExport) {
@@ -97,13 +100,11 @@ export function DataManagement() {
                  allData[name] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             }
             
-            // Handle subcollections
             const sheetsSnapshot = await getDocs(collectionGroup(firestore, 'sheets'));
             allData['sheets'] = sheetsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
             const messagesSnapshot = await getDocs(collectionGroup(firestore, 'messages'));
             allData['chat_messages'] = messagesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
 
             downloadJson(`palilious_full_backup_${new Date().toISOString().split('T')[0]}`, allData);
             toast({ title: 'Full Export Successful', description: `All data has been exported.` });
@@ -137,7 +138,7 @@ export function DataManagement() {
                         }
                     }
                     setImportPreview(preview);
-                    setCollectionsToImport(collectionsFromFile); // Pre-select all by default
+                    setCollectionsToImport(collectionsFromFile);
                 } catch (err: any) {
                     toast({ variant: 'destructive', title: 'Parse Error', description: `Could not parse JSON file: ${err.message}` });
                     setFileToImport(null);
@@ -150,18 +151,13 @@ export function DataManagement() {
     };
 
     const handleImport = async () => {
-        if (!fileToImport || collectionsToImport.length === 0) {
-            toast({ variant: 'destructive', title: 'Nothing to Import', description: 'Please select a file and at least one collection to import.' });
-            return;
-        }
+        if (!fileToImport || collectionsToImport.length === 0) return;
         setLoading('import');
-
         try {
             const fileContent = await fileToImport.text();
             const data = JSON.parse(fileContent);
-
-            let currentBatch = writeBatch(firestore);
             let writeCount = 0;
+            let currentBatch = writeBatch(firestore);
 
             for (const collectionName of collectionsToImport) {
                 const documents = data[collectionName];
@@ -169,7 +165,6 @@ export function DataManagement() {
                     for (const docData of documents) {
                         if (docData.id) {
                             let docRef;
-                            // Special handling for subcollections based on export logic
                             if (collectionName === 'sheets' && docData.workbookId) {
                                 docRef = doc(firestore, `workbooks/${docData.workbookId}/sheets`, docData.id);
                             } else if (collectionName === 'chat_messages' && docData.chatId) {
@@ -186,19 +181,13 @@ export function DataManagement() {
                                 await currentBatch.commit();
                                 currentBatch = writeBatch(firestore);
                                 writeCount = 0;
-                                toast({ title: 'Importing...', description: `Writing a batch of documents for ${collectionName}...` });
                             }
                         }
                     }
                 }
             }
-            
-            if (writeCount > 0) {
-                await currentBatch.commit();
-            }
-
-            toast({ title: 'Import Complete', description: 'Selected data has been restored from the backup file.' });
-
+            if (writeCount > 0) await currentBatch.commit();
+            toast({ title: 'Import Complete', description: 'Selected data has been restored.' });
         } catch (err: any) {
             toast({ variant: 'destructive', title: 'Import Failed', description: `An error occurred: ${err.message}` });
         } finally {
@@ -209,22 +198,29 @@ export function DataManagement() {
         }
     };
 
-    const handleClearDatabase = async () => {
-        setLoading('clear_db');
-        const collectionsToDelete = [
-            'organizations', 'users', 'system_configs', 'departments',
-            'requisitions', 'tasks', 'attendance', 'announcements', 
-            'workbooks', 'feedback', 'chats'
-        ];
-        const subCollectionGroups = ['sheets', 'messages'];
-        
+    const getDeleteConfirmationPhrase = () => {
+        const collectionName = COLLECTIONS.find(c => c.id === collectionToDelete)?.name.toUpperCase() || 'ENTIRE DATABASE';
+        if (targetOrg === '__ALL__') {
+            return `DELETE ALL ${collectionName}`;
+        }
+        const orgName = organizations?.find(o => o.id === targetOrg)?.name.toUpperCase() || 'UNKNOWN ORG';
+        return `DELETE ${collectionName} FROM ${orgName}`;
+    };
+
+    const handleDeleteData = async () => {
+        setLoading('delete');
         try {
-            const allCollections = [...collectionsToDelete, ...subCollectionGroups];
-            for (const name of allCollections) {
-                 toast({ title: 'Clearing Database...', description: `Deleting all documents from ${name}...` });
-                const isGroup = subCollectionGroups.includes(name);
-                const ref = isGroup ? collectionGroup(firestore, name) : collection(firestore, name);
-                const snapshot = await getDocs(ref);
+            const collectionsToDeleteList = collectionToDelete === '__ALL__' ? COLLECTIONS.map(c => c.id) : [collectionToDelete];
+            
+            for (const name of collectionsToDeleteList) {
+                toast({ title: 'Deletion in Progress...', description: `Querying documents in ${name}...` });
+                let q = query(collection(firestore, name));
+                if (targetOrg !== '__ALL__') {
+                    q = query(q, where('orgId', '==', targetOrg));
+                }
+                
+                const snapshot = await getDocs(q);
+                if (snapshot.empty) continue;
 
                 let batch = writeBatch(firestore);
                 let count = 0;
@@ -238,217 +234,143 @@ export function DataManagement() {
                     }
                 }
                 if (count > 0) await batch.commit();
+                toast({ title: 'Deletion in Progress...', description: `Deleted ${snapshot.size} documents from ${name}.` });
             }
-             toast({ title: 'Database Cleared', description: 'All data has been successfully deleted.' });
+
+            toast({ title: 'Deletion Complete', description: 'The selected data has been permanently removed.' });
+
         } catch (err: any) {
-            toast({ variant: 'destructive', title: 'Clear Failed', description: `An error occurred: ${err.message}` });
+            toast({ variant: 'destructive', title: 'Deletion Failed', description: `An error occurred: ${err.message}` });
         } finally {
             setLoading(null);
-            setClearDbConfirmation('');
+            setIsDeleteAlertOpen(false);
+            setDeleteConfirmation('');
         }
     };
 
-    const anyLoading = !!loading || isCreatingBackup;
-
-    const exportOptions = [
-        { name: 'Organizations', id: 'organizations' },
-        { name: 'Users', id: 'users' },
-        { name: 'System Configs', id: 'system_configs' },
-        { name: 'Departments', id: 'departments' },
-        { name: 'Requisitions', id: 'requisitions' },
-        { name: 'Tasks', id: 'tasks' },
-        { name: 'Attendance', id: 'attendance' },
-        { name: 'Workbooks', id: 'workbooks' },
-        { name: 'Feedback', id: 'feedback' },
-    ];
-    
-    const isImportButtonDisabled = !importPreview || collectionsToImport.length === 0 || anyLoading || isParsing;
-
+    const anyLoading = !!loading || isCreatingBackup || areOrgsLoading;
 
     return (
         <div className="space-y-8">
             <Card>
                 <CardHeader>
-                    <CardTitle>Data Management</CardTitle>
-                    <CardDescription>Backup, restore, and manage your application data.</CardDescription>
+                    <CardTitle>Backup & Export</CardTitle>
+                    <CardDescription>Create offline (JSON) or online (Cloud) backups of your Firestore data.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <Tabs defaultValue="offline" className="w-full">
-                        <TabsList className="grid w-full grid-cols-2">
-                            <TabsTrigger value="offline">Offline Backup</TabsTrigger>
-                            <TabsTrigger value="online">Online Backup</TabsTrigger>
-                        </TabsList>
-                        
-                        <TabsContent value="offline" className="mt-4 space-y-6">
-                            <Card>
-                            <CardHeader>
-                                <CardTitle>Export to JSON</CardTitle>
-                                <CardDescription>Download collections as JSON files for local analysis or manual backup.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                                        {exportOptions.map(option => (
-                                            <Button 
-                                                key={option.id}
-                                                variant="outline"
-                                                onClick={() => handleExport(option.id)}
-                                                disabled={anyLoading}
-                                            >
-                                                {loading === option.id ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
-                                                {option.name}
-                                            </Button>
-                                        ))}
-                                    </div>
-                                    <div className="border-t pt-4 mt-4">
-                                        <Button 
-                                            className="w-full"
-                                            onClick={() => handleExportAll()}
-                                            disabled={anyLoading}
-                                        >
-                                            {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
-                                            Export All Data (Full Snapshot)
-                                        </Button>
-                                    </div>
-                            </CardContent>
-                            </Card>
-                            
-                            <Card>
-                            <CardHeader>
-                                <CardTitle>Import from JSON</CardTitle>
-                                <CardDescription>Select a JSON backup file to preview and selectively import its contents. This is destructive and will overwrite existing data.</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                    <div className="space-y-4">
-                                        <div className="space-y-4">
-                                            <Input type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || anyLoading}/>
-                                            {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
-                                            {importPreview && (
-                                                <Card>
-                                                    <CardHeader className="flex-row items-center justify-between">
-                                                        <CardTitle className="text-base">Import Preview</CardTitle>
-                                                         <div className="flex items-center space-x-2">
-                                                            <Checkbox
-                                                                id="select-all-collections"
-                                                                checked={collectionsToImport.length === Object.keys(importPreview).length}
-                                                                onCheckedChange={(checked) => setCollectionsToImport(checked ? Object.keys(importPreview) : [])}
-                                                            />
-                                                            <label htmlFor="select-all-collections" className="text-sm font-medium leading-none">Select All</label>
-                                                        </div>
-                                                    </CardHeader>
-                                                    <CardContent>
-                                                        <p className="text-sm font-medium mb-2">Select collections to import:</p>
-                                                        <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
-                                                            {Object.entries(importPreview).map(([key, value]) => (
-                                                                <div key={key} className="flex items-center space-x-2">
-                                                                     <Checkbox
-                                                                        id={`collection-${key}`}
-                                                                        checked={collectionsToImport.includes(key)}
-                                                                        onCheckedChange={(checked) => {
-                                                                            setCollectionsToImport(prev => 
-                                                                                checked ? [...prev, key] : prev.filter(c => c !== key)
-                                                                            )
-                                                                        }}
-                                                                    />
-                                                                    <label htmlFor={`collection-${key}`} className="flex-1">
-                                                                        <strong>{key}</strong> ({value} documents)
-                                                                    </label>
-                                                                </div>
-                                                            ))}
-                                                        </div>
-                                                    </CardContent>
-                                                </Card>
-                                            )}
-                                        </div>
-                                        <div className="border-t pt-4">
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button className="w-full" disabled={isImportButtonDisabled}>
-                                                        {loading === 'import' ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
-                                                        Import Selected Data
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This is a destructive action that cannot be undone. It will overwrite any existing documents with the same ID in the selected collections. Are you sure you want to proceed?
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={handleImport} className="bg-destructive hover:bg-destructive/90">Yes, Start Import</AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        </div>
-                                    </div>
-                            </CardContent>
-                            </Card>
-                        </TabsContent>
+                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <Button className="w-full" onClick={handleExportAll} disabled={anyLoading}>
+                        {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
+                        Export All to JSON (Offline)
+                    </Button>
+                     <Button onClick={handleCreateBackup} disabled={anyLoading}>
+                        {isCreatingBackup ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
+                        Create Cloud Snapshot (Online)
+                    </Button>
+                </CardContent>
+            </Card>
 
-                        <TabsContent value="online" className="mt-4 space-y-6">
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Cloud Snapshot Management</CardTitle>
-                                    <CardDescription>Create and manage automated backups of your entire Firestore database to a secure cloud bucket.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <Button onClick={handleCreateBackup} disabled={anyLoading}>
-                                        {isCreatingBackup ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
-                                        Create New Cloud Backup
+            <Card>
+                <CardHeader>
+                    <CardTitle>Restore & Import</CardTitle>
+                    <CardDescription>Restore data from an offline JSON backup or an online cloud snapshot.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                    <div>
+                        <h3 className="font-semibold mb-2">Import from JSON (Offline)</h3>
+                        <div className="p-4 border rounded-lg space-y-4">
+                            <Input type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || anyLoading}/>
+                            {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
+                            {importPreview && (
+                                <Card>
+                                    <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Import Preview</CardTitle>
+                                        <div className="flex items-center space-x-2">
+                                            <Checkbox id="select-all" checked={collectionsToImport.length === Object.keys(importPreview).length} onCheckedChange={(checked) => setCollectionsToImport(checked ? Object.keys(importPreview) : [])}/>
+                                            <label htmlFor="select-all" className="text-sm font-medium">Select All</label>
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
+                                            {Object.entries(importPreview).map(([key, value]) => (
+                                                <div key={key} className="flex items-center space-x-2">
+                                                    <Checkbox id={key} checked={collectionsToImport.includes(key)} onCheckedChange={(checked) => setCollectionsToImport(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
+                                                    <label htmlFor={key} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            )}
+                             <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                    <Button className="w-full" disabled={!importPreview || collectionsToImport.length === 0 || anyLoading || isParsing}>
+                                        <Upload className="mr-2" /> Import Selected Data
                                     </Button>
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader>
-                                    <CardTitle>Available Backups</CardTitle>
-                                    <CardDescription>List of available cloud backups. Select one to restore.</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
-                                        <CloudCog className="mx-auto h-12 w-12 text-muted-foreground" />
-                                        <p className="mt-2 text-sm text-muted-foreground">Backup listing feature coming soon.</p>
-                                    </div>
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    </Tabs>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This is a destructive action that will overwrite existing documents with the same ID. Are you sure you want to proceed?</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleImport} className="bg-destructive hover:bg-destructive/90">Yes, Start Import</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                        </div>
+                    </div>
+                     <Separator />
+                    <div>
+                        <h3 className="font-semibold mb-2">Restore from Cloud Snapshot (Online)</h3>
+                        <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
+                            <CloudCog className="mx-auto h-12 w-12 text-muted-foreground" /><p className="mt-2 text-sm text-muted-foreground">Cloud restore feature coming soon.</p>
+                        </div>
+                    </div>
                 </CardContent>
             </Card>
 
             <Card className="border-destructive/50">
                 <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-destructive">
-                        <ShieldAlert/> Destructive Zone
-                    </CardTitle>
-                    <CardDescription>
-                        Be very careful. These actions are irreversible and will result in permanent data loss.
-                    </CardDescription>
+                    <CardTitle className="flex items-center gap-2 text-destructive"><ShieldAlert/> Destructive Zone</CardTitle>
+                    <CardDescription>Perform irreversible data deletion operations with granular control.</CardDescription>
                 </CardHeader>
-                <CardContent>
-                    <AlertDialog>
+                <CardContent className="space-y-4">
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                        <div className="space-y-2">
+                            <Label>Target Organization</Label>
+                            <Select value={targetOrg} onValueChange={setTargetOrg} disabled={anyLoading}>
+                                <SelectTrigger><SelectValue /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__ALL__">All Organizations</SelectItem>
+                                    {organizations?.map(org => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Data to Delete</Label>
+                            <Select value={collectionToDelete} onValueChange={setCollectionToDelete} disabled={anyLoading}>
+                                <SelectTrigger><SelectValue placeholder="Select a data collection..." /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="__ALL__">ENTIRE DATABASE</SelectItem>
+                                    <Separator />
+                                    {COLLECTIONS.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                     </div>
+                      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                         <AlertDialogTrigger asChild>
-                            <Button variant="destructive" disabled={anyLoading}>
-                                {loading === 'clear_db' ? <Loader2 className="mr-2 animate-spin" /> : <Trash2 className="mr-2" />}
-                                Clear Entire Database
+                            <Button variant="destructive" className="w-full" disabled={anyLoading || !collectionToDelete}>
+                                <Trash2 className="mr-2" /> Delete Selected Data
                             </Button>
                         </AlertDialogTrigger>
                         <AlertDialogContent>
                             <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                <AlertDialogTitle>Are you absolutely, positively sure?</AlertDialogTitle>
                                 <AlertDialogDescription>
-                                    This action cannot be undone. This will permanently delete ALL data in the database, including users, organizations, and all associated content. To confirm, please type <code className="font-mono bg-muted text-destructive-foreground px-1 py-0.5 rounded-sm">DELETE ALL DATA</code> below.
+                                    This is your final confirmation. This action is irreversible. To proceed, please type the following phrase exactly: <br />
+                                    <code className="font-mono bg-muted text-destructive-foreground px-2 py-1 rounded-sm mt-2 block text-center">{getDeleteConfirmationPhrase()}</code>
                                 </AlertDialogDescription>
                             </AlertDialogHeader>
-                             <Input 
-                                placeholder="Type confirmation phrase here"
-                                value={clearDbConfirmation}
-                                onChange={(e) => setClearDbConfirmation(e.target.value)}
-                             />
+                             <Input placeholder="Type confirmation phrase here" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} />
                             <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setClearDbConfirmation('')}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleClearDatabase} disabled={clearDbConfirmation !== 'DELETE ALL DATA'}>
-                                    Yes, I understand, clear everything
+                                <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleDeleteData} disabled={deleteConfirmation !== getDeleteConfirmationPhrase() || loading === 'delete'}>
+                                    {loading === 'delete' && <Loader2 className='animate-spin' />} I understand, delete the data
                                 </AlertDialogAction>
                             </AlertDialogFooter>
                         </AlertDialogContent>
