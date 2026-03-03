@@ -11,7 +11,7 @@ import {
 import type { Task, UserProfile, ActivityEntry, SubTask } from '@/lib/types';
 import type { Permissions } from '@/hooks/usePermissions';
 import { format } from 'date-fns';
-import { Calendar, CheckSquare, HardDriveDownload, History, Info, Link as LinkIcon, User, Zap, Target, Plus, Trash2, Loader2, Share2 } from 'lucide-react';
+import { Calendar, CheckSquare, History, Info, Link as LinkIcon, User, Plus, Trash2, Share2, Pencil } from 'lucide-react';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
@@ -35,6 +35,7 @@ import {
 } from '@/components/ui/alert-dialog'
 import { ActivityFeed } from '../shared/ActivityFeed';
 import { ShareTaskDialog } from './ShareTaskDialog';
+import { EditTaskDialog } from './EditTaskDialog';
 
 interface TaskDetailDialogProps {
   task: Task;
@@ -51,6 +52,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
 
   const handleSubTaskToggle = (subTaskId: string) => {
     const updatedSubTasks = subTasks.map(st => 
@@ -208,45 +210,58 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
         </div>
 
         <DialogFooter>
-             <div className='flex justify-between w-full items-center'>
+             <div className='flex justify-start w-full items-center'>
                 <div className='flex gap-2'>
                     {permissions.canManageStaff && (
-                          <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
-                            <AlertDialogTrigger asChild>
-                                <Button variant="destructive">
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete Mission
-                                </Button>
-                            </AlertDialogTrigger>
-                            <AlertDialogContent>
-                                <AlertDialogHeader>
-                                    <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-                                    <AlertDialogDescription>
-                                        This action cannot be undone. This will permanently delete the mission "{task.title}".
-                                    </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                    <AlertDialogAction
-                                        className="bg-destructive hover:bg-destructive/90" 
-                                        onClick={handleDeleteTask}
-                                    >
+                        <>
+                            <AlertDialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+                                <AlertDialogTrigger asChild>
+                                    <Button variant="destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />
                                         Delete
-                                    </AlertDialogAction>
-                                </AlertDialogFooter>
-                            </AlertDialogContent>
-                        </AlertDialog>
-                    )}
-                    {permissions.canManageStaff && (
-                        <Button variant="outline" onClick={() => setShowShareDialog(true)}>
-                            <Share2 className="mr-2 h-4 w-4" />
-                            Share
-                        </Button>
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This action cannot be undone. This will permanently delete the mission "{task.title}".
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction
+                                            className="bg-destructive hover:bg-destructive/90" 
+                                            onClick={handleDeleteTask}
+                                        >
+                                            Delete
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                             <Button variant="outline" onClick={() => setShowEditDialog(true)}>
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit
+                            </Button>
+                            <Button variant="outline" onClick={() => setShowShareDialog(true)}>
+                                <Share2 className="mr-2 h-4 w-4" />
+                                Share
+                            </Button>
+                        </>
                     )}
                 </div>
             </div>
         </DialogFooter>
         
+        {showEditDialog && (
+            <EditTaskDialog
+                task={task}
+                open={showEditDialog}
+                onOpenChange={setShowEditDialog}
+                currentUserProfile={currentUserProfile}
+            />
+        )}
+
         {showShareDialog && (
             <ShareTaskDialog
                 task={task}
