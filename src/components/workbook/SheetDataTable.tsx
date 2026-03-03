@@ -9,7 +9,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, MoreVertical } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -19,8 +19,14 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import { AddColumnDialog } from './AddColumnDialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface SheetDataTableProps {
   sheet: Sheet;
@@ -30,12 +36,15 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [data, setData] = useState<Record<string, any>[]>([]);
+    const [headers, setHeaders] = useState<string[]>([]);
     const [editingCell, setEditingCell] = useState<{ rowIndex: number; header: string } | null>(null);
+    const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
+    const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
 
     // Update local state if the sheet prop changes (e.g., user switches tabs)
     useEffect(() => {
-        // Make a deep copy to avoid mutating the prop directly
         setData(sheet.data ? JSON.parse(JSON.stringify(sheet.data)) : []);
+        setHeaders(sheet.headers ? [...sheet.headers] : []);
     }, [sheet]);
 
     const handleCellUpdate = (rowIndex: number, header: string, value: any) => {
@@ -44,23 +53,23 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
         setData(newData);
     };
 
-    const saveChanges = (updatedData: Record<string, any>[], toastMessage: string) => {
-        if (!firestore) return;
+    const saveChanges = (payload: { data?: Record<string, any>[]; headers?: string[] }, toastMessage: string) => {
+        if (!firestore || Object.keys(payload).length === 0) return;
         const sheetRef = doc(firestore, `workbooks/${sheet.workbookId}/sheets`, sheet.id);
-        updateDocumentNonBlocking(sheetRef, { data: updatedData });
+        updateDocumentNonBlocking(sheetRef, payload);
         toast({ title: 'Saved', description: toastMessage });
     };
 
     const handleBlurSave = () => {
         setEditingCell(null); // Exit editing mode
-        saveChanges(data, 'Your changes have been saved.');
+        saveChanges({ data }, 'Your changes have been saved.');
     };
 
     const handleEnterSave = (e: React.KeyboardEvent<HTMLInputElement>) => {
         if (e.key === 'Enter') {
             e.preventDefault();
             setEditingCell(null);
-            saveChanges(data, 'Your changes have been saved.');
+            saveChanges({ data }, 'Your changes have been saved.');
         } else if (e.key === 'Escape') {
             setEditingCell(null);
             setData(sheet.data ? JSON.parse(JSON.stringify(sheet.data)) : []); // Revert changes
@@ -68,26 +77,47 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
     }
 
     const handleAddRow = () => {
-        const newRow = sheet.headers.reduce((acc, header) => {
+        const newRow = headers.reduce((acc, header) => {
             acc[header] = '';
             return acc;
         }, {} as Record<string, any>);
         const updatedData = [...data, newRow];
         setData(updatedData);
-        saveChanges(updatedData, 'A new row has been added.');
+        saveChanges({ data: updatedData }, 'A new row has been added.');
     };
 
     const handleDeleteRow = (rowIndexToDelete: number) => {
         const updatedData = data.filter((_, index) => index !== rowIndexToDelete);
         setData(updatedData);
-        saveChanges(updatedData, 'The row has been deleted.');
+        saveChanges({ data: updatedData }, 'The row has been deleted.');
     }
     
-    if (!sheet.headers || sheet.headers.length === 0) {
+    const handleDeleteColumn = () => {
+        if (!columnToDelete) return;
+
+        const newHeaders = headers.filter(h => h !== columnToDelete);
+        const newData = data.map(row => {
+            const newRow = {...row};
+            delete newRow[columnToDelete];
+            return newRow;
+        });
+
+        setHeaders(newHeaders);
+        setData(newData);
+        saveChanges({ data: newData, headers: newHeaders }, `Column "${columnToDelete}" has been deleted.`);
+        setColumnToDelete(null);
+    }
+    
+    if (!headers || headers.length === 0) {
         return (
-             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
+             <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 space-y-4">
                  <p className="text-sm font-semibold">This sheet is empty.</p>
-                 <p className="text-xs">Add columns to get started.</p>
+                 <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
+                     <Button variant="outline">
+                         <Plus className="mr-2 h-4 w-4" />
+                         Add First Column
+                     </Button>
+                 </AddColumnDialog>
              </div>
         );
     }
@@ -98,8 +128,27 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
                 <Table>
                     <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
                         <TableRow>
-                            {sheet.headers.map(header => (
-                                <TableHead key={header}>{header}</TableHead>
+                            {headers.map(header => (
+                                <TableHead key={header}>
+                                    <div className="flex items-center justify-between group">
+                                        <span>{header}</span>
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem 
+                                                    className="text-destructive focus:text-destructive"
+                                                    onSelect={() => setColumnToDelete(header)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete Column
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </div>
+                                </TableHead>
                             ))}
                             <TableHead className="w-[50px] sticky right-0 bg-background/95 backdrop-blur">
                                 <span className="sr-only">Actions</span>
@@ -109,14 +158,14 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
                     <TableBody>
                         {data.length === 0 ? (
                              <TableRow>
-                                <TableCell colSpan={sheet.headers.length + 1} className="h-24 text-center">
+                                <TableCell colSpan={headers.length + 1} className="h-24 text-center">
                                     No rows yet. Click "Add Row" to start.
                                 </TableCell>
                             </TableRow>
                         ) : (
                             data.map((row, rowIndex) => (
                                 <TableRow key={rowIndex}>
-                                    {sheet.headers.map(header => (
+                                    {headers.map(header => (
                                         <TableCell 
                                             key={`${rowIndex}-${header}`}
                                             onDoubleClick={() => setEditingCell({ rowIndex, header })}
@@ -165,12 +214,37 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
                     </TableBody>
                 </Table>
             </ScrollArea>
-             <div className="flex-shrink-0 border-t p-2">
+             <div className="flex-shrink-0 border-t p-2 flex items-center gap-2">
                 <Button variant="outline" size="sm" onClick={handleAddRow}>
                     <Plus className="mr-2 h-4 w-4" />
                     Add Row
                 </Button>
+                <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
+                     <Button variant="outline" size="sm">
+                         <Plus className="mr-2 h-4 w-4" />
+                         Add Column
+                     </Button>
+                </AddColumnDialog>
             </div>
+
+            {columnToDelete && (
+                 <AlertDialog open={!!columnToDelete} onOpenChange={(isOpen) => !isOpen && setColumnToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Delete Column "{columnToDelete}"?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. All data in this column will be permanently deleted.
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteColumn} className="bg-destructive hover:bg-destructive/90">
+                                Delete Column
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
         </div>
     );
 }
