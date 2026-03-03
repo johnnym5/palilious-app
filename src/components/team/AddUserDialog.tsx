@@ -123,8 +123,8 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
         fullName: values.fullName,
         email: values.email.toLowerCase(),
         position: values.position as UserPosition,
-        departmentId: values.departmentId || undefined,
-        departmentName: selectedDepartment?.name || undefined,
+        departmentId: values.departmentId || null,
+        departmentName: selectedDepartment?.name || null,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
       };
