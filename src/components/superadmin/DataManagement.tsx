@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, collectionGroup } from 'firebase/firestore';
+import { collection, getDocs, collectionGroup, writeBatch, doc } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Loader2, Download, Upload, CloudCog } from 'lucide-react';
@@ -123,12 +123,66 @@ export function DataManagement() {
         }
     };
 
-    const handleImport = () => {
-        // This will be implemented in the next step. For now, it's a placeholder.
-        toast({
-            title: "Ready for Next Step",
-            description: "Data import functionality will be fully implemented in the next phase.",
-        });
+    const handleImport = async () => {
+        if (!fileToImport || !importPreview) {
+            toast({ variant: 'destructive', title: 'No File', description: 'Please select a file to import.' });
+            return;
+        }
+        setLoading('import');
+
+        try {
+            const fileContent = await fileToImport.text();
+            const data = JSON.parse(fileContent);
+
+            let currentBatch = writeBatch(firestore);
+            let writeCount = 0;
+
+            for (const collectionName in data) {
+                const documents = data[collectionName];
+                if (Array.isArray(documents)) {
+                    for (const docData of documents) {
+                        if (docData.id) {
+                            let docRef;
+                            // Special handling for subcollections based on export logic
+                            if (collectionName === 'sheets' && docData.workbookId) {
+                                docRef = doc(firestore, `workbooks/${docData.workbookId}/sheets`, docData.id);
+                            } else if (collectionName === 'chat_messages' && docData.chatId) {
+                                docRef = doc(firestore, `chats/${docData.chatId}/messages`, docData.id);
+                            } else {
+                                docRef = doc(firestore, collectionName, docData.id);
+                            }
+                            
+                            // Firestore documents don't store their own ID in the data object.
+                            const { id, ...dataToSet } = docData;
+                            currentBatch.set(docRef, dataToSet);
+                            writeCount++;
+
+                            // Batches have a 500 operation limit. Commit and create a new one.
+                            if (writeCount >= 499) {
+                                await currentBatch.commit();
+                                currentBatch = writeBatch(firestore);
+                                writeCount = 0;
+                                toast({ title: 'Importing...', description: 'Writing a batch of documents...' });
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // Commit any remaining writes
+            if (writeCount > 0) {
+                await currentBatch.commit();
+            }
+
+            toast({ title: 'Import Complete', description: 'All data has been restored from the backup file.' });
+
+        } catch (err: any) {
+            toast({ variant: 'destructive', title: 'Import Failed', description: `An error occurred: ${err.message}` });
+        } finally {
+            setLoading(null);
+            setFileToImport(null);
+            setImportPreview(null);
+        }
     };
 
     const exportOptions = [
