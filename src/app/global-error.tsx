@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, RotateCw } from 'lucide-react';
+import { ShieldAlert, RotateCw, RefreshCw, Undo } from 'lucide-react';
 import { useEffect } from 'react';
 
 export default function GlobalError({
@@ -31,17 +31,32 @@ export default function GlobalError({
                 </div>
                 <h1 className="text-3xl font-bold font-headline text-foreground">Application Error</h1>
                 <p className="text-muted-foreground mt-2 max-w-md">
-                    An unexpected error occurred. This could be a temporary issue. Please try restarting the application.
+                    An unexpected error occurred. This could be a temporary issue. Please try one of the recovery options below.
                 </p>
                 
-                <Button
-                    onClick={() => reset()}
-                    className="mt-8"
-                    variant="destructive"
-                >
-                    <RotateCw className="mr-2 h-4 w-4" />
-                    Restart Application
-                </Button>
+                <div className="mt-8 flex flex-wrap justify-center gap-4">
+                    <Button
+                        onClick={() => window.history.back()}
+                        variant="outline"
+                    >
+                        <Undo className="mr-2 h-4 w-4" />
+                        Go Back
+                    </Button>
+                    <Button
+                        onClick={() => reset()}
+                        variant="outline"
+                    >
+                        <RotateCw className="mr-2 h-4 w-4" />
+                        Retry Action
+                    </Button>
+                     <Button
+                        onClick={() => window.location.reload()}
+                        variant="destructive"
+                    >
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        Restart Page
+                    </Button>
+                </div>
             </div>
       </body>
     </html>
