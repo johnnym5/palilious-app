@@ -7,7 +7,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { Plus, ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { NewWorkbookDialog } from '@/components/workbook/NewWorkbookDialog';
 import { EditWorkbookDialog } from '@/components/workbook/EditWorkbookDialog';
@@ -15,6 +15,7 @@ import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
+import Link from 'next/link';
 
 function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
     const firestore = useFirestore();
@@ -41,7 +42,7 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
 
     if (isLoading) {
         return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-36" />)}
+            {Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-48" />)}
         </div>
     }
 
@@ -59,7 +60,7 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
         <>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {workbooks.map(workbook => (
-                    <Card key={workbook.id} className="group hover:shadow-md transition-shadow">
+                    <Card key={workbook.id} className="group hover:shadow-md transition-shadow flex flex-col">
                         <CardHeader className="flex flex-row items-start justify-between">
                             <div className='flex-1 pr-2'>
                                 <CardTitle className="truncate">{workbook.title}</CardTitle>
@@ -83,11 +84,16 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
                                 </DropdownMenuContent>
                             </DropdownMenu>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="flex-grow">
                             <p className="text-xs text-muted-foreground">
                                 Created by {workbook.creatorName} on {format(new Date(workbook.createdAt), 'PP')}
                             </p>
                         </CardContent>
+                         <CardFooter>
+                            <Link href={`/workbook/${workbook.id}`} passHref legacyBehavior>
+                                <Button as="a" variant="outline" className="w-full">View Workbook</Button>
+                            </Link>
+                        </CardFooter>
                     </Card>
                 ))}
             </div>

@@ -350,6 +350,27 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["orgId", "title", "createdBy", "creatorName", "createdAt"]
+    },
+    "Sheet": {
+      "title": "Sheet",
+      "type": "object",
+      "description": "A single sheet within a workbook, containing rows of data.",
+      "properties": {
+        "workbookId": { "type": "string" },
+        "name": { "type": "string" },
+        "data": {
+          "type": "array",
+          "description": "The grid data of the sheet, stored as an array of objects.",
+          "items": { "type": "object", "additionalProperties": true }
+        },
+        "headers": {
+          "type": "array",
+          "description": "An array of strings representing the column headers.",
+          "items": { "type": "string" }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["workbookId", "name", "data", "headers", "createdAt"]
     }
   },
   "auth": {
@@ -504,9 +525,27 @@
             }
           ]
         }
+    },
+    {
+        "path": "/workbooks/{workbookId}/sheets/{sheetId}",
+        "definition": {
+            "entityName": "Sheet",
+            "schema": {
+                "$ref": "#/entities/Sheet"
+            },
+            "description": "Stores individual sheets for a workbook.",
+            "params": [
+                {
+                    "name": "workbookId",
+                    "description": "The workbook's unique ID."
+                },
+                {
+                    "name": "sheetId",
+                    "description": "The sheet's unique ID."
+                }
+            ]
+        }
     }
     ]
   }
 }
-
-    

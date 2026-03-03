@@ -178,4 +178,11 @@ export interface Workbook {
   createdAt: string; // ISO String
 }
 
-    
+export interface Sheet {
+  id: string;
+  workbookId: string;
+  name: string;
+  data: Record<string, any>[];
+  headers: string[];
+  createdAt: string; // ISO String
+}
