@@ -7,40 +7,10 @@ import type { Workbook, Sheet, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { usePermissions } from '@/hooks/usePermissions';
 import { ShieldAlert } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-
-function SheetDataTable({ sheet }: { sheet: Sheet }) {
-    if (!sheet.data || sheet.data.length === 0) {
-        return <p className="text-muted-foreground text-center py-8">This sheet is empty.</p>;
-    }
-
-    return (
-        <ScrollArea className="h-[60vh] relative">
-            <Table>
-                <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
-                    <TableRow>
-                        {sheet.headers.map(header => (
-                            <TableHead key={header}>{header}</TableHead>
-                        ))}
-                    </TableRow>
-                </TableHeader>
-                <TableBody>
-                    {sheet.data.map((row, rowIndex) => (
-                        <TableRow key={rowIndex}>
-                            {sheet.headers.map(header => (
-                                <TableCell key={`${rowIndex}-${header}`}>{row[header]}</TableCell>
-                            ))}
-                        </TableRow>
-                    ))}
-                </TableBody>
-            </Table>
-        </ScrollArea>
-    );
-}
+import { SheetDataTable } from '@/components/workbook/SheetDataTable';
 
 export default function WorkbookDetailPage() {
     const params = useParams();
@@ -103,7 +73,7 @@ export default function WorkbookDetailPage() {
 
             {sheets && sheets.length > 0 ? (
                 <Card>
-                    <Tabs defaultValue={sheets[0].id}>
+                    <Tabs defaultValue={sheets[0].id} className="h-full flex flex-col">
                         <CardHeader>
                             <TabsList>
                                 {sheets.map(sheet => (
@@ -111,9 +81,9 @@ export default function WorkbookDetailPage() {
                                 ))}
                             </TabsList>
                         </CardHeader>
-                        <CardContent>
+                        <CardContent className="flex-1">
                             {sheets.map(sheet => (
-                                <TabsContent key={sheet.id} value={sheet.id}>
+                                <TabsContent key={sheet.id} value={sheet.id} className="h-full">
                                     <SheetDataTable sheet={sheet} />
                                 </TabsContent>
                             ))}
