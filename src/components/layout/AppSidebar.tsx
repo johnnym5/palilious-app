@@ -12,6 +12,8 @@ import {
   Users,
   Building2,
   BookOpenCheck,
+  User as UserIcon,
+  Settings,
 } from "lucide-react";
 
 import { Logo } from "@/components/Logo";
@@ -120,6 +122,10 @@ export default function AppSidebar({ isMobile = false }) {
                   <NavLink key={item.href} {...item} />
               ))
           )}
+
+          <div className="my-2 h-px w-full bg-border" />
+          <NavLink href="/profile" icon={UserIcon} label="Profile" />
+          <NavLink href="/settings" icon={Settings} label="Settings" />
         </nav>
 
         <div className="mt-auto border-t p-4">
