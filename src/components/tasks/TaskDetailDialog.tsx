@@ -31,7 +31,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { ActivityFeed } from '../shared/ActivityFeed';
 import { ShareTaskDialog } from './ShareTaskDialog';
@@ -243,11 +242,13 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                                 <Pencil className="mr-2 h-4 w-4" />
                                 Edit
                             </Button>
-                            <Button variant="outline" onClick={() => setShowShareDialog(true)}>
-                                <Share2 className="mr-2 h-4 w-4" />
-                                Share
-                            </Button>
                         </>
+                    )}
+                    {(permissions.canManageStaff || task.assignedTo === currentUserProfile.id) && (
+                        <Button variant="outline" onClick={() => setShowShareDialog(true)}>
+                            <Share2 className="mr-2 h-4 w-4" />
+                            Share
+                        </Button>
                     )}
                 </div>
             </div>

@@ -151,5 +151,3 @@ export function RequestAssistanceDialog({ open, onOpenChange, targetUser, curren
     </Dialog>
   );
 }
-
-    

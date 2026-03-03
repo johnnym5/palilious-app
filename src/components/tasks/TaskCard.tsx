@@ -133,7 +133,7 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad }: Task
                 </CardHeader>
                 <CardContent>
                      <p className="text-sm text-muted-foreground line-clamp-2">
-                        {isAssistanceRequest ? `Requesting assistance for the mission: "${task.title}"` : task.description}
+                        {isAssistanceRequest ? `Requesting assistance for the mission: "${task.title.replace('Assistance Request: ', '')}"` : task.description}
                     </p>
                 </CardContent>
                 <CardFooter className="flex justify-between items-center">
@@ -191,5 +191,3 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad }: Task
         </>
     )
 }
-
-    

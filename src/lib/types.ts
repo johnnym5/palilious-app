@@ -218,3 +218,18 @@ export interface Feedback {
   createdAt: string; // ISO String
   status: 'NEW' | 'READ';
 }
+
+export interface Permissions {
+  canApproveHR: boolean;
+  canApproveFinance: boolean;
+  canApproveMD: boolean;
+  canDisburse: boolean;
+  canManageStaff: boolean;
+  canManageCompany: boolean;
+  canClockIn: boolean;
+  canEditOwnProfile: boolean;
+  canAccessRequisitions: boolean;
+  canAccessChat: boolean;
+  canAccessAllTasks: boolean;
+  canAccessAllWorkbooks: boolean;
+}

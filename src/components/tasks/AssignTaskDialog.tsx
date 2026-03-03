@@ -12,10 +12,10 @@ import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { CalendarIcon, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useFirestore, useUser, useCollection, addDocumentNonBlocking, useMemoFirebase, useDoc } from "@/firebase";
+import { useFirestore, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, UserProfile, ActivityEntry } from "@/lib/types";
+import type { Task, UserProfile, ActivityEntry, Permissions } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
@@ -23,7 +23,7 @@ import { format } from "date-fns";
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
   description: z.string().optional(),
-  assignedTo: z.string({ required_error: "Please select a staff member." }),
+  assignedTo: z.string().optional(),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
   dueDate: z.date().optional(),
   attachmentUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
@@ -39,23 +39,19 @@ interface AssignTaskDialogProps {
       title: string;
       description?: string;
       attachmentUrl?: string;
-  }
+  };
+  currentUserProfile: UserProfile;
+  permissions: Permissions;
 }
 
-export function AssignTaskDialog({ children, open, onOpenChange, initialData }: AssignTaskDialogProps) {
+export function AssignTaskDialog({ children, open, onOpenChange, initialData, currentUserProfile, permissions }: AssignTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const { user: authUser } = useUser();
   const { toast } = useToast();
 
-  const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, "users", authUser.uid) : null
-  , [firestore, authUser]);
-  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
-
   const usersQuery = useMemoFirebase(() => 
-    userProfile ? query(collection(firestore, 'users'), where('orgId', '==', userProfile.orgId)) : null
-  , [firestore, userProfile]);
+    currentUserProfile ? query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId)) : null
+  , [firestore, currentUserProfile]);
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const form = useForm<FormData>({
@@ -83,9 +79,10 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData }: 
 
 
   async function onSubmit(values: FormData) {
-    if (!firestore || !authUser || !userProfile) return;
+    const assigneeId = permissions.canManageStaff && values.assignedTo ? values.assignedTo : currentUserProfile.id;
+    if (!firestore || !currentUserProfile || !assigneeId) return;
     
-    const assignedUser = users?.find(u => u.id === values.assignedTo);
+    const assignedUser = users?.find(u => u.id === assigneeId);
     if (!assignedUser) {
         toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
         return;
@@ -95,7 +92,7 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData }: 
         const tasksRef = collection(firestore, 'tasks');
         const q = query(
             tasksRef,
-            where('assignedTo', '==', values.assignedTo),
+            where('assignedTo', '==', assigneeId),
             where('status', 'in', ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW'])
         );
         const existingTasksSnapshot = await getDocs(q);
@@ -133,9 +130,9 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData }: 
         const now = new Date().toISOString();
         const initialActivity: ActivityEntry = {
             type: 'LOG',
-            actorId: authUser.uid,
-            actorName: userProfile.fullName,
-            actorAvatarUrl: userProfile.avatarURL,
+            actorId: currentUserProfile.id,
+            actorName: currentUserProfile.fullName,
+            actorAvatarUrl: currentUserProfile.avatarURL,
             timestamp: now,
             text: `created the mission and assigned it to ${assignedUser.fullName}.`,
             fromStatus: 'N/A',
@@ -146,17 +143,18 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData }: 
             orgId: assignedUser.orgId,
             title: values.title,
             description: values.description || "",
-            assignedTo: values.assignedTo,
+            assignedTo: assigneeId,
             assignedToName: assignedUser.fullName,
             priority: values.priority,
             status: 'QUEUED',
             dueDate: values.dueDate?.toISOString(),
-            createdBy: authUser.uid,
+            createdBy: currentUserProfile.id,
             activity: [initialActivity],
             createdAt: now,
             attachmentUrl: values.attachmentUrl,
             sharedWith: [],
             subTasks: [],
+            type: 'STANDARD',
         };
 
         await addDocumentNonBlocking(collection(firestore, 'tasks'), newTask);
@@ -194,14 +192,16 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData }: 
                 )} />
 
                 <div className="grid grid-cols-2 gap-4">
-                    <FormField control={form.control} name="assignedTo" render={({ field }) => (
-                        <FormItem><FormLabel>Assign To</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                            <FormControl><SelectTrigger disabled={areUsersLoading}><SelectValue placeholder="Select Personnel" /></SelectTrigger></FormControl>
-                            <SelectContent>{users?.map(user => <SelectItem key={user.id} value={user.id}>{user.fullName}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <FormMessage /></FormItem>
-                    )} />
+                    {permissions.canManageStaff && (
+                      <FormField control={form.control} name="assignedTo" render={({ field }) => (
+                          <FormItem><FormLabel>Assign To</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl><SelectTrigger disabled={areUsersLoading}><SelectValue placeholder="Select Personnel" /></SelectTrigger></FormControl>
+                              <SelectContent>{users?.map(user => <SelectItem key={user.id} value={user.id}>{user.fullName}</SelectItem>)}</SelectContent>
+                          </Select>
+                          <FormMessage /></FormItem>
+                      )} />
+                    )}
                     <FormField control={form.control} name="priority" render={({ field }) => (
                          <FormItem><FormLabel>Priority</FormLabel>
                          <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -235,7 +235,7 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData }: 
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Assign Mission
+                    {permissions.canManageStaff ? 'Assign Mission' : 'Create Mission'}
                 </Button>
             </form>
         </Form>
