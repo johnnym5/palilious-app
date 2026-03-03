@@ -29,6 +29,10 @@ const priorityLabels: Record<TaskPriority, string> = {
 
 
 export function TaskPriorityBadge({ priority, className }: TaskPriorityBadgeProps) {
+  if (!priority || !priorityIcons[priority]) {
+    return null;
+  }
+
   const Icon = priorityIcons[priority];
   const label = priorityLabels[priority];
 
