@@ -5,8 +5,10 @@ import { useFirestore } from '@/firebase';
 import { collection, getDocs, collectionGroup } from 'firebase/firestore';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Download } from 'lucide-react';
+import { Loader2, Download, Upload, CloudCog } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from '@/components/ui/input';
 
 export function DataManagement() {
     const firestore = useFirestore();
@@ -92,32 +94,58 @@ export function DataManagement() {
         <Card>
             <CardHeader>
                 <CardTitle>Data Management</CardTitle>
-                <CardDescription>Export your Firestore data to JSON files. Selective exports do not include sub-collections (e.g., sheets, chat messages).</CardDescription>
+                <CardDescription>Backup, restore, and export your application data.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                    {exportOptions.map(option => (
-                        <Button 
-                            key={option.id}
-                            variant="outline"
-                            onClick={() => handleExport(option.id)}
-                            disabled={!!loading}
-                        >
-                            {loading === option.id ? <Loader2 className="animate-spin" /> : <Download />}
-                            Export {option.name}
-                        </Button>
-                    ))}
-                </div>
-                <div className="border-t pt-4">
-                     <Button 
-                        className="w-full"
-                        onClick={() => handleExportAll()}
-                        disabled={!!loading}
-                    >
-                        {loading === 'all' ? <Loader2 className="animate-spin" /> : <Download />}
-                        Export All Data (Full Backup)
-                    </Button>
-                </div>
+            <CardContent>
+                 <Tabs defaultValue="export" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3">
+                        <TabsTrigger value="export">Export to JSON</TabsTrigger>
+                        <TabsTrigger value="backup" disabled>Cloud Backup</TabsTrigger>
+                        <TabsTrigger value="import" disabled>Import from JSON</TabsTrigger>
+                    </TabsList>
+                    <TabsContent value="export" className="mt-4">
+                        <p className="text-sm text-muted-foreground mb-4">Download collections as JSON files. This is useful for local analysis but is not a complete, restorable backup.</p>
+                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                            {exportOptions.map(option => (
+                                <Button 
+                                    key={option.id}
+                                    variant="outline"
+                                    onClick={() => handleExport(option.id)}
+                                    disabled={!!loading}
+                                >
+                                    {loading === option.id ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
+                                    {option.name}
+                                </Button>
+                            ))}
+                        </div>
+                        <div className="border-t pt-4 mt-4">
+                            <Button 
+                                className="w-full"
+                                onClick={() => handleExportAll()}
+                                disabled={!!loading}
+                            >
+                                {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
+                                Export All Data (Full Snapshot)
+                            </Button>
+                        </div>
+                    </TabsContent>
+                    <TabsContent value="backup" className="mt-4">
+                         <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
+                            <CloudCog className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <h3 className="mt-4 text-lg font-semibold">Cloud Backup & Restore</h3>
+                            <p className="mt-1 text-sm text-muted-foreground">This feature to create and restore from Google Cloud backups is coming soon.</p>
+                            <p className="text-xs text-muted-foreground mt-4">Note: The application uses Firestore, not Realtime Database. Backups will be managed for the Firestore instance.</p>
+                         </div>
+                    </TabsContent>
+                     <TabsContent value="import" className="mt-4">
+                         <div className="text-center py-10 px-4 border-2 border-dashed rounded-lg">
+                            <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                            <h3 className="mt-4 text-lg font-semibold">Import from Backup</h3>
+                            <p className="mt-1 text-sm text-muted-foreground">The ability to restore data by importing a JSON file is coming soon.</p>
+                             <p className="text-xs text-destructive mt-4">Warning: Importing data is a destructive action that can overwrite existing data.</p>
+                         </div>
+                    </TabsContent>
+                </Tabs>
             </CardContent>
         </Card>
     );
