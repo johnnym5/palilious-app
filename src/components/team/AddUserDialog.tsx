@@ -18,7 +18,7 @@ import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-import { PREDEFINED_ROLES, PREDEFINED_DEPARTMENTS } from "@/lib/roles-and-departments";
+import { PREDEFINED_DEPARTMENTS, ROLES_BY_DEPARTMENT, GENERIC_ROLES } from "@/lib/roles-and-departments";
 import { sanitizeInput } from "@/lib/utils";
 
 const baseSchema = z.object({
@@ -26,7 +26,7 @@ const baseSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
-  position: z.string({ required_error: "Position is required." }).min(1),
+  position: z.string({ required_error: "Position is required." }).min(1, 'Position is required.'),
   departmentName: z.string().optional(),
 });
 
@@ -90,6 +90,24 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       const combined = new Set([...PREDEFINED_DEPARTMENTS, ...customDeptNames]);
       return Array.from(combined).sort();
   }, [customDepartments, areDeptsLoading]);
+
+  const selectedDepartment = form.watch('departmentName');
+
+  useEffect(() => {
+    form.setValue('position', undefined);
+  }, [selectedDepartment, form]);
+
+  const availablePositions = useMemo(() => {
+    if (!selectedDepartment || selectedDepartment === '__NONE__') {
+      return GENERIC_ROLES;
+    }
+    if (selectedDepartment in ROLES_BY_DEPARTMENT) {
+        const key = selectedDepartment as keyof typeof ROLES_BY_DEPARTMENT;
+        return [...ROLES_BY_DEPARTMENT[key], ...GENERIC_ROLES].sort();
+    }
+    // For custom departments, only allow generic roles
+    return GENERIC_ROLES;
+  }, [selectedDepartment]);
   
   useEffect(() => {
     form.reset({
@@ -260,30 +278,12 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
                   </FormItem>
                 )}
               />
-               <FormField
-                control={form.control}
-                name="position"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Position</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                            <SelectTrigger><SelectValue placeholder="Select a position" /></SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                            {PREDEFINED_ROLES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="departmentName"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Department (Optional)</FormLabel>
+                    <FormLabel>Department</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                             <SelectTrigger>
@@ -293,6 +293,24 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
                         <SelectContent>
                             <SelectItem value="__NONE__">No Department</SelectItem>
                             {areDeptsLoading ? <SelectItem value="loading" disabled>Loading...</SelectItem> : allDepartments?.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+               <FormField
+                control={form.control}
+                name="position"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Position</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDepartment}>
+                        <FormControl>
+                            <SelectTrigger><SelectValue placeholder="Select a department first" /></SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                            {availablePositions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />

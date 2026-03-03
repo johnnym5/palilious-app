@@ -17,7 +17,7 @@ import { sendPasswordResetEmail } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
-import { PREDEFINED_DEPARTMENTS, PREDEFINED_ROLES } from "@/lib/roles-and-departments";
+import { PREDEFINED_DEPARTMENTS, ROLES_BY_DEPARTMENT, GENERIC_ROLES } from "@/lib/roles-and-departments";
 import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
@@ -59,6 +59,19 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
     resolver: zodResolver(formSchema),
   });
 
+  const selectedDepartment = form.watch('departmentName');
+
+  const availablePositions = useMemo(() => {
+    if (!selectedDepartment || selectedDepartment === '__NONE__') {
+      return GENERIC_ROLES;
+    }
+    if (selectedDepartment in ROLES_BY_DEPARTMENT) {
+        const key = selectedDepartment as keyof typeof ROLES_BY_DEPARTMENT;
+        return [...ROLES_BY_DEPARTMENT[key], ...GENERIC_ROLES].sort();
+    }
+    return GENERIC_ROLES;
+  }, [selectedDepartment]);
+
   useEffect(() => {
     if (userToEdit) {
       form.reset({
@@ -71,7 +84,15 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
         canAccessAllWorkbooks: userToEdit.customPermissions?.canAccessAllWorkbooks,
       });
     }
-  }, [userToEdit, form]);
+  }, [userToEdit, form, open]);
+
+  useEffect(() => {
+    if (userToEdit && form.getValues('departmentName') !== userToEdit.departmentName) {
+        form.setValue('position', '');
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedDepartment]);
+
 
   const handlePasswordReset = async () => {
     if (!auth) return;
@@ -153,26 +174,6 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                 </FormItem>
               )}
             />
-             <FormField
-              control={form.control}
-              name="position"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Position / Role</FormLabel>
-                  <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a position" />
-                      </SelectTrigger>
-                    </FormControl>
-                    <SelectContent>
-                      {PREDEFINED_ROLES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
-                    </SelectContent>
-                  </Select>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
             <FormField
                 control={form.control}
                 name="departmentName"
@@ -194,6 +195,26 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                   </FormItem>
                 )}
               />
+             <FormField
+              control={form.control}
+              name="position"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Position / Role</FormLabel>
+                  <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDepartment}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a position" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {availablePositions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
              <FormItem>
                 <FormLabel>Email</FormLabel>
                 <Input disabled value={userToEdit.email} />
