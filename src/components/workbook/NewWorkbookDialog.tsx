@@ -16,6 +16,7 @@ import type { Workbook, UserProfile, Sheet } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as XLSX from 'xlsx';
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
@@ -115,8 +116,8 @@ export function NewWorkbookDialog({ children, open, onOpenChange, userProfile }:
         const now = new Date().toISOString();
         const newWorkbook: Omit<Workbook, 'id'> = {
             orgId: userProfile.orgId,
-            title: values.title,
-            description: values.description,
+            title: sanitizeInput(values.title),
+            description: sanitizeInput(values.description),
             createdBy: userProfile.id,
             creatorName: userProfile.fullName,
             createdAt: now,

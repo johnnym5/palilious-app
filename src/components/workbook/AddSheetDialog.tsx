@@ -13,6 +13,7 @@ import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Sheet } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Sheet name is required." }),
@@ -41,11 +42,12 @@ export function AddSheetDialog({ children, open, onOpenChange, workbookId }: Add
     if (!firestore) return;
     
     setIsLoading(true);
+    const sanitizedName = sanitizeInput(values.name);
 
     try {
         const newSheet: Omit<Sheet, 'id'> = {
             workbookId,
-            name: values.name,
+            name: sanitizedName,
             data: [],
             headers: [],
             createdAt: new Date().toISOString(),
@@ -55,7 +57,7 @@ export function AddSheetDialog({ children, open, onOpenChange, workbookId }: Add
 
         toast({
             title: "Sheet Added",
-            description: `Sheet "${values.name}" has been added to the workbook.`,
+            description: `Sheet "${sanitizedName}" has been added to the workbook.`,
         });
 
         form.reset();

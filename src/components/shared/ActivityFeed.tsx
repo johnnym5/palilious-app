@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Send, MessageSquare, History } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
-import { cn } from '@/lib/utils'
+import { cn, sanitizeInput } from '@/lib/utils'
 
 interface ActivityFeedProps {
   activity: ActivityEntry[]
@@ -38,7 +38,7 @@ export function ActivityFeed({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
     if (!newComment.trim()) return
-    onAddComment(newComment)
+    onAddComment(sanitizeInput(newComment))
     setNewComment('')
   }
 

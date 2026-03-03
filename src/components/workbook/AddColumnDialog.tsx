@@ -13,6 +13,7 @@ import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Sheet } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Column name is required." }),
@@ -40,17 +41,19 @@ export function AddColumnDialog({ children, open, onOpenChange, sheet }: AddColu
   async function onSubmit(values: FormData) {
     if (!firestore) return;
     
-    if (sheet.headers.includes(values.name)) {
+    const sanitizedName = sanitizeInput(values.name);
+
+    if (sheet.headers.includes(sanitizedName)) {
         form.setError("name", { type: "manual", message: "This column name already exists." });
         return;
     }
 
     setIsLoading(true);
 
-    const newHeaders = [...sheet.headers, values.name];
+    const newHeaders = [...sheet.headers, sanitizedName];
     const newData = sheet.data.map(row => ({
         ...row,
-        [values.name]: ""
+        [sanitizedName]: ""
     }));
 
     try {
@@ -62,7 +65,7 @@ export function AddColumnDialog({ children, open, onOpenChange, sheet }: AddColu
 
         toast({
             title: "Column Added",
-            description: `Column "${values.name}" has been added to the sheet.`,
+            description: `Column "${sanitizedName}" has been added to the sheet.`,
         });
 
         form.reset();

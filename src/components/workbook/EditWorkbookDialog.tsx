@@ -14,6 +14,7 @@ import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Workbook } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   title: z.string().min(3, { message: "Title must be at least 3 characters." }),
@@ -56,8 +57,8 @@ export function EditWorkbookDialog({ open, onOpenChange, workbook }: EditWorkboo
     try {
         const workbookRef = doc(firestore, 'workbooks', workbook.id);
         updateDocumentNonBlocking(workbookRef, {
-            title: values.title,
-            description: values.description
+            title: sanitizeInput(values.title),
+            description: sanitizeInput(values.description)
         });
 
         toast({

@@ -13,6 +13,7 @@ import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Sheet } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   name: z.string().min(1, { message: "Sheet name is required." }),
@@ -46,16 +47,17 @@ export function RenameSheetDialog({ open, onOpenChange, sheet }: RenameSheetDial
     if (!firestore) return;
     
     setIsLoading(true);
+    const sanitizedName = sanitizeInput(values.name);
 
     try {
         const sheetRef = doc(firestore, `workbooks/${sheet.workbookId}/sheets`, sheet.id);
         updateDocumentNonBlocking(sheetRef, {
-            name: values.name
+            name: sanitizedName
         });
 
         toast({
             title: "Sheet Renamed",
-            description: `Sheet has been renamed to "${values.name}".`,
+            description: `Sheet has been renamed to "${sanitizedName}".`,
         });
         
         onOpenChange(false);

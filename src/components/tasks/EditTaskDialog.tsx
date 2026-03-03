@@ -17,7 +17,7 @@ import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, UserProfile } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeInput } from "@/lib/utils";
 import { format } from "date-fns";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { Progress } from "../ui/progress";
@@ -84,8 +84,8 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
         }
         
         const updateData = {
-            title: values.title,
-            description: values.description,
+            title: sanitizeInput(values.title),
+            description: sanitizeInput(values.description),
             priority: values.priority,
             dueDate: values.dueDate?.toISOString(),
             attachmentUrl: attachmentUrl,

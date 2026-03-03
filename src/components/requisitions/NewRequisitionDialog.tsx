@@ -17,6 +17,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { Progress } from "@/components/ui/progress";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
@@ -108,9 +109,9 @@ export function NewRequisitionDialog({ children, open, onOpenChange, userProfile
             orgId: userProfile.orgId,
             createdBy: userProfile.id,
             creatorName: userProfile.fullName,
-            title: values.title,
+            title: sanitizeInput(values.title),
             amount: values.amount,
-            description: values.description,
+            description: sanitizeInput(values.description),
             status: nextStatus,
             createdAt: now,
             activity: [initialActivity],

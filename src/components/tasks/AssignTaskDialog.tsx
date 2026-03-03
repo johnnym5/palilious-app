@@ -17,7 +17,7 @@ import { collection, query, where, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, UserProfile, ActivityEntry, Permissions } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
-import { cn } from "@/lib/utils";
+import { cn, sanitizeInput } from "@/lib/utils";
 import { format } from "date-fns";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { Progress } from "../ui/progress";
@@ -169,8 +169,8 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
         
         const newTask: Omit<Task, 'id'> = {
             orgId: assignedUser.orgId,
-            title: values.title,
-            description: values.description || "",
+            title: sanitizeInput(values.title),
+            description: sanitizeInput(values.description),
             assignedTo: assigneeId,
             assignedToName: assignedUser.fullName,
             priority: values.priority,

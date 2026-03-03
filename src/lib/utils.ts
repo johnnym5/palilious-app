@@ -61,3 +61,18 @@ export function hexToHslString(hex: string): string | null {
 
   return `${h} ${s}% ${l}%`;
 }
+
+/**
+ * Sanitizes a string by replacing HTML special characters with their entities.
+ * @param input The string to sanitize.
+ * @returns The sanitized string.
+ */
+export function sanitizeInput(input: string | null | undefined): string {
+  if (!input) return "";
+  return input
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}

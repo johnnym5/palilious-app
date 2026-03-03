@@ -19,6 +19,7 @@ import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { PREDEFINED_ROLES, PREDEFINED_DEPARTMENTS } from "@/lib/roles-and-departments";
+import { sanitizeInput } from "@/lib/utils";
 
 const baseSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
@@ -111,7 +112,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
 
       const userData: Omit<UserProfile, 'id' | 'username'> = {
         orgId: orgId,
-        fullName: values.fullName,
+        fullName: sanitizeInput(values.fullName),
         email: values.email.toLowerCase(),
         position: values.position as UserPosition,
         departmentId: departmentName ? departmentName.toLowerCase().replace(/\s+/g, '-').replace(/&/g, 'and') : null,
@@ -121,14 +122,14 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       };
 
       await updateProfile(newUser, { 
-        displayName: values.fullName,
+        displayName: sanitizeInput(values.fullName),
         photoURL: null
       });
 
       const userRef = doc(firestore, "users", newUser.uid);
       const profileData: UserProfile = {
           id: newUser.uid,
-          username: values.username.toLowerCase(),
+          username: sanitizeInput(values.username.toLowerCase()),
           ...userData,
       }
       setDocumentNonBlocking(userRef, profileData, { merge: false });

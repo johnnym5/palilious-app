@@ -18,6 +18,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
 import { PREDEFINED_DEPARTMENTS, PREDEFINED_ROLES } from "@/lib/roles-and-departments";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
@@ -84,7 +85,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
       const departmentName = isNoDepartment ? null : values.departmentName;
       
       const updateData = {
-        fullName: values.fullName,
+        fullName: sanitizeInput(values.fullName),
         position: values.position,
         departmentId: departmentName ? departmentName.toLowerCase().replace(/\s+/g, '-').replace(/&/g, 'and') : null,
         departmentName: departmentName,

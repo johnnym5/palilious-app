@@ -14,6 +14,7 @@ import { doc, arrayUnion } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, UserProfile, ActivityEntry } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   brief: z.string().min(10, { message: "Brief must be at least 10 characters." }),
@@ -53,7 +54,7 @@ export function CompletionBriefDialog({ isOpen, onOpenChange, task, userProfile 
             actorName: userProfile.fullName,
             actorAvatarUrl: userProfile.avatarURL,
             timestamp: now,
-            text: values.brief,
+            text: sanitizeInput(values.brief),
         };
         
         const logEntry: ActivityEntry = {

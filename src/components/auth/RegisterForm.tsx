@@ -21,6 +21,7 @@ import { useAuth, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useFi
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { collection, doc } from "firebase/firestore";
 import type { Organization, UserProfile, SystemConfig, UserPosition } from "@/lib/types";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   organizationName: z.string().min(1, { message: "Organization name is required." }),
@@ -67,7 +68,7 @@ export function RegisterForm() {
       // 2. Create the Organization document, store name as lowercase for case-insensitive lookup
       const orgsCollection = collection(firestore, "organizations");
       const orgData: Omit<Organization, 'id'> = {
-        name: values.organizationName.toLowerCase(),
+        name: sanitizeInput(values.organizationName.toLowerCase()),
         ownerId: newUser.uid,
         createdAt: new Date().toISOString(),
       };
@@ -99,15 +100,15 @@ export function RegisterForm() {
       const userProfileData: Omit<UserProfile, 'id'> = {
         orgId: orgDocRef.id,
         email: values.email.toLowerCase(),
-        username: values.username.toLowerCase(),
-        fullName: values.fullName,
+        username: sanitizeInput(values.username.toLowerCase()),
+        fullName: sanitizeInput(values.fullName),
         position: "Organization Administrator",
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
       };
       
       await updateProfile(newUser, { 
-        displayName: values.fullName,
+        displayName: sanitizeInput(values.fullName),
         photoURL: null
       });
       
