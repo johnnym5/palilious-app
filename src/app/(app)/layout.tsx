@@ -2,13 +2,14 @@
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ArrowLeft } from 'lucide-react';
 import AppSidebar from '@/components/layout/AppSidebar';
 import AppHeader from '@/components/layout/AppHeader';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
 import { hexToHslString } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -53,6 +54,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           {children}
         </main>
       </div>
+      <Button
+          onClick={() => router.back()}
+          variant="outline"
+          size="icon"
+          className="fixed bottom-6 left-4 md:left-[19.5rem] h-14 w-14 rounded-full shadow-lg z-50 bg-background/80 backdrop-blur-md transition-transform hover:scale-110 active:scale-100 border-2 border-primary/50 hover:border-primary"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="h-6 w-6" />
+      </Button>
     </div>
   );
 }
