@@ -2,11 +2,11 @@
 
 import { useState, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useDatabase } from '@/firebase';
-import { collection, getDocs, collectionGroup, writeBatch, doc, query, where } from 'firebase/firestore';
+import { collection, getDocs, collectionGroup, writeBatch, doc, query, where, getDoc } from 'firebase/firestore';
 import { ref, get, child, set, onValue } from 'firebase/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Loader2, Download, Upload, CloudCog, Trash2, ShieldAlert, PlusCircle, Server } from 'lucide-react';
+import { Loader2, Download, Upload, CloudCog, Trash2, ShieldAlert, PlusCircle, Server, ChevronDown } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -27,6 +27,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { DatabaseExplorer } from './DatabaseExplorer';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { ScrollArea } from '../ui/scroll-area';
 
 
 export const COLLECTIONS = [
@@ -49,21 +51,27 @@ export function DataManagement() {
     const { toast } = useToast();
     const [loading, setLoading] = useState<string | null>(null);
 
-    // Offline state
+    // Export state
+    const [exportTargetOrg, setExportTargetOrg] = useState<string>('__ALL__');
+    const [collectionsToExport, setCollectionsToExport] = useState<string[]>([]);
+    
+    // Offline Import state
     const [fileToImport, setFileToImport] = useState<File | null>(null);
     const [importPreview, setImportPreview] = useState<Record<string, number> | null>(null);
     const [collectionsToImport, setCollectionsToImport] = useState<string[]>([]);
     const [isParsing, setIsParsing] = useState(false);
+    const [importTargetOrg, setImportTargetOrg] = useState<string>('__ALL__');
     
-    // Online state
+    // Online Restore state
     const [onlineBackups, setOnlineBackups] = useState<string[]>([]);
     const [selectedOnlineBackup, setSelectedOnlineBackup] = useState<string | null>(null);
     const [onlineBackupPreview, setOnlineBackupPreview] = useState<Record<string, number> | null>(null);
     const [collectionsToRestore, setCollectionsToRestore] = useState<string[]>([]);
+    const [restoreTargetOrg, setRestoreTargetOrg] = useState<string>('__ALL__');
 
 
     // Destructive actions state
-    const [targetOrg, setTargetOrg] = useState<string>('__ALL__');
+    const [deleteTargetOrg, setDeleteTargetOrg] = useState<string>('__ALL__');
     const [collectionToDelete, setCollectionToDelete] = useState<string>('');
     const [deleteConfirmation, setDeleteConfirmation] = useState('');
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
@@ -87,6 +95,20 @@ export function DataManagement() {
 
         return () => unsubscribe();
     }, [database]);
+    
+    const getSubCollectionData = async (parentCollection: string, subCollection: string, parentIds: string[]) => {
+        const subCollectionData: any[] = [];
+        // Process in chunks to avoid hitting query limits
+        for (let i = 0; i < parentIds.length; i += 10) {
+            const chunk = parentIds.slice(i, i + 10);
+            const promises = chunk.map(id => getDocs(collection(firestore, parentCollection, id, subCollection)));
+            const snapshots = await Promise.all(promises);
+            snapshots.forEach(snapshot => {
+                snapshot.forEach(doc => subCollectionData.push({ id: doc.id, ...doc.data() }));
+            });
+        }
+        return subCollectionData;
+    }
 
     const handleCreateBackup = async () => {
         if (!firestore || !database) return;
@@ -95,23 +117,40 @@ export function DataManagement() {
 
         try {
             toast({ title: 'Starting cloud backup...', description: 'Fetching all data from Firestore.' });
-
-            const allData: Record<string, any[]> = {};
-            for (const name of COLLECTIONS.map(c => c.id)) {
-                 const querySnapshot = await getDocs(collection(firestore, name));
-                 allData[name] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            const collectionsToProcess = collectionsToExport.length > 0 ? collectionsToExport : COLLECTIONS.map(c => c.id);
+            const dataToBackup: Record<string, any[]> = {};
+            
+            for (const name of collectionsToProcess) {
+                let q = query(collection(firestore, name));
+                if (exportTargetOrg !== '__ALL__') {
+                    // This assumes the collection has an 'orgId' field. Not all do (e.g., 'organizations').
+                    if (name !== 'organizations' && name !== 'feedback') {
+                         q = query(q, where('orgId', '==', exportTargetOrg));
+                    }
+                }
+                const querySnapshot = await getDocs(q);
+                dataToBackup[name] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            }
+            
+            if (exportTargetOrg !== '__ALL__') {
+                if (dataToBackup['organizations']) {
+                    dataToBackup['organizations'] = dataToBackup['organizations'].filter(o => o.id === exportTargetOrg);
+                }
+            }
+            
+            if (collectionsToProcess.includes('workbooks') && dataToBackup['workbooks']?.length > 0) {
+                const workbookIds = dataToBackup['workbooks'].map(wb => wb.id);
+                dataToBackup['sheets'] = await getSubCollectionData('workbooks', 'sheets', workbookIds);
+            }
+            if (collectionsToProcess.includes('chats') && dataToBackup['chats']?.length > 0) {
+                const chatIds = dataToBackup['chats'].map(c => c.id);
+                dataToBackup['chat_messages'] = await getSubCollectionData('chats', 'messages', chatIds);
             }
 
-            const sheetsSnapshot = await getDocs(collectionGroup(firestore, 'sheets'));
-            allData['sheets'] = sheetsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-            const messagesSnapshot = await getDocs(collectionGroup(firestore, 'messages'));
-            allData['chat_messages'] = messagesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
             toast({ title: 'Data fetched', description: 'Writing data to Realtime Database. This may take a moment.' });
-
             const backupRef = ref(database, `backups/${backupTimestamp}`);
-            await set(backupRef, allData);
+            await set(backupRef, dataToBackup);
 
             toast({ title: 'Cloud Backup Complete', description: `Snapshot created successfully.` });
 
@@ -135,26 +174,42 @@ export function DataManagement() {
         URL.revokeObjectURL(url);
     };
     
-    const handleExportAll = async () => {
+    const handleExport = async () => {
         if (!firestore) return;
-        setLoading('all');
+        setLoading('export');
         try {
-            const collectionsToExport = COLLECTIONS.map(c => c.id);
-            const allData: Record<string, any[]> = {};
+            const collectionsToProcess = collectionsToExport.length > 0 ? collectionsToExport : COLLECTIONS.map(c => c.id);
+            const dataToExport: Record<string, any[]> = {};
             
-            for (const name of collectionsToExport) {
-                 const querySnapshot = await getDocs(collection(firestore, name));
-                 allData[name] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            for (const name of collectionsToProcess) {
+                let q = query(collection(firestore, name));
+                if (exportTargetOrg !== '__ALL__') {
+                    if (name !== 'organizations' && name !== 'feedback') {
+                         q = query(q, where('orgId', '==', exportTargetOrg));
+                    }
+                }
+                const querySnapshot = await getDocs(q);
+                dataToExport[name] = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             }
             
-            const sheetsSnapshot = await getDocs(collectionGroup(firestore, 'sheets'));
-            allData['sheets'] = sheetsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (exportTargetOrg !== '__ALL__') {
+                if (dataToExport['organizations']) {
+                    dataToExport['organizations'] = dataToExport['organizations'].filter(o => o.id === exportTargetOrg);
+                }
+            }
+            
+            if (collectionsToProcess.includes('workbooks') && dataToExport['workbooks']?.length > 0) {
+                const workbookIds = dataToExport['workbooks'].map(wb => wb.id);
+                dataToExport['sheets'] = await getSubCollectionData('workbooks', 'sheets', workbookIds);
+            }
 
-            const messagesSnapshot = await getDocs(collectionGroup(firestore, 'messages'));
-            allData['chat_messages'] = messagesSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            if (collectionsToProcess.includes('chats') && dataToExport['chats']?.length > 0) {
+                const chatIds = dataToExport['chats'].map(c => c.id);
+                dataToExport['chat_messages'] = await getSubCollectionData('chats', 'messages', chatIds);
+            }
 
-            downloadJson(`palilious_full_backup_${new Date().toISOString().split('T')[0]}`, allData);
-            toast({ title: 'Full Export Successful', description: `All data has been exported.` });
+            downloadJson(`palilious_backup_${exportTargetOrg}_${new Date().toISOString().split('T')[0]}`, dataToExport);
+            toast({ title: 'Export Successful', description: `Selected data has been exported.` });
 
         } catch (e: any) {
              toast({ variant: 'destructive', title: 'Export Failed', description: e.message });
@@ -240,25 +295,29 @@ export function DataManagement() {
                 const documents = data[collectionName];
                 if (Array.isArray(documents)) {
                     for (const docData of documents) {
-                        if (docData.id) {
-                            let docRef;
-                            if (collectionName === 'sheets' && docData.workbookId) {
-                                docRef = doc(firestore, `workbooks/${docData.workbookId}/sheets`, docData.id);
-                            } else if (collectionName === 'chat_messages' && docData.chatId) {
-                                docRef = doc(firestore, `chats/${docData.chatId}/messages`, docData.id);
-                            } else {
-                                docRef = doc(firestore, collectionName, docData.id);
-                            }
-                            
-                            const { id, ...dataToSet } = docData;
-                            currentBatch.set(docRef, dataToSet);
-                            writeCount++;
+                        if (!docData.id) continue;
 
-                            if (writeCount >= 499) {
-                                await currentBatch.commit();
-                                currentBatch = writeBatch(firestore);
-                                writeCount = 0;
-                            }
+                        if (importTargetOrg !== '__ALL__' && docData.orgId && docData.orgId !== importTargetOrg) {
+                           continue;
+                        }
+
+                        let docRef;
+                        if (collectionName === 'sheets' && docData.workbookId) {
+                            docRef = doc(firestore, `workbooks/${docData.workbookId}/sheets`, docData.id);
+                        } else if (collectionName === 'chat_messages' && docData.chatId) {
+                            docRef = doc(firestore, `chats/${docData.chatId}/messages`, docData.id);
+                        } else {
+                            docRef = doc(firestore, collectionName, docData.id);
+                        }
+                        
+                        const { id, ...dataToSet } = docData;
+                        currentBatch.set(docRef, dataToSet);
+                        writeCount++;
+
+                        if (writeCount >= 499) {
+                            await currentBatch.commit();
+                            currentBatch = writeBatch(firestore);
+                            writeCount = 0;
                         }
                     }
                 }
@@ -277,10 +336,10 @@ export function DataManagement() {
 
     const getDeleteConfirmationPhrase = () => {
         const collectionName = COLLECTIONS.find(c => c.id === collectionToDelete)?.name.toUpperCase() || 'ENTIRE DATABASE';
-        if (targetOrg === '__ALL__') {
+        if (deleteTargetOrg === '__ALL__') {
             return `DELETE ALL ${collectionName}`;
         }
-        const orgName = organizations?.find(o => o.id === targetOrg)?.name.toUpperCase() || 'UNKNOWN ORG';
+        const orgName = organizations?.find(o => o.id === deleteTargetOrg)?.name.toUpperCase() || 'UNKNOWN ORG';
         return `DELETE ${collectionName} FROM ${orgName}`;
     };
 
@@ -292,16 +351,26 @@ export function DataManagement() {
             for (const name of collectionsToDeleteList) {
                 toast({ title: 'Deletion in Progress...', description: `Querying documents in ${name}...` });
                 let q = query(collection(firestore, name));
-                if (targetOrg !== '__ALL__') {
-                    q = query(q, where('orgId', '==', targetOrg));
+                if (deleteTargetOrg !== '__ALL__') {
+                    // This logic might need to be more robust for collections without orgId
+                    if (name !== 'organizations' && name !== 'feedback') {
+                         q = query(q, where('orgId', '==', deleteTargetOrg));
+                    }
                 }
                 
                 const snapshot = await getDocs(q);
-                if (snapshot.empty) continue;
+                let docsToDelete = snapshot.docs;
+
+                // Special handling for 'organizations' collection
+                if (name === 'organizations' && deleteTargetOrg !== '__ALL__') {
+                    docsToDelete = docsToDelete.filter(doc => doc.id === deleteTargetOrg);
+                }
+
+                if (docsToDelete.length === 0) continue;
 
                 let batch = writeBatch(firestore);
                 let count = 0;
-                for (const doc of snapshot.docs) {
+                for (const doc of docsToDelete) {
                     batch.delete(doc.ref);
                     count++;
                     if (count === 499) {
@@ -311,7 +380,7 @@ export function DataManagement() {
                     }
                 }
                 if (count > 0) await batch.commit();
-                toast({ title: 'Deletion in Progress...', description: `Deleted ${snapshot.size} documents from ${name}.` });
+                toast({ title: 'Deletion in Progress...', description: `Deleted ${docsToDelete.length} documents from ${name}.` });
             }
 
             toast({ title: 'Deletion Complete', description: 'The selected data has been permanently removed.' });
@@ -340,17 +409,59 @@ export function DataManagement() {
                     <Card>
                         <CardHeader>
                             <CardTitle>Backup & Export</CardTitle>
-                            <CardDescription>Create offline (JSON) or online (Realtime Database) backups of your Firestore data.</CardDescription>
+                            <CardDescription>
+                                Create offline (JSON) or online (Realtime Database) backups. You can scope backups to a specific organization and/or collection.
+                            </CardDescription>
                         </CardHeader>
-                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <Button className="w-full" onClick={handleExportAll} disabled={anyLoading}>
-                                {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
-                                Export All to JSON (Offline)
-                            </Button>
-                             <Button onClick={handleCreateBackup} disabled={anyLoading}>
-                                {loading === 'cloud-backup' ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
-                                Create Cloud Snapshot (Online)
-                            </Button>
+                        <CardContent className="space-y-4">
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                <div className="space-y-2">
+                                    <Label>Target Organization</Label>
+                                    <Select value={exportTargetOrg} onValueChange={setExportTargetOrg} disabled={anyLoading}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__ALL__">All Organizations</SelectItem>
+                                            {organizations?.map(org => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Data to Export</Label>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className="w-full justify-between">
+                                                <span>{collectionsToExport.length > 0 ? `${collectionsToExport.length} selected` : 'All Collections'}</span>
+                                                <ChevronDown className="h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-64 p-0">
+                                            <ScrollArea className="h-48">
+                                                <div className="p-2 space-y-1">
+                                                    {COLLECTIONS.map(c => (
+                                                        <div key={c.id} className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer" onClick={() => {
+                                                            setCollectionsToExport(prev => prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id]);
+                                                        }}>
+                                                            <Checkbox checked={collectionsToExport.includes(c.id)} />
+                                                            <span>{c.name}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </ScrollArea>
+                                        </PopoverContent>
+                                    </Popover>
+                                </div>
+                            </div>
+                            <Separator />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                <Button className="w-full" onClick={handleExport} disabled={anyLoading}>
+                                    {loading === 'export' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
+                                    Export to JSON (Offline)
+                                </Button>
+                                <Button onClick={handleCreateBackup} disabled={anyLoading}>
+                                    {loading === 'cloud-backup' ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
+                                    Create Cloud Snapshot (Online)
+                                </Button>
+                            </div>
                         </CardContent>
                     </Card>
                 </TabsContent>
@@ -368,6 +479,18 @@ export function DataManagement() {
                              </TabsList>
                              <TabsContent value="offline" className="pt-4">
                                  <div className="p-4 border rounded-lg space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Target Organization for Import</Label>
+                                        <Select value={importTargetOrg} onValueChange={setImportTargetOrg} disabled={anyLoading}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__ALL__">All Organizations (from file)</SelectItem>
+                                                {organizations?.map(org => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                        <p className="text-xs text-muted-foreground">If a target is selected, only data matching that organization will be imported from the file.</p>
+                                    </div>
+                                    <Separator />
                                     <Label htmlFor="import-file">Import from JSON</Label>
                                     <Input id="import-file" type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || anyLoading}/>
                                     {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
@@ -380,21 +503,24 @@ export function DataManagement() {
                                                 </div>
                                             </CardHeader>
                                             <CardContent>
-                                                <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
-                                                    {Object.entries(importPreview).map(([key, value]) => (
-                                                        <div key={key} className="flex items-center space-x-2">
-                                                            <Checkbox id={`import-${key}`} checked={collectionsToImport.includes(key)} onCheckedChange={(checked) => setCollectionsToImport(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
-                                                            <label htmlFor={`import-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                                <ScrollArea className="max-h-48">
+                                                    <div className="text-sm text-muted-foreground space-y-2">
+                                                        {Object.entries(importPreview).map(([key, value]) => (
+                                                            <div key={key} className="flex items-center space-x-2">
+                                                                <Checkbox id={`import-${key}`} checked={collectionsToImport.includes(key)} onCheckedChange={(checked) => setCollectionsToImport(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
+                                                                <label htmlFor={`import-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </ScrollArea>
                                             </CardContent>
                                         </Card>
                                     )}
                                      <AlertDialog>
                                         <AlertDialogTrigger asChild>
                                             <Button className="w-full" disabled={!importPreview || collectionsToImport.length === 0 || anyLoading || isParsing}>
-                                                <Upload className="mr-2" /> Import Selected Data
+                                                {loading === 'import' ? <Loader2 className="mr-2 animate-spin" /> : <Upload className="mr-2" />}
+                                                Import Selected Data
                                             </Button>
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
@@ -406,19 +532,32 @@ export function DataManagement() {
                              </TabsContent>
                              <TabsContent value="online" className="pt-4">
                                  <div className="p-4 border rounded-lg space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Target Organization for Restore</Label>
+                                        <Select value={restoreTargetOrg} onValueChange={setRestoreTargetOrg} disabled={anyLoading}>
+                                            <SelectTrigger><SelectValue /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="__ALL__">All Organizations</SelectItem>
+                                                {organizations?.map(org => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                    <Separator />
                                     <h3 className="font-semibold text-sm">Available Cloud Backups</h3>
                                     {onlineBackups.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No cloud backups found.</p>}
-                                    <div className="max-h-60 overflow-y-auto space-y-2">
-                                        {onlineBackups.map(key => (
-                                            <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
-                                                <div className="flex items-center gap-2">
-                                                    <Server className="h-4 w-4 text-muted-foreground" />
-                                                    <span className="font-mono text-xs">{new Date(key).toLocaleString()}</span>
+                                    <ScrollArea className="max-h-60">
+                                        <div className="space-y-2 pr-2">
+                                            {onlineBackups.map(key => (
+                                                <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
+                                                    <div className="flex items-center gap-2">
+                                                        <Server className="h-4 w-4 text-muted-foreground" />
+                                                        <span className="font-mono text-xs">{new Date(key).toLocaleString()}</span>
+                                                    </div>
+                                                    {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
                                                 </div>
-                                                {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    </ScrollArea>
                                     {onlineBackupPreview && (
                                         <Card>
                                              <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Restore Preview</CardTitle>
@@ -428,14 +567,16 @@ export function DataManagement() {
                                                 </div>
                                             </CardHeader>
                                             <CardContent>
-                                               <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
-                                                    {Object.entries(onlineBackupPreview).map(([key, value]) => (
-                                                        <div key={key} className="flex items-center space-x-2">
-                                                            <Checkbox id={`restore-${key}`} checked={collectionsToRestore.includes(key)} onCheckedChange={(checked) => setCollectionsToRestore(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
-                                                            <label htmlFor={`restore-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
-                                                        </div>
-                                                    ))}
-                                                </div>
+                                               <ScrollArea className="max-h-48">
+                                                    <div className="text-sm text-muted-foreground space-y-2">
+                                                        {Object.entries(onlineBackupPreview).map(([key, value]) => (
+                                                            <div key={key} className="flex items-center space-x-2">
+                                                                <Checkbox id={`restore-${key}`} checked={collectionsToRestore.includes(key)} onCheckedChange={(checked) => setCollectionsToRestore(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
+                                                                <label htmlFor={`restore-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </ScrollArea>
                                             </CardContent>
                                         </Card>
                                     )}
@@ -471,7 +612,7 @@ export function DataManagement() {
                              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
                                 <div className="space-y-2">
                                     <Label>Target Organization</Label>
-                                    <Select value={targetOrg} onValueChange={setTargetOrg} disabled={anyLoading}>
+                                    <Select value={deleteTargetOrg} onValueChange={setDeleteTargetOrg} disabled={anyLoading}>
                                         <SelectTrigger><SelectValue /></SelectTrigger>
                                         <SelectContent>
                                             <SelectItem value="__ALL__">All Organizations</SelectItem>
