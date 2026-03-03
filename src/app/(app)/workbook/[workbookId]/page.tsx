@@ -16,6 +16,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { AddSheetDialog } from '@/components/workbook/AddSheetDialog';
 import { RenameSheetDialog } from '@/components/workbook/RenameSheetDialog';
 import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
+import { usePermissions } from '@/hooks/usePermissions';
 
 interface WorkbookPermissions {
     canView: boolean;
@@ -73,18 +74,20 @@ export default function WorkbookDetailPage() {
     [firestore, workbookId]);
     const { data: sheets, isLoading: areSheetsLoading } = useCollection<Sheet>(sheetsQuery);
 
-    const permissions = useWorkbookPermissions(workbook, userProfile);
+    const workbookPermissions = useWorkbookPermissions(workbook, userProfile);
+    const generalPermissions = usePermissions(userProfile);
+
 
     const isLoading = isWorkbookLoading || areSheetsLoading || isProfileLoading;
 
     const handleDeleteSheet = () => {
-        if (!sheetToDelete || !permissions.canEdit) return;
+        if (!sheetToDelete || !workbookPermissions.canEdit) return;
         const sheetRef = doc(firestore, `workbooks/${workbookId}/sheets`, sheetToDelete.id);
         deleteDocumentNonBlocking(sheetRef);
         setSheetToDelete(null);
     }
     
-    if (!isLoading && !permissions.canView) {
+    if (!isLoading && !workbookPermissions.canView) {
       return (
            <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
@@ -129,7 +132,7 @@ export default function WorkbookDetailPage() {
                                         {sheets.map(sheet => (
                                             <div key={sheet.id} className="flex items-center group">
                                                 <TabsTrigger value={sheet.id}>{sheet.name}</TabsTrigger>
-                                                 {permissions.canManage && (
+                                                 {workbookPermissions.canManage && (
                                                      <DropdownMenu>
                                                         <DropdownMenuTrigger asChild>
                                                             <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100 transition-opacity">
@@ -152,7 +155,7 @@ export default function WorkbookDetailPage() {
                                             </div>
                                         ))}
                                     </TabsList>
-                                    {permissions.canEdit && (
+                                    {workbookPermissions.canEdit && (
                                         <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
                                             <Button variant="outline" size="icon" className='h-10 w-10'>
                                                 <Plus className="h-4 w-4" />
@@ -164,7 +167,7 @@ export default function WorkbookDetailPage() {
                             <CardContent className="flex-1">
                                 {sheets.map(sheet => (
                                     <TabsContent key={sheet.id} value={sheet.id} className="h-full">
-                                        <SheetDataTable sheet={sheet} permissions={permissions} />
+                                        <SheetDataTable sheet={sheet} permissions={workbookPermissions} />
                                     </TabsContent>
                                 ))}
                             </CardContent>
@@ -174,7 +177,7 @@ export default function WorkbookDetailPage() {
                     <Card>
                         <CardContent className="p-8 text-center text-muted-foreground">
                             This workbook has no sheets yet.
-                            {permissions.canEdit && (
+                            {workbookPermissions.canEdit && (
                                 <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
                                     <Button variant="outline" className="mt-4">
                                         <Plus className="mr-2 h-4 w-4" /> Add First Sheet
@@ -194,14 +197,17 @@ export default function WorkbookDetailPage() {
                 />
             )}
 
-            {sheetToMakeTask && (
+            {sheetToMakeTask && userProfile && (
                 <AssignTaskDialog
                     open={!!sheetToMakeTask}
                     onOpenChange={(isOpen) => !isOpen && setSheetToMakeTask(null)}
+                    currentUserProfile={userProfile}
+                    permissions={generalPermissions}
                     initialData={{
-                        title: `From Workbook: ${'\'\'\'\'\'\'\'\'\'\''}${sheetToMakeTask.name}`,
-                        description: `Complete the tasks outlined in the workbook sheet "${'\'\'\'\'\'\'\'\'\'\''}${sheetToMakeTask.name}". See attached link for the workbook.`,
-                        attachmentUrl: `${window.location.origin}/workbook/${workbookId}`
+                        title: `From Workbook: ${sheetToMakeTask.name}`,
+                        description: `Complete the tasks outlined in the workbook sheet "${sheetToMakeTask.name}".`,
+                        workbookId: sheetToMakeTask.workbookId,
+                        sheetId: sheetToMakeTask.id,
                     }}
                 />
             )}

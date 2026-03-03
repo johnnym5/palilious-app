@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Paperclip } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFirestore, updateDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -19,13 +19,15 @@ import type { Task, UserProfile } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useFileUpload } from "@/hooks/useFileUpload";
+import { Progress } from "../ui/progress";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
   description: z.string().optional(),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
   dueDate: z.date().optional(),
-  attachmentUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  attachment: z.custom<File>().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -37,14 +39,26 @@ interface EditTaskDialogProps {
   currentUserProfile: UserProfile;
 }
 
-export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps) {
+export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }: EditTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { isUploading, uploadProgress, uploadFile } = useFileUpload();
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  const isBusy = isLoading || isUploading;
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
   });
+  
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      form.setValue('attachment', file);
+      setFileName(file.name);
+    }
+  };
 
   useEffect(() => {
     form.reset({
@@ -52,8 +66,9 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
       description: task.description || "",
       priority: task.priority,
       dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
-      attachmentUrl: task.attachmentUrl || "",
-    })
+    });
+    setFileName(null);
+    form.setValue('attachment', undefined);
   }, [task, form]);
 
 
@@ -62,13 +77,21 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
     setIsLoading(true);
 
     try {
-        const taskRef = doc(firestore, 'tasks', task.id);
+        let attachmentUrl: string | undefined = task.attachmentUrl;
+        if (values.attachment) {
+            const filePath = `tasks/${currentUserProfile.orgId}/${Date.now()}_${values.attachment.name}`;
+            attachmentUrl = await uploadFile(values.attachment, filePath);
+        }
         
         const updateData = {
-            ...values,
+            title: values.title,
+            description: values.description,
+            priority: values.priority,
             dueDate: values.dueDate?.toISOString(),
+            attachmentUrl: attachmentUrl,
         }
 
+        const taskRef = doc(firestore, 'tasks', task.id);
         updateDocumentNonBlocking(taskRef, updateData);
         
         toast({ title: "Task Updated", description: `"${values.title}" has been saved.`});
@@ -97,9 +120,25 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
                 <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="attachmentUrl" render={({ field }) => (
-                    <FormItem><FormLabel>Link to Document (Optional)</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
+                
+                 <FormField
+                    control={form.control}
+                    name="attachment"
+                    render={() => (
+                        <FormItem>
+                            <FormLabel>Attachment (Optional)</FormLabel>
+                            <FormControl>
+                                <Input id="edit-task-attachment-file" type="file" className="hidden" onChange={handleFileChange} disabled={isBusy} />
+                            </FormControl>
+                             <label htmlFor="edit-task-attachment-file" className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer border p-2 rounded-md hover:bg-accent transition-colors">
+                                <Paperclip className="h-4 w-4" />
+                                <span className="truncate">{fileName || task.attachmentUrl || 'Upload a file'}</span>
+                            </label>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                {isUploading && <Progress value={uploadProgress} className="w-full h-2" />}
 
                 <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="priority" render={({ field }) => (
@@ -133,8 +172,8 @@ export function EditTaskDialog({ task, open, onOpenChange }: EditTaskDialogProps
                     )} />
                 </div>
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" className="w-full" disabled={isBusy}>
+                    {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes
                 </Button>
             </form>

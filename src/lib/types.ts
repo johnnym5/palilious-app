@@ -134,6 +134,8 @@ export interface Task {
   activity: ActivityEntry[];
   createdAt: string; // ISO string
   attachmentUrl?: string;
+  workbookId?: string;
+  sheetId?: string;
   sharedWith?: string[];
   subTasks?: SubTask[];
   type?: 'STANDARD' | 'ASSISTANCE_REQUEST';

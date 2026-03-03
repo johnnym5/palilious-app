@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Paperclip } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFirestore, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
@@ -19,6 +19,8 @@ import type { Task, UserProfile, ActivityEntry, Permissions } from "@/lib/types"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import { format } from "date-fns";
+import { useFileUpload } from "@/hooks/useFileUpload";
+import { Progress } from "../ui/progress";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
@@ -26,7 +28,7 @@ const formSchema = z.object({
   assignedTo: z.string().optional(),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
   dueDate: z.date().optional(),
-  attachmentUrl: z.string().url({ message: "Please enter a valid URL." }).optional().or(z.literal('')),
+  attachment: z.custom<File>().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -38,7 +40,8 @@ interface AssignTaskDialogProps {
   initialData?: {
       title: string;
       description?: string;
-      attachmentUrl?: string;
+      workbookId?: string;
+      sheetId?: string;
   };
   currentUserProfile: UserProfile;
   permissions: Permissions;
@@ -48,6 +51,10 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
+  const { isUploading, uploadProgress, uploadFile } = useFileUpload();
+  const [fileName, setFileName] = useState<string | null>(null);
+
+  const isBusy = isLoading || isUploading;
 
   const usersQuery = useMemoFirebase(() => 
     currentUserProfile ? query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId)) : null
@@ -60,21 +67,36 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
       title: "",
       description: "",
       priority: "LEVEL_1",
-      attachmentUrl: "",
+      attachment: undefined,
     },
   });
 
-    useEffect(() => {
-        if (open) {
-            form.reset({
-                title: initialData?.title || "",
-                description: initialData?.description || "",
-                priority: "LEVEL_1",
-                attachmentUrl: initialData?.attachmentUrl || "",
-                assignedTo: undefined,
-                dueDate: undefined,
-            });
-        }
+  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      form.setValue('attachment', file);
+      setFileName(file.name);
+    }
+  };
+
+  const handleDialogClose = () => {
+    form.reset();
+    setFileName(null);
+    onOpenChange(false);
+  }
+
+  useEffect(() => {
+    if (open) {
+        form.reset({
+            title: initialData?.title || "",
+            description: initialData?.description || "",
+            priority: "LEVEL_1",
+            attachment: undefined,
+            assignedTo: undefined,
+            dueDate: undefined,
+        });
+        setFileName(null);
+    }
   }, [initialData, open, form]);
 
 
@@ -104,7 +126,7 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
                 toast({ 
                     variant: 'destructive', 
                     title: 'Assignment Failed', 
-                    description: `${'\'\'\'\'\'\'\'\'\'\''}${assignedUser.fullName} already has a High Priority (Level 3) task. Only one is allowed.` 
+                    description: `${assignedUser.fullName} already has a High Priority (Level 3) task. Only one is allowed.` 
                 });
                 return;
             }
@@ -116,7 +138,7 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
                 toast({ 
                     variant: 'destructive', 
                     title: 'Assignment Failed', 
-                    description: `${'\'\'\'\'\'\'\'\'\'\''}${assignedUser.fullName} already has two Medium Priority (Level 2) tasks. Only two are allowed.` 
+                    description: `${assignedUser.fullName} already has two Medium Priority (Level 2) tasks. Only two are allowed.` 
                 });
                 return;
             }
@@ -127,6 +149,12 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
     setIsLoading(true);
 
     try {
+        let attachmentUrl: string | undefined = undefined;
+        if (values.attachment) {
+            const filePath = `tasks/${currentUserProfile.orgId}/${Date.now()}_${values.attachment.name}`;
+            attachmentUrl = await uploadFile(values.attachment, filePath);
+        }
+
         const now = new Date().toISOString();
         const initialActivity: ActivityEntry = {
             type: 'LOG',
@@ -151,7 +179,9 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
             createdBy: currentUserProfile.id,
             activity: [initialActivity],
             createdAt: now,
-            attachmentUrl: values.attachmentUrl,
+            attachmentUrl: attachmentUrl,
+            workbookId: initialData?.workbookId,
+            sheetId: initialData?.sheetId,
             sharedWith: [],
             subTasks: [],
             type: 'STANDARD',
@@ -159,9 +189,8 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
 
         await addDocumentNonBlocking(collection(firestore, 'tasks'), newTask);
         
-        toast({ title: "Task Assigned", description: `${'\'\'\'\'\'\'\'\'\'\''}${values.title} has been assigned to ${assignedUser.fullName}.`});
-        form.reset();
-        onOpenChange(false);
+        toast({ title: "Task Assigned", description: `${values.title} has been assigned to ${assignedUser.fullName}.`});
+        handleDialogClose();
     } catch (error: any) {
         toast({ variant: "destructive", title: "Error", description: error.message });
     } finally {
@@ -170,7 +199,7 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleDialogClose}>
       {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -187,9 +216,28 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
                 <FormField control={form.control} name="description" render={({ field }) => (
                     <FormItem><FormLabel>Description (Optional)</FormLabel><FormControl><Textarea placeholder="Add more context about the mission..." {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
-                <FormField control={form.control} name="attachmentUrl" render={({ field }) => (
-                    <FormItem><FormLabel>Link to Document (Optional)</FormLabel><FormControl><Input placeholder="Paste a link to your Excel, Word, or PDF file" {...field} /></FormControl><FormMessage /></FormItem>
-                )} />
+                
+                {!initialData?.workbookId && (
+                     <FormField
+                        control={form.control}
+                        name="attachment"
+                        render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Attachment (Optional)</FormLabel>
+                                <FormControl>
+                                    <Input id="task-attachment-file" type="file" className="hidden" onChange={handleFileChange} disabled={isBusy} />
+                                </FormControl>
+                                <label htmlFor="task-attachment-file" className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer border p-2 rounded-md hover:bg-accent transition-colors">
+                                    <Paperclip className="h-4 w-4" />
+                                    <span className="truncate">{fileName || 'Upload a file'}</span>
+                                </label>
+                                <FormMessage />
+                            </FormItem>
+                        )}
+                    />
+                )}
+                 {isUploading && <Progress value={uploadProgress} className="w-full h-2" />}
+
 
                 <div className="grid grid-cols-2 gap-4">
                     {permissions.canManageStaff && (
@@ -233,8 +281,8 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
                     <FormMessage /></FormItem>
                  )} />
 
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" className="w-full" disabled={isBusy}>
+                    {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {permissions.canManageStaff ? 'Assign Mission' : 'Create Mission'}
                 </Button>
             </form>

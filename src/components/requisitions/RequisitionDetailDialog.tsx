@@ -27,6 +27,7 @@ import {
   X,
   Loader2,
   ShieldAlert,
+  Paperclip,
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { doc, arrayUnion } from 'firebase/firestore'
@@ -47,6 +48,7 @@ import { Textarea } from '../ui/textarea'
 import { useState } from 'react'
 import { ActivityFeed } from '../shared/ActivityFeed'
 import { Badge } from '../ui/badge'
+import Link from 'next/link'
 
 interface RequisitionDetailDialogProps {
   requisition: Requisition
@@ -247,6 +249,18 @@ export function RequisitionDetailDialog({
                 <span className="font-medium">
                   {format(new Date(requisition.createdAt), 'PP')}
                 </span>
+              </div>
+               <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Paperclip className="h-4 w-4" /> Attachment
+                </span>
+                {requisition.attachmentUrl ? (
+                    <Link href={requisition.attachmentUrl} target="_blank" rel="noopener noreferrer" className='font-medium text-primary hover:underline'>
+                        View File
+                    </Link>
+                ) : (
+                    <span className="font-medium text-muted-foreground">None</span>
+                )}
               </div>
             </div>
           </div>

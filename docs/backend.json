@@ -214,6 +214,8 @@
         "createdBy": { "type": "string", "description": "The user ID of the creator." },
         "createdAt": { "type": "string", "format": "date-time" },
         "attachmentUrl": { "type": "string", "format": "uri", "description": "URL of any attachment." },
+        "workbookId": { "type": "string", "description": "The ID of the workbook this task is related to." },
+        "sheetId": { "type": "string", "description": "The ID of the specific sheet this task is related to." },
         "sharedWith": {
             "type": "array",
             "description": "A list of user IDs this task is shared with.",
