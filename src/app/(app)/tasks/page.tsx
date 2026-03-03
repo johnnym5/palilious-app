@@ -54,7 +54,7 @@ export default function TasksPage() {
           permissions={permissions}
         >
           <Button 
-              className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-10" 
+              className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
               onClick={() => setIsAssignTaskOpen(true)}
               aria-label="Assign New Task"
           >

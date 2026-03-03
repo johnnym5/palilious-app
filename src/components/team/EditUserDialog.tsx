@@ -6,24 +6,23 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserProfile, UserPosition, Department } from "@/lib/types";
+import { UserProfile, UserPosition } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
-import { useFirestore, updateDocumentNonBlocking, useAuth, useMemoFirebase, useCollection } from "@/firebase";
-import { doc, query, collection, where } from "firebase/firestore";
+import { useFirestore, updateDocumentNonBlocking, useAuth } from "@/firebase";
+import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Separator } from "../ui/separator";
 import { Switch } from "../ui/switch";
-
-const positions: UserPosition[] = ["Staff", "HR Manager", "Finance Manager", "Managing Director", "Organization Administrator"];
+import { PREDEFINED_DEPARTMENTS, PREDEFINED_ROLES } from "@/lib/roles-and-departments";
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
   position: z.string().min(1, { message: "Position is required." }),
-  departmentId: z.string().optional(),
+  departmentName: z.string().optional(),
   canAccessRequisitions: z.boolean().optional(),
   canAccessChat: z.boolean().optional(),
   canAccessAllTasks: z.boolean().optional(),
@@ -42,11 +41,6 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
   const auth = useAuth();
   const { toast } = useToast();
 
-  const deptsQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'departments'), where('orgId', '==', userToEdit.orgId))
-  , [firestore, userToEdit.orgId]);
-  const { data: departments, isLoading: areDeptsLoading } = useCollection<Department>(deptsQuery);
-
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
@@ -56,7 +50,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
       form.reset({
         fullName: userToEdit.fullName,
         position: userToEdit.position,
-        departmentId: userToEdit.departmentId || "__NONE__",
+        departmentName: userToEdit.departmentName || "__NONE__",
         canAccessRequisitions: userToEdit.customPermissions?.canAccessRequisitions,
         canAccessChat: userToEdit.customPermissions?.canAccessChat,
         canAccessAllTasks: userToEdit.customPermissions?.canAccessAllTasks,
@@ -86,14 +80,14 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
     setIsLoading(true);
     try {
       const userRef = doc(firestore, "users", userToEdit.id);
-      const isNoDepartment = values.departmentId === "__NONE__";
-      const selectedDepartment = isNoDepartment ? null : departments?.find(d => d.id === values.departmentId);
+      const isNoDepartment = values.departmentName === "__NONE__";
+      const departmentName = isNoDepartment ? null : values.departmentName;
       
       const updateData = {
         fullName: values.fullName,
         position: values.position,
-        departmentId: isNoDepartment ? null : values.departmentId,
-        departmentName: selectedDepartment?.name || null,
+        departmentId: departmentName ? departmentName.toLowerCase().replace(/\s+/g, '-').replace(/&/g, 'and') : null,
+        departmentName: departmentName,
         customPermissions: {
             canAccessRequisitions: values.canAccessRequisitions || false,
             canAccessChat: values.canAccessChat || false,
@@ -158,7 +152,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {positions.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                      {PREDEFINED_ROLES.map((p) => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                     </SelectContent>
                   </Select>
                   <FormMessage />
@@ -167,19 +161,19 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
             />
             <FormField
                 control={form.control}
-                name="departmentId"
+                name="departmentName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                            <SelectTrigger disabled={areDeptsLoading}>
-                                <SelectValue placeholder={areDeptsLoading ? "Loading..." : "Select a department"} />
+                            <SelectTrigger>
+                                <SelectValue placeholder={"Select a department"} />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
                             <SelectItem value="__NONE__">No Department</SelectItem>
-                            {departments?.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                            {PREDEFINED_DEPARTMENTS?.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />

@@ -27,8 +27,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { DepartmentManager } from '@/components/team/DepartmentManager';
-
 
 export default function TeamPage() {
   const { user: authUser } = useUser();
@@ -98,10 +96,6 @@ export default function TeamPage() {
           </AddUserDialog>
         )}
       </div>
-
-      {permissions.canManageStaff && userProfile && (
-        <DepartmentManager userProfile={userProfile} />
-      )}
       
       <Card>
         <CardHeader>

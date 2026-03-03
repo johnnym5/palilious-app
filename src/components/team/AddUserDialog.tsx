@@ -18,8 +18,7 @@ import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
-
-const positions: UserPosition[] = ["Staff", "HR Manager", "Finance Manager", "Managing Director", "Organization Administrator"];
+import { PREDEFINED_ROLES, PREDEFINED_DEPARTMENTS } from "@/lib/roles-and-departments";
 
 const baseSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
@@ -27,7 +26,7 @@ const baseSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
   position: z.string({ required_error: "Position is required." }).min(1),
-  departmentId: z.string().optional(),
+  departmentName: z.string().optional(),
 });
 
 interface AddUserDialogProps {
@@ -72,18 +71,10 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
       email: "",
       password: "",
       position: undefined,
-      departmentId: undefined,
+      departmentName: undefined,
     },
   });
   
-  const watchedOrgId = isSuperAdmin ? form.watch('orgId' as any) : adminProfile?.orgId;
-
-  const deptsQuery = useMemoFirebase(() => {
-    if (!firestore || !watchedOrgId) return null;
-    return query(collection(firestore, 'departments'), where('orgId', '==', watchedOrgId));
-  }, [firestore, watchedOrgId]);
-  const { data: departments, isLoading: areDeptsLoading } = useCollection<Department>(deptsQuery);
-
   useEffect(() => {
     form.reset({
         fullName: "",
@@ -91,7 +82,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
         email: "",
         password: "",
         position: undefined,
-        departmentId: undefined,
+        departmentName: undefined,
     });
   }, [open, form]);
 
@@ -115,16 +106,16 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
     try {
       const userCredential = await createUserWithEmailAndPassword(tempAuth, values.email, values.password);
       const newUser = userCredential.user;
-
-      const selectedDepartment = departments?.find(d => d.id === values.departmentId);
+      
+      const departmentName = values.departmentName === '__NONE__' ? null : values.departmentName;
 
       const userData: Omit<UserProfile, 'id' | 'username'> = {
         orgId: orgId,
         fullName: values.fullName,
         email: values.email.toLowerCase(),
         position: values.position as UserPosition,
-        departmentId: values.departmentId || null,
-        departmentName: selectedDepartment?.name || null,
+        departmentId: departmentName ? departmentName.toLowerCase().replace(/\s+/g, '-').replace(/&/g, 'and') : null,
+        departmentName: departmentName,
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
       };
@@ -264,7 +255,7 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
                             <SelectTrigger><SelectValue placeholder="Select a position" /></SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            {positions.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
+                            {PREDEFINED_ROLES.map(p => <SelectItem key={p} value={p}>{p}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />
@@ -273,18 +264,19 @@ export function AddUserDialog({ children, open, onOpenChange }: AddUserDialogPro
               />
               <FormField
                 control={form.control}
-                name="departmentId"
+                name="departmentName"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Department (Optional)</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
-                            <SelectTrigger disabled={areDeptsLoading}>
-                                <SelectValue placeholder={areDeptsLoading ? "Loading..." : "Select a department"} />
+                            <SelectTrigger>
+                                <SelectValue placeholder="Select a department" />
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            {departments?.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
+                            <SelectItem value="__NONE__">No Department</SelectItem>
+                            {PREDEFINED_DEPARTMENTS?.map(d => <SelectItem key={d} value={d}>{d}</SelectItem>)}
                         </SelectContent>
                     </Select>
                     <FormMessage />

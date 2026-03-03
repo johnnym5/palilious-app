@@ -19,7 +19,24 @@ export interface Permissions {
   canAccessAllWorkbooks: boolean;
 }
 
-const positionPermissions: Record<UserPosition, Partial<Permissions>> = {
+// Maps new descriptive roles to the original, simpler roles used for permission logic.
+const getBaseRoleForPermissions = (position: UserPosition): 'Staff' | 'HR Manager' | 'Finance Manager' | 'Managing Director' | 'Organization Administrator' => {
+    switch (position) {
+        case "CEO / Managing Director":
+            return "Managing Director";
+        case "Finance Manager":
+            return "Finance Manager";
+        case "HR Manager":
+            return "HR Manager";
+        case "Organization Administrator":
+            return "Organization Administrator";
+        default:
+            return "Staff";
+    }
+}
+
+
+const positionPermissions: Record<'Staff' | 'HR Manager' | 'Finance Manager' | 'Managing Director' | 'Organization Administrator', Partial<Permissions>> = {
   'Staff': {},
   'HR Manager': {
     canApproveHR: true,
@@ -83,8 +100,9 @@ export function usePermissions(userProfile: UserProfile | null): Permissions {
     if (!userProfile) {
       return defaultPermissions;
     }
-
-    const rolePerms = positionPermissions[userProfile.position] || {};
+    
+    const baseRole = getBaseRoleForPermissions(userProfile.position);
+    const rolePerms = positionPermissions[baseRole] || {};
     const customPerms = userProfile.customPermissions || {};
 
     const perms: Permissions = {

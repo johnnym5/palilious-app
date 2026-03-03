@@ -1,12 +1,12 @@
 'use client';
 import { useState } from 'react';
-import type { UserProfile } from '@/lib/types';
+import type { UserProfile, Chat } from '@/lib/types';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Skeleton } from '@/components/ui/skeleton';
-import { ShieldAlert, MessageSquareOff } from 'lucide-react';
+import { MessageSquareOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -16,6 +16,7 @@ export default function ChatPage() {
     const firestore = useFirestore();
     const router = useRouter();
     
+    const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
     const userProfileRef = useMemoFirebase(() => 
@@ -23,6 +24,25 @@ export default function ChatPage() {
     [firestore, authUser]);
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
     const permissions = usePermissions(currentUserProfile);
+    
+    const handleSelectConversation = (item: Chat | UserProfile) => {
+        if ('participants' in item) { // It's a Chat object
+            setSelectedChat(item);
+            const otherParticipantId = item.participants.find(p => p !== currentUserProfile?.id);
+            if (otherParticipantId && item.participantProfiles[otherParticipantId]) {
+                 // We need a partial UserProfile here. ChatWindow might need the full one.
+                 // For now, let's just create a partial one.
+                 const otherUser = {
+                     id: otherParticipantId,
+                     ...item.participantProfiles[otherParticipantId]
+                 } as UserProfile
+                 setSelectedUser(otherUser);
+            }
+        } else { // It's a UserProfile object
+            setSelectedUser(item);
+            setSelectedChat(null); // Clear selected chat when a new user is selected
+        }
+    };
 
 
     if (isProfileLoading) {
@@ -71,12 +91,12 @@ export default function ChatPage() {
             <div className="flex-1 flex border bg-card/50 rounded-xl overflow-hidden">
                 <ChatSidebar 
                     currentUserProfile={currentUserProfile} 
-                    onSelectUser={setSelectedUser}
+                    onSelectConversation={handleSelectConversation}
                     selectedUser={selectedUser}
                 />
                 <ChatWindow 
                     currentUserProfile={currentUserProfile} 
-                    selectedUser={selectedUser} 
+                    selectedUser={selectedUser}
                 />
             </div>
         </div>

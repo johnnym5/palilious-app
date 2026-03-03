@@ -1,4 +1,6 @@
-export type UserPosition = "Staff" | "HR Manager" | "Finance Manager" | "Managing Director" | "Organization Administrator";
+import { PREDEFINED_ROLES } from './roles-and-departments';
+
+export type UserPosition = (typeof PREDEFINED_ROLES)[number];
 export type UserStatus = "ONLINE" | "OFFLINE" | "ON_LEAVE";
 
 export interface Organization {
