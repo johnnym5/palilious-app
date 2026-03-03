@@ -1,12 +1,21 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useFirestore } from '@/firebase';
+import { useState, useEffect, useCallback } from 'react';
+import { useFirestore, setDocumentNonBlocking } from '@/firebase';
 import { collection, getDocs, doc, getDoc } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Database, FileJson, FileText, ChevronRight, Loader2 } from 'lucide-react';
+import { Database, FileJson, FileText, ChevronRight, Loader2, Save, Trash2, PlusCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+import {
+  AlertDialog,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
+
 
 const STATIC_COLLECTIONS = [
     { id: 'organizations', name: 'Organizations' },
@@ -22,62 +31,116 @@ const STATIC_COLLECTIONS = [
     { id: 'feedback', name: 'Feedback' },
 ];
 
+const getDisplayName = (doc: any): string => {
+    return doc.title || doc.name || doc.fullName || doc.serialNo || 'Untitled Document';
+}
+
 export function DatabaseExplorer() {
     const firestore = useFirestore();
+    const { toast } = useToast();
+
     const [collections] = useState(STATIC_COLLECTIONS);
     const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
-    const [documents, setDocuments] = useState<{ id: string }[]>([]);
-    const [selectedDocument, setSelectedDocument] = useState<any | null>(null);
-    const [selectedDocumentId, setSelectedDocumentId] = useState<string | null>(null);
-
+    
+    // State for documents list
+    const [documents, setDocuments] = useState<any[]>([]);
     const [isLoadingDocs, setIsLoadingDocs] = useState(false);
+    
+    // State for selected documents (for bulk actions)
+    const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+    
+    // State for the currently viewed/edited document
+    const [viewedDocument, setViewedDocument] = useState<any | null>(null);
+    const [editedJson, setEditedJson] = useState<string>('');
     const [isLoadingDoc, setIsLoadingDoc] = useState(false);
+    const [isSaving, setIsSaving] = useState(false);
+
+    const fetchDocuments = useCallback(async (collectionName: string) => {
+        setIsLoadingDocs(true);
+        setDocuments([]);
+        setViewedDocument(null);
+        setSelectedDocIds([]);
+        try {
+            const querySnapshot = await getDocs(collection(firestore, collectionName));
+            const docs = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+            setDocuments(docs);
+        } catch (error) {
+            console.error("Error fetching documents:", error);
+            toast({ variant: 'destructive', title: 'Error', description: 'Could not fetch documents.' });
+        } finally {
+            setIsLoadingDocs(false);
+        }
+    }, [firestore, toast]);
     
     useEffect(() => {
         if (selectedCollection) {
-            const fetchDocuments = async () => {
-                setIsLoadingDocs(true);
-                setDocuments([]);
-                setSelectedDocument(null);
-                setSelectedDocumentId(null);
-                try {
-                    const querySnapshot = await getDocs(collection(firestore, selectedCollection));
-                    const docs = querySnapshot.docs.map(d => ({ id: d.id }));
-                    setDocuments(docs);
-                } catch (error) {
-                    console.error("Error fetching documents:", error);
-                } finally {
-                    setIsLoadingDocs(false);
-                }
-            };
-            fetchDocuments();
+            fetchDocuments(selectedCollection);
         }
-    }, [selectedCollection, firestore]);
+    }, [selectedCollection, fetchDocuments]);
 
-    const handleSelectDocument = async (docId: string) => {
+    const handleSelectDocument = useCallback(async (docId: string) => {
         if (!selectedCollection) return;
         setIsLoadingDoc(true);
-        setSelectedDocumentId(docId);
-        setSelectedDocument(null);
+        setViewedDocument(null);
+        setEditedJson('');
         try {
             const docRef = doc(firestore, selectedCollection, docId);
             const docSnap = await getDoc(docRef);
             if (docSnap.exists()) {
-                setSelectedDocument({ id: docSnap.id, ...docSnap.data() });
+                const docData = { id: docSnap.id, ...docSnap.data() };
+                setViewedDocument(docData);
+                setEditedJson(JSON.stringify(docData, null, 2));
             } else {
-                setSelectedDocument({ error: "Document not found." });
+                setViewedDocument({ error: "Document not found." });
+                setEditedJson('{"error": "Document not found."}');
             }
         } catch (error) {
             console.error("Error fetching document:", error);
-            setSelectedDocument({ error: "Failed to fetch document." });
+             setViewedDocument({ error: "Failed to fetch document." });
+             setEditedJson('{"error": "Failed to fetch document."}');
         } finally {
             setIsLoadingDoc(false);
         }
+    }, [selectedCollection, firestore]);
+    
+    const handleSave = async () => {
+        if (!viewedDocument || !selectedCollection) return;
+        setIsSaving(true);
+        try {
+            const updatedData = JSON.parse(editedJson);
+            // Ensure ID is not part of the data being written
+            const { id, ...dataToWrite } = updatedData;
+            const docRef = doc(firestore, selectedCollection, viewedDocument.id);
+            setDocumentNonBlocking(docRef, dataToWrite, { merge: false });
+            toast({ title: 'Success', description: `Document ${viewedDocument.id} has been saved.` });
+            
+            // Refresh the document list to show changes
+            await fetchDocuments(selectedCollection);
+
+        } catch (e: any) {
+            console.error("Save error:", e);
+            toast({ variant: 'destructive', title: 'Save Failed', description: e.message || 'Invalid JSON format.' });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+    
+    const handleSelectAll = (checked: boolean | string) => {
+        if (typeof checked === 'boolean') {
+            setSelectedDocIds(checked ? documents.map(d => d.id) : []);
+        }
     };
 
+    const handleSingleSelect = (docId: string, checked: boolean) => {
+        if (checked) {
+            setSelectedDocIds(prev => [...prev, docId]);
+        } else {
+            setSelectedDocIds(prev => prev.filter(id => id !== docId));
+        }
+    };
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 border rounded-lg h-[60vh] overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 border rounded-lg h-[70vh] overflow-hidden">
             {/* Collections Column */}
             <div className="flex flex-col border-r">
                 <div className="p-3 border-b font-semibold text-sm flex items-center gap-2">
@@ -102,13 +165,19 @@ export function DatabaseExplorer() {
 
             {/* Documents Column */}
             <div className="flex flex-col border-r">
-                <div className="p-3 border-b font-semibold text-sm flex items-center gap-2">
-                    <FileText className="h-4 w-4 text-muted-foreground" /> Documents
+                <div className="p-3 border-b font-semibold text-sm flex items-center gap-2 justify-between">
+                    <div className="flex items-center gap-2">
+                        <FileText className="h-4 w-4 text-muted-foreground" /> Documents ({documents.length})
+                    </div>
+                     <div className="flex items-center gap-2">
+                        <Checkbox id="select-all" onCheckedChange={handleSelectAll} checked={documents.length > 0 && selectedDocIds.length === documents.length} />
+                        <label htmlFor="select-all" className="text-xs">All</label>
+                    </div>
                 </div>
                 <ScrollArea className="flex-1">
                     {isLoadingDocs ? (
                         <div className="p-3 space-y-2">
-                            {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-5 w-full" />)}
+                            {Array.from({ length: 10 }).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                         </div>
                     ) : documents.length > 0 ? (
                         documents.map(d => (
@@ -116,11 +185,15 @@ export function DatabaseExplorer() {
                                 key={d.id}
                                 onClick={() => handleSelectDocument(d.id)}
                                 className={cn(
-                                    "p-3 text-sm font-mono cursor-pointer hover:bg-accent truncate",
-                                    selectedDocumentId === d.id && "bg-accent"
+                                    "p-3 text-sm cursor-pointer hover:bg-accent border-b flex items-center gap-3",
+                                    viewedDocument?.id === d.id && "bg-accent"
                                 )}
                             >
-                                {d.id}
+                                <Checkbox checked={selectedDocIds.includes(d.id)} onCheckedChange={(checked) => handleSingleSelect(d.id, !!checked)} onClick={e => e.stopPropagation()} />
+                                <div className="truncate">
+                                    <p className="font-medium">{getDisplayName(d)}</p>
+                                    <p className="text-xs text-muted-foreground font-mono">{d.id}</p>
+                                </div>
                             </div>
                         ))
                     ) : (
@@ -129,6 +202,19 @@ export function DatabaseExplorer() {
                         </div>
                     )}
                 </ScrollArea>
+                <div className="p-2 border-t flex gap-2">
+                     <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                             <Button variant="destructive" className="flex-1" disabled={selectedDocIds.length === 0}>
+                                <Trash2 className="mr-2" /> Delete ({selectedDocIds.length})
+                            </Button>
+                        </AlertDialogTrigger>
+                        {/* AlertDialogContent for delete confirmation - not implemented yet */}
+                    </AlertDialog>
+                    <Button variant="outline" className="flex-1" disabled>
+                        <PlusCircle className="mr-2" /> Add New
+                    </Button>
+                </div>
             </div>
 
             {/* Document Viewer Column */}
@@ -137,23 +223,29 @@ export function DatabaseExplorer() {
                     <FileJson className="h-4 w-4 text-muted-foreground" /> Data Viewer
                 </div>
                 <ScrollArea className="flex-1 bg-muted/30">
-                    {isLoadingDoc && (
+                    {isLoadingDoc ? (
                          <div className="p-4 flex justify-center items-center h-full">
                             <Loader2 className="animate-spin text-muted-foreground" />
                          </div>
-                    )}
-                    {selectedDocument ? (
-                        <pre className="text-xs p-4 overflow-x-auto">
-                            <code>
-                                {JSON.stringify(selectedDocument, null, 2)}
-                            </code>
-                        </pre>
+                    ) : viewedDocument ? (
+                        <Textarea
+                            value={editedJson}
+                            onChange={e => setEditedJson(e.target.value)}
+                            className="w-full h-full text-xs font-mono bg-transparent border-0 rounded-none resize-none focus-visible:ring-0"
+                            placeholder="Document JSON data..."
+                        />
                     ) : (
                          <div className="p-4 text-center text-xs text-muted-foreground">
                            {!isLoadingDoc && "Select a document to view its data."}
                         </div>
                     )}
                 </ScrollArea>
+                <div className="p-2 border-t">
+                    <Button className="w-full" onClick={handleSave} disabled={isSaving || isLoadingDoc || !viewedDocument || !!viewedDocument.error}>
+                        {isSaving ? <Loader2 className="animate-spin" /> : <Save className="mr-2" />}
+                        Save Changes
+                    </Button>
+                </div>
             </div>
         </div>
     );
