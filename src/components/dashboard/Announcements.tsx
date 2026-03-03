@@ -8,11 +8,13 @@ import { collection, doc, query, where, orderBy, arrayUnion } from "firebase/fir
 import { usePermissions } from "@/hooks/usePermissions";
 import { Skeleton } from "../ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
+import { NewAnnouncementDialog } from "./NewAnnouncementDialog";
 
 export function Announcements() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
+    const [isAddOpen, setIsAddOpen] = useState(false);
     
     const userProfileRef = useMemoFirebase(() => 
         authUser ? doc(firestore, "users", authUser.uid) : null,
@@ -58,11 +60,13 @@ export function Announcements() {
         <Card>
             <CardHeader className="flex flex-row items-center justify-between">
                 <CardTitle>Announcements</CardTitle>
-                {permissions.canManageStaff && (
-                    <Button variant="ghost" size="sm" disabled>
-                        <PlusCircle className="mr-2 h-4 w-4" />
-                        Add New
-                    </Button>
+                {permissions.canManageStaff && userProfile && (
+                    <NewAnnouncementDialog open={isAddOpen} onOpenChange={setIsAddOpen} userProfile={userProfile}>
+                        <Button variant="ghost" size="sm" onClick={() => setIsAddOpen(true)}>
+                            <PlusCircle className="mr-2 h-4 w-4" />
+                            Add New
+                        </Button>
+                    </NewAnnouncementDialog>
                 )}
             </CardHeader>
             <CardContent>
