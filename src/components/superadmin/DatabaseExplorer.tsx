@@ -16,7 +16,7 @@ import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import backendConfig from '@/docs/backend.json';
+import backendConfig from '../../../docs/backend.json';
 
 const getDisplayName = (doc: any): string => {
     return doc.title || doc.name || doc.fullName || doc.serialNo || 'Untitled Document';
