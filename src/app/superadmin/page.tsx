@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import Link from "next/link";
 import { Logo } from '@/components/Logo';
 import { FeedbackViewer } from '@/components/superadmin/FeedbackViewer';
+import { DataManagement } from '@/components/superadmin/DataManagement';
 
 interface OrgStats {
     userCount: number;
@@ -112,7 +113,7 @@ export default function SuperAdminPage() {
                     </Button>
                 </div>
             </header>
-            <main className="p-6">
+            <main className="p-6 space-y-8">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {isLoading && Array.from({length: 4}).map((_, i) => (
                         <Card key={i}>
@@ -149,6 +150,8 @@ export default function SuperAdminPage() {
                         <p className="text-muted-foreground col-span-full text-center py-16">No organizations found.</p>
                     )}
                 </div>
+
+                <DataManagement />
             </main>
             <FeedbackViewer open={showFeedback} onOpenChange={setShowFeedback} />
         </div>
