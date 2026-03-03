@@ -162,3 +162,13 @@ export interface ChatMessage {
     content: string;
     timestamp: string; // ISO String for timestamp
 }
+
+export interface Workbook {
+  id: string;
+  orgId: string;
+  title: string;
+  description?: string;
+  createdBy: string;
+  creatorName: string;
+  createdAt: string; // ISO String
+}

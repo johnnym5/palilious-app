@@ -45,6 +45,14 @@
             "OFFLINE"
           ],
           "description": "User's current status."
+        },
+        "notificationPreferences": {
+            "type": "object",
+            "properties": {
+                "requisitionUpdates": { "type": "boolean" },
+                "taskAssignments": { "type": "boolean" },
+                "announcements": { "type": "boolean" }
+            }
         }
       },
       "required": [
@@ -306,6 +314,20 @@
         }
       },
       "required": ["orgId", "title", "content", "isPinned", "authorId", "authorName", "createdAt"]
+    },
+    "Workbook": {
+      "title": "Workbook",
+      "type": "object",
+      "description": "A collection of sheets, similar to a spreadsheet file.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "createdBy": { "type": "string" },
+        "creatorName": { "type": "string"},
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "title", "createdBy", "creatorName", "createdAt"]
     }
   },
   "auth": {
@@ -443,6 +465,22 @@
                     "description": "The announcement's unique ID."
                 }
             ]
+        }
+    },
+    {
+        "path": "/workbooks/{workbookId}",
+        "definition": {
+          "entityName": "Workbook",
+          "schema": {
+            "$ref": "#/entities/Workbook"
+          },
+          "description": "Stores user-created workbooks.",
+          "params": [
+            {
+              "name": "workbookId",
+              "description": "The workbook's unique ID."
+            }
+          ]
         }
     }
     ]
