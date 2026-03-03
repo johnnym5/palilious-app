@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useFirestore } from '@/firebase';
-import { collection, getDocs, doc, getDoc, writeBatch, setDoc } from 'firebase/firestore';
+import { collection, getDocs, doc, getDoc, writeBatch, setDoc, query } from 'firebase/firestore';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
@@ -11,7 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useToast } from '@/hooks/use-toast';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from '@/components/ui/alert-dialog';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Switch } from '../ui/switch';
@@ -22,7 +22,7 @@ const getDisplayName = (doc: any): string => {
     return doc.title || doc.name || doc.fullName || doc.serialNo || 'Untitled Document';
 }
 
-const IMMUTABLE_FIELDS = ['id', 'orgId', 'createdBy', 'createdAt', 'serialNo', 'email', 'username', 'userId', 'chatId', 'workbookId', 'ownerId', 'requesterId'];
+const IMMUTABLE_FIELDS = ['id', 'orgId', 'createdBy', 'createdAt', 'serialNo', 'email', 'userId', 'chatId', 'workbookId', 'ownerId', 'requesterId'];
 
 // Maps collection names to their entity definitions in backend.json
 const collectionSchemaMap: Record<string, any> = {};
@@ -39,10 +39,11 @@ export function DatabaseExplorer() {
     const firestore = useFirestore();
     const { toast } = useToast();
 
-    const [collections] = useState(Object.keys(collectionSchemaMap).map(id => ({ id, name: collectionSchemaMap[id].title })));
+    const [collections, setCollections] = useState<{id: string, name: string}[]>([]);
     const [selectedCollection, setSelectedCollection] = useState<string | null>(null);
     
     const [documents, setDocuments] = useState<any[]>([]);
+    const [selectedCollections, setSelectedCollections] = useState<string[]>([]);
     const [isLoadingDocs, setIsLoadingDocs] = useState(false);
     
     const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
@@ -54,6 +55,15 @@ export function DatabaseExplorer() {
     const [isLoadingDoc, setIsLoadingDoc] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isAddDocOpen, setIsAddDocOpen] = useState(false);
+    const [newDocId, setNewDocId] = useState('');
+
+    useEffect(() => {
+        const sortedCollections = Object.keys(collectionSchemaMap)
+            .map(id => ({ id, name: collectionSchemaMap[id].title }))
+            .sort((a, b) => a.name.localeCompare(b.name));
+        setCollections(sortedCollections);
+    }, []);
 
     const fetchDocuments = useCallback(async (collectionName: string) => {
         setIsLoadingDocs(true);
@@ -62,7 +72,7 @@ export function DatabaseExplorer() {
         setEditedDocument(null);
         setSelectedDocIds([]);
         try {
-            const querySnapshot = await getDocs(collection(firestore, collectionName));
+            const querySnapshot = await getDocs(query(collection(firestore, collectionName)));
             const docs = querySnapshot.docs.map(d => ({ id: d.id, ...d.data() }));
             setDocuments(docs);
         } catch (error) {
@@ -113,15 +123,16 @@ export function DatabaseExplorer() {
         if (!editedDocument || !selectedCollection || !viewedDocument) return;
         setIsSaving(true);
         try {
-            // Safely merge changes to prevent losing fields not in the form
             const dataToWrite = { ...viewedDocument, ...editedDocument };
             const { id, ...payload } = dataToWrite;
             const docRef = doc(firestore, selectedCollection, id);
-            await setDoc(docRef, payload); // Overwrite with merged data
+            await setDoc(docRef, payload, { merge: true });
             
             toast({ title: 'Success', description: `Document ${id} has been saved.` });
             
             await fetchDocuments(selectedCollection);
+            // After saving, re-select the document to see the fresh data
+            await handleSelectDocument(id);
 
         } catch (e: any) {
             console.error("Save error:", e);
@@ -130,6 +141,47 @@ export function DatabaseExplorer() {
             setIsSaving(false);
         }
     };
+
+    const handleAddNewDocument = async () => {
+        if (!selectedCollection || !viewedSchema) return;
+        setIsSaving(true);
+        try {
+            let newDocRef;
+            if (newDocId) {
+                newDocRef = doc(firestore, selectedCollection, newDocId);
+            } else {
+                newDocRef = doc(collection(firestore, selectedCollection));
+            }
+
+            const blankData: Record<string, any> = {};
+            for (const key in viewedSchema.properties) {
+                const prop = viewedSchema.properties[key];
+                if (IMMUTABLE_FIELDS.includes(key)) continue;
+
+                switch(prop.type) {
+                    case 'string': blankData[key] = ''; break;
+                    case 'number': blankData[key] = 0; break;
+                    case 'boolean': blankData[key] = false; break;
+                    case 'array': blankData[key] = []; break;
+                    case 'object': blankData[key] = {}; break;
+                    default: blankData[key] = null;
+                }
+            }
+
+            await setDoc(newDocRef, blankData);
+            toast({ title: 'Success', description: 'New document created.' });
+            
+            setIsAddDocOpen(false);
+            setNewDocId('');
+            await fetchDocuments(selectedCollection);
+            await handleSelectDocument(newDocRef.id);
+
+        } catch (e: any) {
+             toast({ variant: 'destructive', title: 'Creation Failed', description: e.message });
+        } finally {
+            setIsSaving(false);
+        }
+    }
 
      const handleDeleteSelected = async () => {
         if (!selectedCollection || selectedDocIds.length === 0) return;
@@ -172,6 +224,13 @@ export function DatabaseExplorer() {
             setSelectedDocIds(prev => prev.filter(id => id !== docId));
         }
     };
+    
+     const handleSelectAllCollections = (checked: boolean | string) => {
+        if (typeof checked === 'boolean') {
+            setSelectedCollections(checked ? collections.map(c => c.id) : []);
+        }
+    };
+
 
     const renderField = (key: string, value: any) => {
         const schema = viewedSchema?.properties?.[key];
@@ -186,7 +245,7 @@ export function DatabaseExplorer() {
                         value={JSON.stringify(value, null, 2)}
                         disabled
                         className="col-span-2 font-mono text-xs bg-input"
-                        rows={3}
+                        rows={Object.keys(value).length > 5 ? 10 : 5}
                     />
                 </div>
             )
@@ -242,8 +301,14 @@ export function DatabaseExplorer() {
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 border rounded-lg h-[70vh] overflow-hidden">
             <div className="flex flex-col border-r">
-                <div className="p-3 border-b font-semibold text-sm flex items-center gap-2">
-                    <Database className="h-4 w-4 text-muted-foreground" /> Collections
+                 <div className="p-3 border-b font-semibold text-sm flex items-center justify-between">
+                     <div className="flex items-center gap-2">
+                        <Database className="h-4 w-4 text-muted-foreground" /> Collections
+                    </div>
+                    <div className="flex items-center gap-2">
+                        <Checkbox id="select-all-collections" onCheckedChange={handleSelectAllCollections} checked={collections.length > 0 && selectedCollections.length === collections.length} />
+                        <label htmlFor="select-all-collections" className="text-xs">All</label>
+                    </div>
                 </div>
                 <ScrollArea className="flex-1">
                     {collections.map(c => (
@@ -251,11 +316,23 @@ export function DatabaseExplorer() {
                             key={c.id}
                             onClick={() => setSelectedCollection(c.id)}
                             className={cn(
-                                "flex items-center justify-between p-3 text-sm cursor-pointer hover:bg-accent",
+                                "flex items-center justify-between p-3 text-sm cursor-pointer hover:bg-accent border-b",
                                 selectedCollection === c.id && "bg-accent"
                             )}
                         >
-                            <span>{c.name}</span>
+                            <div className="flex items-center gap-3">
+                                 <Checkbox 
+                                    id={`select-collection-${c.id}`}
+                                    checked={selectedCollections.includes(c.id)} 
+                                    onCheckedChange={(checked) => {
+                                        setSelectedCollections(prev => 
+                                            checked ? [...prev, c.id] : prev.filter(id => id !== c.id)
+                                        )
+                                    }} 
+                                    onClick={e => e.stopPropagation()} 
+                                />
+                                <label htmlFor={`select-collection-${c.id}`} className="cursor-pointer">{c.name}</label>
+                            </div>
                             <ChevronRight className="h-4 w-4 text-muted-foreground" />
                         </div>
                     ))}
@@ -323,9 +400,33 @@ export function DatabaseExplorer() {
                             </AlertDialogFooter>
                         </AlertDialogContent>
                     </AlertDialog>
-                    <Button variant="outline" className="flex-1" disabled>
-                        <PlusCircle className="mr-2" /> Add New
-                    </Button>
+                    <AlertDialog open={isAddDocOpen} onOpenChange={setIsAddDocOpen}>
+                        <AlertDialogTrigger asChild>
+                            <Button variant="outline" className="flex-1" disabled={!selectedCollection}>
+                                <PlusCircle className="mr-2" /> Add New
+                            </Button>
+                        </AlertDialogTrigger>
+                         <AlertDialogContent>
+                            <AlertDialogHeader>
+                                <AlertDialogTitle>Add New Document</AlertDialogTitle>
+                                <AlertDialogDescription>
+                                    Enter a unique ID for the new document or leave it blank to auto-generate one.
+                                    The document will be created with a blank schema.
+                                </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <Input 
+                                placeholder="Optional: Enter document ID" 
+                                value={newDocId}
+                                onChange={(e) => setNewDocId(e.target.value)}
+                            />
+                            <AlertDialogFooter>
+                                <AlertDialogCancel onClick={() => setNewDocId('')}>Cancel</AlertDialogCancel>
+                                <AlertDialogAction onClick={handleAddNewDocument} disabled={isSaving}>
+                                    {isSaving ? <Loader2 className="animate-spin" /> : "Create & Edit"}
+                                </AlertDialogAction>
+                            </AlertDialogFooter>
+                        </AlertDialogContent>
+                    </AlertDialog>
                 </div>
             </div>
 
