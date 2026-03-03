@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useDatabase } from '@/firebase';
-import { collection, getDocs, collectionGroup, writeBatch, doc, query, where, getDoc } from 'firebase/firestore';
+import { collection, getDocs, collectionGroup, writeBatch, doc, query, where, getDoc, setDoc } from 'firebase/firestore';
 import { ref, get, child, set, onValue } from 'firebase/database';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -72,7 +72,7 @@ export function DataManagement() {
 
     // Destructive actions state
     const [deleteTargetOrg, setDeleteTargetOrg] = useState<string>('__ALL__');
-    const [collectionToDelete, setCollectionToDelete] = useState<string>('');
+    const [collectionsToDelete, setCollectionsToDelete] = useState<string[]>([]);
     const [deleteConfirmation, setDeleteConfirmation] = useState('');
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
@@ -282,26 +282,42 @@ export function DataManagement() {
         }
     }
 
-    const handleImport = async () => {
-        if (!fileToImport || collectionsToImport.length === 0) return;
-        setLoading('import');
+    const handleImport = async (source: 'offline' | 'online') => {
+        setLoading(source === 'offline' ? 'import' : 'restore');
+        
+        let data: any;
+
         try {
-            const fileContent = await fileToImport.text();
-            const data = JSON.parse(fileContent);
+            if (source === 'offline') {
+                if (!fileToImport || collectionsToImport.length === 0) throw new Error("No file or collections selected for import.");
+                const fileContent = await fileToImport.text();
+                data = JSON.parse(fileContent);
+            } else { // online
+                if (!selectedOnlineBackup || collectionsToRestore.length === 0) throw new Error("No backup or collections selected for restore.");
+                const backupRef = ref(database, `backups/${selectedOnlineBackup}`);
+                const snapshot = await get(backupRef);
+                if (!snapshot.exists()) throw new Error("Online backup not found.");
+                data = snapshot.val();
+            }
+
+            const collectionsToProcess = source === 'offline' ? collectionsToImport : collectionsToRestore;
+            const targetOrg = source === 'offline' ? importTargetOrg : restoreTargetOrg;
+            
             let writeCount = 0;
             let currentBatch = writeBatch(firestore);
 
-            for (const collectionName of collectionsToImport) {
+            for (const collectionName of collectionsToProcess) {
                 const documents = data[collectionName];
                 if (Array.isArray(documents)) {
                     for (const docData of documents) {
                         if (!docData.id) continue;
 
-                        if (importTargetOrg !== '__ALL__' && docData.orgId && docData.orgId !== importTargetOrg) {
+                        if (targetOrg !== '__ALL__' && 'orgId' in docData && docData.orgId !== targetOrg) {
                            continue;
                         }
 
                         let docRef;
+                        // Handle subcollections
                         if (collectionName === 'sheets' && docData.workbookId) {
                             docRef = doc(firestore, `workbooks/${docData.workbookId}/sheets`, docData.id);
                         } else if (collectionName === 'chat_messages' && docData.chatId) {
@@ -323,30 +339,48 @@ export function DataManagement() {
                 }
             }
             if (writeCount > 0) await currentBatch.commit();
-            toast({ title: 'Import Complete', description: 'Selected data has been restored.' });
+            toast({ title: 'Operation Complete', description: 'Selected data has been restored.' });
         } catch (err: any) {
-            toast({ variant: 'destructive', title: 'Import Failed', description: `An error occurred: ${err.message}` });
+            toast({ variant: 'destructive', title: 'Operation Failed', description: `An error occurred: ${err.message}` });
         } finally {
             setLoading(null);
-            setFileToImport(null);
-            setImportPreview(null);
-            setCollectionsToImport([]);
+            if (source === 'offline') {
+                setFileToImport(null);
+                setImportPreview(null);
+                setCollectionsToImport([]);
+            }
         }
     };
 
+
     const getDeleteConfirmationPhrase = () => {
-        const collectionName = COLLECTIONS.find(c => c.id === collectionToDelete)?.name.toUpperCase() || 'ENTIRE DATABASE';
-        if (deleteTargetOrg === '__ALL__') {
-            return `DELETE ALL ${collectionName}`;
-        }
+        if (collectionsToDelete.length === 0) return '';
         const orgName = organizations?.find(o => o.id === deleteTargetOrg)?.name.toUpperCase() || 'UNKNOWN ORG';
-        return `DELETE ${collectionName} FROM ${orgName}`;
+    
+        if (collectionsToDelete.includes('__ALL__')) {
+            return deleteTargetOrg === '__ALL__' ? `DELETE ENTIRE DATABASE` : `DELETE ALL FROM ${orgName}`;
+        }
+    
+        const targetString = deleteTargetOrg === '__ALL__' ? 'ALL ORGS' : orgName;
+    
+        if (collectionsToDelete.length > 1) {
+            return `DELETE ${collectionsToDelete.length} COLLECTIONS FROM ${targetString}`;
+        }
+    
+        // collectionsToDelete.length === 1
+        const collectionName = COLLECTIONS.find(c => c.id === collectionsToDelete[0])?.name.toUpperCase();
+        return `DELETE ${collectionName} FROM ${targetString}`;
     };
 
     const handleDeleteData = async () => {
         setLoading('delete');
         try {
-            const collectionsToDeleteList = collectionToDelete === '__ALL__' ? COLLECTIONS.map(c => c.id) : [collectionToDelete];
+            let collectionsToDeleteList: string[];
+            if (collectionsToDelete.includes('__ALL__')) {
+                collectionsToDeleteList = COLLECTIONS.map(c => c.id);
+            } else {
+                collectionsToDeleteList = collectionsToDelete;
+            }
             
             for (const name of collectionsToDeleteList) {
                 toast({ title: 'Deletion in Progress...', description: `Querying documents in ${name}...` });
@@ -391,6 +425,7 @@ export function DataManagement() {
             setLoading(null);
             setIsDeleteAlertOpen(false);
             setDeleteConfirmation('');
+            setCollectionsToDelete([]);
         }
     };
 
@@ -434,7 +469,7 @@ export function DataManagement() {
                                                 <ChevronDown className="h-4 w-4 opacity-50" />
                                             </Button>
                                         </PopoverTrigger>
-                                        <PopoverContent className="w-64 p-0">
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                                             <ScrollArea className="h-48">
                                                 <div className="p-2 space-y-1">
                                                     {COLLECTIONS.map(c => (
@@ -525,7 +560,7 @@ export function DataManagement() {
                                         </AlertDialogTrigger>
                                         <AlertDialogContent>
                                             <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This is a destructive action that will overwrite existing documents with the same ID. Are you sure you want to proceed?</AlertDialogDescription></AlertDialogHeader>
-                                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleImport} className="bg-destructive hover:bg-destructive/90">Yes, Start Import</AlertDialogAction></AlertDialogFooter>
+                                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleImport('offline')} className="bg-destructive hover:bg-destructive/90">Yes, Start Import</AlertDialogAction></AlertDialogFooter>
                                         </AlertDialogContent>
                                     </AlertDialog>
                                 </div>
@@ -580,9 +615,18 @@ export function DataManagement() {
                                             </CardContent>
                                         </Card>
                                     )}
-                                    <Button disabled className="w-full">
-                                        <CloudCog className="mr-2" /> Restore from Cloud (Coming Soon)
-                                    </Button>
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button className="w-full" disabled={!onlineBackupPreview || collectionsToRestore.length === 0 || anyLoading}>
+                                                {loading === 'restore' ? <Loader2 className="mr-2 animate-spin" /> : <CloudCog className="mr-2" />}
+                                                Restore Selected Data
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This is a destructive action that will overwrite existing documents with the same ID. Are you sure you want to proceed?</AlertDialogDescription></AlertDialogHeader>
+                                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={() => handleImport('online')} className="bg-destructive hover:bg-destructive/90">Yes, Start Restore</AlertDialogAction></AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
                                  </div>
                              </TabsContent>
                            </Tabs>
@@ -622,19 +666,50 @@ export function DataManagement() {
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Data to Delete</Label>
-                                    <Select value={collectionToDelete} onValueChange={setCollectionToDelete} disabled={anyLoading}>
-                                        <SelectTrigger><SelectValue placeholder="Select a data collection..." /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="__ALL__">ENTIRE DATABASE</SelectItem>
-                                            <Separator />
-                                            {COLLECTIONS.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                                    <Popover>
+                                        <PopoverTrigger asChild>
+                                            <Button variant="outline" className="w-full justify-between" disabled={anyLoading}>
+                                                <span>
+                                                    {collectionsToDelete.length === 0
+                                                        ? 'Select collections...'
+                                                        : collectionsToDelete.includes('__ALL__')
+                                                        ? 'ENTIRE DATABASE'
+                                                        : `${collectionsToDelete.length} selected`}
+                                                </span>
+                                                <ChevronDown className="h-4 w-4 opacity-50" />
+                                            </Button>
+                                        </PopoverTrigger>
+                                        <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                            <ScrollArea className="h-48">
+                                                <div className="p-2 space-y-1">
+                                                    <div key="__ALL__" className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer text-destructive" onClick={() => {
+                                                        const isAll = collectionsToDelete.includes('__ALL__');
+                                                        setCollectionsToDelete(isAll ? [] : ['__ALL__']);
+                                                    }}>
+                                                        <Checkbox checked={collectionsToDelete.includes('__ALL__')} />
+                                                        <span>ENTIRE DATABASE</span>
+                                                    </div>
+                                                    <Separator />
+                                                    {COLLECTIONS.map(c => (
+                                                        <div key={c.id} className="flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm hover:bg-accent cursor-pointer" onClick={() => {
+                                                            setCollectionsToDelete(prev => {
+                                                                if (prev.includes('__ALL__')) return [c.id];
+                                                                return prev.includes(c.id) ? prev.filter(id => id !== c.id) : [...prev, c.id];
+                                                            });
+                                                        }}>
+                                                            <Checkbox checked={!collectionsToDelete.includes('__ALL__') && collectionsToDelete.includes(c.id)} disabled={collectionsToDelete.includes('__ALL__')} />
+                                                            <span>{c.name}</span>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </ScrollArea>
+                                        </PopoverContent>
+                                    </Popover>
                                 </div>
                              </div>
                               <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                                 <AlertDialogTrigger asChild>
-                                    <Button variant="destructive" className="w-full" disabled={anyLoading || !collectionToDelete}>
+                                    <Button variant="destructive" className="w-full" disabled={anyLoading || collectionsToDelete.length === 0}>
                                         <Trash2 className="mr-2" /> Delete Selected Data
                                     </Button>
                                 </AlertDialogTrigger>
