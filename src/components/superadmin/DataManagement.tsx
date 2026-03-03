@@ -26,9 +26,10 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
+import { DatabaseExplorer } from './DatabaseExplorer';
 
 
-const COLLECTIONS = [
+export const COLLECTIONS = [
     { id: 'requisitions', name: 'Requisitions' },
     { id: 'tasks', name: 'Tasks' },
     { id: 'attendance', name: 'Attendance' },
@@ -328,170 +329,195 @@ export function DataManagement() {
 
     return (
         <div className="space-y-8">
-            <Card>
-                <CardHeader>
-                    <CardTitle>Backup & Export</CardTitle>
-                    <CardDescription>Create offline (JSON) or online (Realtime Database) backups of your Firestore data.</CardDescription>
-                </CardHeader>
-                <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Button className="w-full" onClick={handleExportAll} disabled={anyLoading}>
-                        {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
-                        Export All to JSON (Offline)
-                    </Button>
-                     <Button onClick={handleCreateBackup} disabled={anyLoading}>
-                        {loading === 'cloud-backup' ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
-                        Create Cloud Snapshot (Online)
-                    </Button>
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Restore & Import</CardTitle>
-                    <CardDescription>Restore data from an offline JSON backup or an online cloud snapshot.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                   <Tabs defaultValue="offline">
-                     <TabsList className="grid w-full grid-cols-2">
-                        <TabsTrigger value="offline">Offline</TabsTrigger>
-                        <TabsTrigger value="online">Online</TabsTrigger>
-                     </TabsList>
-                     <TabsContent value="offline" className="pt-4">
-                         <div className="p-4 border rounded-lg space-y-4">
-                            <Label htmlFor="import-file">Import from JSON</Label>
-                            <Input id="import-file" type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || anyLoading}/>
-                            {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
-                            {importPreview && (
-                                <Card>
-                                    <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Import Preview</CardTitle>
-                                        <div className="flex items-center space-x-2">
-                                            <Checkbox id="select-all-import" checked={collectionsToImport.length === Object.keys(importPreview).length} onCheckedChange={(checked) => setCollectionsToImport(checked ? Object.keys(importPreview) : [])}/>
-                                            <label htmlFor="select-all-import" className="text-sm font-medium">Select All</label>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                        <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
-                                            {Object.entries(importPreview).map(([key, value]) => (
-                                                <div key={key} className="flex items-center space-x-2">
-                                                    <Checkbox id={`import-${key}`} checked={collectionsToImport.includes(key)} onCheckedChange={(checked) => setCollectionsToImport(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
-                                                    <label htmlFor={`import-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
+            <Tabs defaultValue="backup" className="w-full">
+                <TabsList className="grid w-full grid-cols-4">
+                    <TabsTrigger value="backup">Backup & Export</TabsTrigger>
+                    <TabsTrigger value="restore">Restore & Import</TabsTrigger>
+                    <TabsTrigger value="explorer">Database Explorer</TabsTrigger>
+                    <TabsTrigger value="destructive" className="text-destructive/70 focus:text-destructive">Destructive Zone</TabsTrigger>
+                </TabsList>
+                <TabsContent value="backup" className="pt-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Backup & Export</CardTitle>
+                            <CardDescription>Create offline (JSON) or online (Realtime Database) backups of your Firestore data.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <Button className="w-full" onClick={handleExportAll} disabled={anyLoading}>
+                                {loading === 'all' ? <Loader2 className="mr-2 animate-spin" /> : <Download className="mr-2" />}
+                                Export All to JSON (Offline)
+                            </Button>
+                             <Button onClick={handleCreateBackup} disabled={anyLoading}>
+                                {loading === 'cloud-backup' ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
+                                Create Cloud Snapshot (Online)
+                            </Button>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="restore" className="pt-4">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Restore & Import</CardTitle>
+                            <CardDescription>Restore data from an offline JSON backup or an online cloud snapshot.</CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                           <Tabs defaultValue="offline">
+                             <TabsList className="grid w-full grid-cols-2">
+                                <TabsTrigger value="offline">Offline</TabsTrigger>
+                                <TabsTrigger value="online">Online</TabsTrigger>
+                             </TabsList>
+                             <TabsContent value="offline" className="pt-4">
+                                 <div className="p-4 border rounded-lg space-y-4">
+                                    <Label htmlFor="import-file">Import from JSON</Label>
+                                    <Input id="import-file" type="file" accept=".json" onChange={handleFileSelect} disabled={isParsing || anyLoading}/>
+                                    {isParsing && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="animate-spin" /> Parsing file...</div>}
+                                    {importPreview && (
+                                        <Card>
+                                            <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Import Preview</CardTitle>
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox id="select-all-import" checked={collectionsToImport.length === Object.keys(importPreview).length} onCheckedChange={(checked) => setCollectionsToImport(checked ? Object.keys(importPreview) : [])}/>
+                                                    <label htmlFor="select-all-import" className="text-sm font-medium">Select All</label>
                                                 </div>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-                             <AlertDialog>
+                                            </CardHeader>
+                                            <CardContent>
+                                                <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
+                                                    {Object.entries(importPreview).map(([key, value]) => (
+                                                        <div key={key} className="flex items-center space-x-2">
+                                                            <Checkbox id={`import-${key}`} checked={collectionsToImport.includes(key)} onCheckedChange={(checked) => setCollectionsToImport(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
+                                                            <label htmlFor={`import-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                     <AlertDialog>
+                                        <AlertDialogTrigger asChild>
+                                            <Button className="w-full" disabled={!importPreview || collectionsToImport.length === 0 || anyLoading || isParsing}>
+                                                <Upload className="mr-2" /> Import Selected Data
+                                            </Button>
+                                        </AlertDialogTrigger>
+                                        <AlertDialogContent>
+                                            <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This is a destructive action that will overwrite existing documents with the same ID. Are you sure you want to proceed?</AlertDialogDescription></AlertDialogHeader>
+                                            <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleImport} className="bg-destructive hover:bg-destructive/90">Yes, Start Import</AlertDialogAction></AlertDialogFooter>
+                                        </AlertDialogContent>
+                                    </AlertDialog>
+                                </div>
+                             </TabsContent>
+                             <TabsContent value="online" className="pt-4">
+                                 <div className="p-4 border rounded-lg space-y-4">
+                                    <h3 className="font-semibold text-sm">Available Cloud Backups</h3>
+                                    {onlineBackups.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No cloud backups found.</p>}
+                                    <div className="max-h-60 overflow-y-auto space-y-2">
+                                        {onlineBackups.map(key => (
+                                            <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
+                                                <div className="flex items-center gap-2">
+                                                    <Server className="h-4 w-4 text-muted-foreground" />
+                                                    <span className="font-mono text-xs">{new Date(key).toLocaleString()}</span>
+                                                </div>
+                                                {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
+                                            </div>
+                                        ))}
+                                    </div>
+                                    {onlineBackupPreview && (
+                                        <Card>
+                                             <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Restore Preview</CardTitle>
+                                                <div className="flex items-center space-x-2">
+                                                    <Checkbox id="select-all-restore" checked={collectionsToRestore.length === Object.keys(onlineBackupPreview).length} onCheckedChange={(checked) => setCollectionsToRestore(checked ? Object.keys(onlineBackupPreview) : [])}/>
+                                                    <label htmlFor="select-all-restore" className="text-sm font-medium">Select All</label>
+                                                </div>
+                                            </CardHeader>
+                                            <CardContent>
+                                               <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
+                                                    {Object.entries(onlineBackupPreview).map(([key, value]) => (
+                                                        <div key={key} className="flex items-center space-x-2">
+                                                            <Checkbox id={`restore-${key}`} checked={collectionsToRestore.includes(key)} onCheckedChange={(checked) => setCollectionsToRestore(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
+                                                            <label htmlFor={`restore-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </CardContent>
+                                        </Card>
+                                    )}
+                                    <Button disabled className="w-full">
+                                        <CloudCog className="mr-2" /> Restore from Cloud (Coming Soon)
+                                    </Button>
+                                 </div>
+                             </TabsContent>
+                           </Tabs>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="explorer">
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Database Explorer</CardTitle>
+                            <CardDescription>
+                                A live, read-only view of your Firestore database. Editing capabilities will be added in a future step.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent>
+                            <DatabaseExplorer />
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+                <TabsContent value="destructive" className="pt-4">
+                     <Card className="border-destructive/50">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2 text-destructive"><ShieldAlert/> Destructive Zone</CardTitle>
+                            <CardDescription>Perform irreversible data deletion operations with granular control.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
+                                <div className="space-y-2">
+                                    <Label>Target Organization</Label>
+                                    <Select value={targetOrg} onValueChange={setTargetOrg} disabled={anyLoading}>
+                                        <SelectTrigger><SelectValue /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__ALL__">All Organizations</SelectItem>
+                                            {organizations?.map(org => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Data to Delete</Label>
+                                    <Select value={collectionToDelete} onValueChange={setCollectionToDelete} disabled={anyLoading}>
+                                        <SelectTrigger><SelectValue placeholder="Select a data collection..." /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="__ALL__">ENTIRE DATABASE</SelectItem>
+                                            <Separator />
+                                            {COLLECTIONS.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                             </div>
+                              <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
                                 <AlertDialogTrigger asChild>
-                                    <Button className="w-full" disabled={!importPreview || collectionsToImport.length === 0 || anyLoading || isParsing}>
-                                        <Upload className="mr-2" /> Import Selected Data
+                                    <Button variant="destructive" className="w-full" disabled={anyLoading || !collectionToDelete}>
+                                        <Trash2 className="mr-2" /> Delete Selected Data
                                     </Button>
                                 </AlertDialogTrigger>
                                 <AlertDialogContent>
-                                    <AlertDialogHeader><AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle><AlertDialogDescription>This is a destructive action that will overwrite existing documents with the same ID. Are you sure you want to proceed?</AlertDialogDescription></AlertDialogHeader>
-                                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleImport} className="bg-destructive hover:bg-destructive/90">Yes, Start Import</AlertDialogAction></AlertDialogFooter>
+                                    <AlertDialogHeader>
+                                        <AlertDialogTitle>Are you absolutely, positively sure?</AlertDialogTitle>
+                                        <AlertDialogDescription>
+                                            This is your final confirmation. This action is irreversible. To proceed, please type the following phrase exactly: <br />
+                                            <code className="font-mono bg-muted text-foreground px-2 py-1 rounded-sm mt-2 block text-center">{getDeleteConfirmationPhrase()}</code>
+                                        </AlertDialogDescription>
+                                    </AlertDialogHeader>
+                                     <Input placeholder="Type confirmation phrase here" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} />
+                                    <AlertDialogFooter>
+                                        <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</AlertDialogCancel>
+                                        <AlertDialogAction onClick={handleDeleteData} disabled={deleteConfirmation !== getDeleteConfirmationPhrase() || loading === 'delete'}>
+                                            {loading === 'delete' && <Loader2 className='animate-spin' />} I understand, delete the data
+                                        </AlertDialogAction>
+                                    </AlertDialogFooter>
                                 </AlertDialogContent>
                             </AlertDialog>
-                        </div>
-                     </TabsContent>
-                     <TabsContent value="online" className="pt-4">
-                         <div className="p-4 border rounded-lg space-y-4">
-                            <h3 className="font-semibold text-sm">Available Cloud Backups</h3>
-                            {onlineBackups.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No cloud backups found.</p>}
-                            <div className="max-h-60 overflow-y-auto space-y-2">
-                                {onlineBackups.map(key => (
-                                    <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
-                                        <div className="flex items-center gap-2">
-                                            <Server className="h-4 w-4 text-muted-foreground" />
-                                            <span className="font-mono text-xs">{new Date(key).toLocaleString()}</span>
-                                        </div>
-                                        {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
-                                    </div>
-                                ))}
-                            </div>
-                            {onlineBackupPreview && (
-                                <Card>
-                                     <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Restore Preview</CardTitle>
-                                        <div className="flex items-center space-x-2">
-                                            <Checkbox id="select-all-restore" checked={collectionsToRestore.length === Object.keys(onlineBackupPreview).length} onCheckedChange={(checked) => setCollectionsToRestore(checked ? Object.keys(onlineBackupPreview) : [])}/>
-                                            <label htmlFor="select-all-restore" className="text-sm font-medium">Select All</label>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent>
-                                       <div className="text-sm text-muted-foreground space-y-2 max-h-48 overflow-y-auto">
-                                            {Object.entries(onlineBackupPreview).map(([key, value]) => (
-                                                <div key={key} className="flex items-center space-x-2">
-                                                    <Checkbox id={`restore-${key}`} checked={collectionsToRestore.includes(key)} onCheckedChange={(checked) => setCollectionsToRestore(prev => checked ? [...prev, key] : prev.filter(c => c !== key))}/>
-                                                    <label htmlFor={`restore-${key}`} className="flex-1"><strong>{key}</strong> ({value} documents)</label>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </CardContent>
-                                </Card>
-                            )}
-                            <Button disabled className="w-full">
-                                <CloudCog className="mr-2" /> Restore from Cloud (Coming Soon)
-                            </Button>
-                         </div>
-                     </TabsContent>
-                   </Tabs>
-                </CardContent>
-            </Card>
-
-            <Card className="border-destructive/50">
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-destructive"><ShieldAlert/> Destructive Zone</CardTitle>
-                    <CardDescription>Perform irreversible data deletion operations with granular control.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 items-end">
-                        <div className="space-y-2">
-                            <Label>Target Organization</Label>
-                            <Select value={targetOrg} onValueChange={setTargetOrg} disabled={anyLoading}>
-                                <SelectTrigger><SelectValue /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__ALL__">All Organizations</SelectItem>
-                                    {organizations?.map(org => <SelectItem key={org.id} value={org.id}>{org.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Data to Delete</Label>
-                            <Select value={collectionToDelete} onValueChange={setCollectionToDelete} disabled={anyLoading}>
-                                <SelectTrigger><SelectValue placeholder="Select a data collection..." /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="__ALL__">ENTIRE DATABASE</SelectItem>
-                                    <Separator />
-                                    {COLLECTIONS.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}
-                                </SelectContent>
-                            </Select>
-                        </div>
-                     </div>
-                      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setIsDeleteAlertOpen}>
-                        <AlertDialogTrigger asChild>
-                            <Button variant="destructive" className="w-full" disabled={anyLoading || !collectionToDelete}>
-                                <Trash2 className="mr-2" /> Delete Selected Data
-                            </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                            <AlertDialogHeader>
-                                <AlertDialogTitle>Are you absolutely, positively sure?</AlertDialogTitle>
-                                <AlertDialogDescription>
-                                    This is your final confirmation. This action is irreversible. To proceed, please type the following phrase exactly: <br />
-                                    <code className="font-mono bg-muted text-foreground px-2 py-1 rounded-sm mt-2 block text-center">{getDeleteConfirmationPhrase()}</code>
-                                </AlertDialogDescription>
-                            </AlertDialogHeader>
-                             <Input placeholder="Type confirmation phrase here" value={deleteConfirmation} onChange={(e) => setDeleteConfirmation(e.target.value)} />
-                            <AlertDialogFooter>
-                                <AlertDialogCancel onClick={() => setDeleteConfirmation('')}>Cancel</AlertDialogCancel>
-                                <AlertDialogAction onClick={handleDeleteData} disabled={deleteConfirmation !== getDeleteConfirmationPhrase() || loading === 'delete'}>
-                                    {loading === 'delete' && <Loader2 className='animate-spin' />} I understand, delete the data
-                                </AlertDialogAction>
-                            </AlertDialogFooter>
-                        </AlertDialogContent>
-                    </AlertDialog>
-                </CardContent>
-            </Card>
+                        </CardContent>
+                    </Card>
+                </TabsContent>
+            </Tabs>
         </div>
     );
 }
