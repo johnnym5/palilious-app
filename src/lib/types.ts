@@ -168,6 +168,8 @@ export interface ChatMessage {
     timestamp: string; // ISO String for timestamp
 }
 
+export type WorkbookRole = "VIEWER" | "EDITOR" | "MANAGER";
+
 export interface Workbook {
   id: string;
   orgId: string;
@@ -176,6 +178,11 @@ export interface Workbook {
   createdBy: string;
   creatorName: string;
   createdAt: string; // ISO String
+  visibleTo: string[];
+  sharedWith?: {
+    userId: string;
+    role: WorkbookRole;
+  }[];
 }
 
 export interface Sheet {

@@ -347,9 +347,26 @@
         "description": { "type": "string" },
         "createdBy": { "type": "string" },
         "creatorName": { "type": "string"},
-        "createdAt": { "type": "string", "format": "date-time" }
+        "createdAt": { "type": "string", "format": "date-time" },
+        "visibleTo": {
+            "type": "array",
+            "description": "A list of user IDs that have any level of access to this workbook, for querying.",
+            "items": { "type": "string" }
+        },
+        "sharedWith": {
+            "type": "array",
+            "description": "A list of users this workbook is shared with and their roles.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "userId": { "type": "string" },
+                    "role": { "type": "string", "enum": ["VIEWER", "EDITOR", "MANAGER"] }
+                },
+                "required": ["userId", "role"]
+            }
+        }
       },
-      "required": ["orgId", "title", "createdBy", "creatorName", "createdAt"]
+      "required": ["orgId", "title", "createdBy", "creatorName", "createdAt", "visibleTo"]
     },
     "Sheet": {
       "title": "Sheet",

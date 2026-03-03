@@ -6,7 +6,7 @@ import type { UserProfile, Workbook } from '@/lib/types';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
+import { Plus, ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { NewWorkbookDialog } from '@/components/workbook/NewWorkbookDialog';
@@ -16,17 +16,20 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
 import Link from 'next/link';
+import { ShareWorkbookDialog } from '@/components/workbook/ShareWorkbookDialog';
 
 function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [workbookToEdit, setWorkbookToEdit] = useState<Workbook | null>(null);
     const [workbookToDelete, setWorkbookToDelete] = useState<Workbook | null>(null);
+    const [workbookToShare, setWorkbookToShare] = useState<Workbook | null>(null);
+    const permissions = usePermissions(userProfile);
 
     const workbooksQuery = useMemoFirebase(() => {
         return query(
             collection(firestore, 'workbooks'),
-            where('orgId', '==', userProfile.orgId)
+            where('visibleTo', 'array-contains', userProfile.id)
         )
     }, [firestore, userProfile]);
 
@@ -40,6 +43,13 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
         setWorkbookToDelete(null);
     };
 
+    const canManage = (workbook: Workbook) => {
+        if (workbook.createdBy === userProfile.id) return true;
+        const sharingInfo = workbook.sharedWith?.find(s => s.userId === userProfile.id);
+        return sharingInfo?.role === 'MANAGER';
+    }
+
+
     if (isLoading) {
         return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
             {Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-48" />)}
@@ -51,7 +61,7 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
             <div className="flex flex-col items-center justify-center w-full p-8 border-2 border-dashed rounded-lg text-center h-64">
                 <BookCopy className="w-12 h-12 text-muted-foreground" />
                 <p className="mt-4 text-lg font-semibold">No Workbooks Yet</p>
-                <p className="mt-1 text-sm text-muted-foreground">Get started by creating your first workbook.</p>
+                <p className="mt-1 text-sm text-muted-foreground">Get started by creating your first workbook or ask a colleague to share one.</p>
             </div>
         )
     }
@@ -66,13 +76,18 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
                                 <CardTitle className="truncate">{workbook.title}</CardTitle>
                                 <CardDescription className="line-clamp-1">{workbook.description || "No description."}</CardDescription>
                             </div>
-                            <DropdownMenu>
+                           {canManage(workbook) && (
+                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                    <Button variant="ghost" size="icon" className="shrink-0">
                                         <MoreHorizontal className="h-4 w-4" />
                                     </Button>
                                 </DropdownMenuTrigger>
                                 <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => setWorkbookToShare(workbook)}>
+                                        <Share2 className="mr-2 h-4 w-4" />
+                                        <span>Share</span>
+                                    </DropdownMenuItem>
                                     <DropdownMenuItem onClick={() => setWorkbookToEdit(workbook)}>
                                         <Edit className="mr-2 h-4 w-4" />
                                         <span>Edit</span>
@@ -83,9 +98,10 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
+                           )}
                         </CardHeader>
                         <CardContent className="flex-grow">
-                            <p className="text-xs text-muted-foreground">
+                             <p className="text-xs text-muted-foreground">
                                 Created by {workbook.creatorName} on {format(new Date(workbook.createdAt), 'PP')}
                             </p>
                         </CardContent>
@@ -103,6 +119,14 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
                     open={!!workbookToEdit}
                     onOpenChange={(isOpen) => !isOpen && setWorkbookToEdit(null)}
                     workbook={workbookToEdit}
+                />
+            )}
+             {workbookToShare && userProfile && (
+                <ShareWorkbookDialog
+                    open={!!workbookToShare}
+                    onOpenChange={(isOpen) => !isOpen && setWorkbookToShare(null)}
+                    workbook={workbookToShare}
+                    currentUserProfile={userProfile}
                 />
             )}
 
@@ -144,12 +168,13 @@ export default function WorkbookPage() {
     return <Skeleton className="h-[calc(100vh-12rem)] w-full" />
   }
 
-  if (!permissions.canManageStaff) {
+  // This page has its own access control via query, but we still need to handle the case where a user has no profile.
+  if (!userProfile) {
       return (
            <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
               <h1 className="text-2xl font-bold font-headline">Access Denied</h1>
-              <p className="text-muted-foreground mt-2">You do not have the required permissions to view this page.</p>
+              <p className="text-muted-foreground mt-2">Could not identify user profile.</p>
               <Button onClick={() => router.push('/dashboard')} className="mt-6">Return to Dashboard</Button>
             </div>
       )
@@ -166,9 +191,9 @@ export default function WorkbookPage() {
          </div>
        </div>
 
-       <WorkbookList userProfile={userProfile!} />
+       <WorkbookList userProfile={userProfile} />
       
-       <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile!}>
+       <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile}>
             <Button 
                 className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-10" 
                 onClick={() => setIsNewWorkbookOpen(true)}

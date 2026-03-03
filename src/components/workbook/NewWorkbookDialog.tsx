@@ -120,6 +120,8 @@ export function NewWorkbookDialog({ children, open, onOpenChange, userProfile }:
             createdBy: userProfile.id,
             creatorName: userProfile.fullName,
             createdAt: now,
+            visibleTo: [userProfile.id],
+            sharedWith: [],
         };
 
         const workbookDocRef = await addDocumentNonBlocking(collection(firestore, 'workbooks'), newWorkbook);

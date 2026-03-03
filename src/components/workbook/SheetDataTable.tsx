@@ -32,9 +32,12 @@ import {
 
 interface SheetDataTableProps {
   sheet: Sheet;
+  permissions: {
+    canEdit: boolean;
+  };
 }
 
-export function SheetDataTable({ sheet }: SheetDataTableProps) {
+export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [data, setData] = useState<Record<string, any>[]>([]);
@@ -56,7 +59,7 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
     };
 
     const saveChanges = (payload: { data?: Record<string, any>[]; headers?: string[] }, toastMessage: string) => {
-        if (!firestore || Object.keys(payload).length === 0) return;
+        if (!firestore || Object.keys(payload).length === 0 || !permissions.canEdit) return;
         const sheetRef = doc(firestore, `workbooks/${sheet.workbookId}/sheets`, sheet.id);
         updateDocumentNonBlocking(sheetRef, payload);
         toast({ title: 'Saved', description: toastMessage });
@@ -79,6 +82,7 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
     }
 
     const handleAddRow = () => {
+        if (!permissions.canEdit) return;
         const newRow = headers.reduce((acc, header) => {
             acc[header] = '';
             return acc;
@@ -89,13 +93,14 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
     };
 
     const handleDeleteRow = (rowIndexToDelete: number) => {
+        if (!permissions.canEdit) return;
         const updatedData = data.filter((_, index) => index !== rowIndexToDelete);
         setData(updatedData);
         saveChanges({ data: updatedData }, 'The row has been deleted.');
     }
     
     const handleDeleteColumn = () => {
-        if (!columnToDelete) return;
+        if (!columnToDelete || !permissions.canEdit) return;
 
         const newHeaders = headers.filter(h => h !== columnToDelete);
         const newData = data.map(row => {
@@ -127,12 +132,14 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 space-y-4">
                  <p className="text-sm font-semibold">This sheet is empty.</p>
-                 <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
-                     <Button variant="outline">
-                         <Plus className="mr-2 h-4 w-4" />
-                         Add First Column
-                     </Button>
-                 </AddColumnDialog>
+                 {permissions.canEdit && (
+                    <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
+                        <Button variant="outline">
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add First Column
+                        </Button>
+                    </AddColumnDialog>
+                 )}
              </div>
         );
     }
@@ -147,21 +154,23 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
                                 <TableHead key={header}>
                                     <div className="flex items-center justify-between group">
                                         <span>{header}</span>
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
-                                                    <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent>
-                                                <DropdownMenuItem 
-                                                    className="text-destructive focus:text-destructive"
-                                                    onSelect={() => setColumnToDelete(header)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" />
-                                                    Delete Column
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
+                                        {permissions.canEdit && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent>
+                                                    <DropdownMenuItem 
+                                                        className="text-destructive focus:text-destructive"
+                                                        onSelect={() => setColumnToDelete(header)}>
+                                                        <Trash2 className="mr-2 h-4 w-4" />
+                                                        Delete Column
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
                                     </div>
                                 </TableHead>
                             ))}
@@ -183,8 +192,8 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
                                     {headers.map(header => (
                                         <TableCell 
                                             key={`${rowIndex}-${header}`}
-                                            onDoubleClick={() => setEditingCell({ rowIndex, header })}
-                                            className="cursor-cell"
+                                            onDoubleClick={() => permissions.canEdit && setEditingCell({ rowIndex, header })}
+                                            className={permissions.canEdit ? 'cursor-cell' : ''}
                                         >
                                             {editingCell?.rowIndex === rowIndex && editingCell?.header === header ? (
                                                 <Input
@@ -201,27 +210,29 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
                                         </TableCell>
                                     ))}
                                     <TableCell className="sticky right-0 bg-background/95 backdrop-blur">
-                                        <AlertDialog>
-                                            <AlertDialogTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </AlertDialogTrigger>
-                                            <AlertDialogContent>
-                                                <AlertDialogHeader>
-                                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                    <AlertDialogDescription>
-                                                        This action will permanently delete this row.
-                                                    </AlertDialogDescription>
-                                                </AlertDialogHeader>
-                                                <AlertDialogFooter>
-                                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                    <AlertDialogAction onClick={() => handleDeleteRow(rowIndex)} className="bg-destructive hover:bg-destructive/90">
-                                                        Delete Row
-                                                    </AlertDialogAction>
-                                                </AlertDialogFooter>
-                                            </AlertDialogContent>
-                                        </AlertDialog>
+                                        {permissions.canEdit && (
+                                            <AlertDialog>
+                                                <AlertDialogTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                                                        <Trash2 className="h-4 w-4" />
+                                                    </Button>
+                                                </AlertDialogTrigger>
+                                                <AlertDialogContent>
+                                                    <AlertDialogHeader>
+                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                                        <AlertDialogDescription>
+                                                            This action will permanently delete this row.
+                                                        </AlertDialogDescription>
+                                                    </AlertDialogHeader>
+                                                    <AlertDialogFooter>
+                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                                        <AlertDialogAction onClick={() => handleDeleteRow(rowIndex)} className="bg-destructive hover:bg-destructive/90">
+                                                            Delete Row
+                                                        </AlertDialogAction>
+                                                    </AlertDialogFooter>
+                                                </AlertDialogContent>
+                                            </AlertDialog>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             ))
@@ -230,16 +241,20 @@ export function SheetDataTable({ sheet }: SheetDataTableProps) {
                 </Table>
             </ScrollArea>
              <div className="flex-shrink-0 border-t p-2 flex items-center gap-2">
-                <Button variant="outline" size="sm" onClick={handleAddRow}>
-                    <Plus className="mr-2 h-4 w-4" />
-                    Add Row
-                </Button>
-                <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
-                     <Button variant="outline" size="sm">
-                         <Plus className="mr-2 h-4 w-4" />
-                         Add Column
-                     </Button>
-                </AddColumnDialog>
+                {permissions.canEdit && (
+                    <>
+                         <Button variant="outline" size="sm" onClick={handleAddRow}>
+                            <Plus className="mr-2 h-4 w-4" />
+                            Add Row
+                        </Button>
+                        <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
+                             <Button variant="outline" size="sm">
+                                 <Plus className="mr-2 h-4 w-4" />
+                                 Add Column
+                             </Button>
+                        </AddColumnDialog>
+                    </>
+                )}
                 <Button variant="outline" size="sm" onClick={handleExport}>
                     <FileDown className="mr-2 h-4 w-4" />
                     Export as Excel
