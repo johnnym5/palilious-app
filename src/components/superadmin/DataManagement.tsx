@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useFirestore, useCollection, useMemoFirebase, useDatabase } from '@/firebase';
 import { collection, getDocs, collectionGroup, writeBatch, doc, query, where, getDoc, setDoc } from 'firebase/firestore';
 import { ref, get, child, set, onValue } from 'firebase/database';
@@ -81,7 +81,8 @@ export function DataManagement() {
     const [importTargetOrg, setImportTargetOrg] = useState<string>('__ALL__');
     
     // Online Restore state
-    const [onlineBackups, setOnlineBackups] = useState<string[]>([]);
+    const [manualOnlineBackups, setManualOnlineBackups] = useState<string[]>([]);
+    const [autoOnlineBackups, setAutoOnlineBackups] = useState<string[]>([]);
     const [selectedOnlineBackup, setSelectedOnlineBackup] = useState<string | null>(null);
     const [onlineBackupPreview, setOnlineBackupPreview] = useState<Record<string, number> | null>(null);
     const [collectionsToRestore, setCollectionsToRestore] = useState<string[]>([]);
@@ -104,10 +105,15 @@ export function DataManagement() {
         const unsubscribe = onValue(backupsRef, (snapshot) => {
             const data = snapshot.val();
             if (data) {
-                const backupKeys = Object.keys(data).sort().reverse();
-                setOnlineBackups(backupKeys);
+                const allKeys = Object.keys(data);
+                const manualKeys = allKeys.filter(k => k.startsWith('manual_')).sort().reverse();
+                const autoKeys = allKeys.filter(k => k.startsWith('auto_')).sort().reverse();
+
+                setManualOnlineBackups(manualKeys);
+                setAutoOnlineBackups(autoKeys);
             } else {
-                setOnlineBackups([]);
+                setManualOnlineBackups([]);
+                setAutoOnlineBackups([]);
             }
         });
 
@@ -132,6 +138,7 @@ export function DataManagement() {
         if (!firestore || !database) return;
         setLoading('cloud-backup');
         const backupTimestamp = new Date().toISOString().replace(/\./g, '_').replace(/:/g, '-');
+        const backupKey = `manual_${backupTimestamp}`;
 
         try {
             toast({ title: 'Starting cloud backup...', description: 'Fetching all data from Firestore.' });
@@ -168,7 +175,7 @@ export function DataManagement() {
             }
 
             toast({ title: 'Data fetched', description: 'Writing data to Realtime Database. This may take a moment.' });
-            const backupRef = ref(database, `backups/${backupTimestamp}`);
+            const backupRef = ref(database, `backups/${backupKey}`);
             await set(backupRef, dataToBackup);
 
             toast({ title: 'Cloud Backup Complete', description: `Snapshot created successfully.` });
@@ -448,8 +455,34 @@ export function DataManagement() {
             setCollectionsToDelete([]);
         }
     };
+    
+    const formatBackupKey = (key: string) => {
+        const timestamp = key.substring(key.indexOf('_') + 1);
+        return new Date(timestamp.replace(/_/g, '.').replace(/-/g, ':')).toLocaleString();
+    };
 
     const anyLoading = !!loading || areOrgsLoading;
+
+    const renderBackupList = (keys: string[]) => {
+        if (keys.length === 0) {
+            return <p className="text-sm text-muted-foreground text-center py-4">No backups found.</p>;
+        }
+        return (
+            <ScrollArea className="max-h-40">
+                <div className="space-y-2 pr-2">
+                    {keys.map(key => (
+                        <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
+                            <div className="flex items-center gap-2">
+                                <Server className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-mono text-xs">{formatBackupKey(key)}</span>
+                            </div>
+                            {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
+                        </div>
+                    ))}
+                </div>
+            </ScrollArea>
+        );
+    }
 
     return (
         <div className="space-y-8">
@@ -514,7 +547,7 @@ export function DataManagement() {
                                 </Button>
                                 <Button onClick={handleCreateBackup} disabled={anyLoading}>
                                     {loading === 'cloud-backup' ? <Loader2 className="mr-2 animate-spin" /> : <PlusCircle className="mr-2" />}
-                                    Create Cloud Snapshot (Online)
+                                    Create Cloud Snapshot (Manual)
                                 </Button>
                             </div>
                         </CardContent>
@@ -598,21 +631,15 @@ export function DataManagement() {
                                         </Select>
                                     </div>
                                     <Separator />
-                                    <h3 className="font-semibold text-sm">Available Cloud Backups</h3>
-                                    {onlineBackups.length === 0 && <p className="text-sm text-muted-foreground text-center py-4">No cloud backups found.</p>}
-                                    <ScrollArea className="max-h-60">
-                                        <div className="space-y-2 pr-2">
-                                            {onlineBackups.map(key => (
-                                                <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
-                                                    <div className="flex items-center gap-2">
-                                                        <Server className="h-4 w-4 text-muted-foreground" />
-                                                        <span className="font-mono text-xs">{new Date(key.replace(/_/g, '.').replace(/-/g, ':')).toLocaleString()}</span>
-                                                    </div>
-                                                    {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </ScrollArea>
+                                     <div className='space-y-2'>
+                                        <h3 className="font-semibold text-sm">Available Manual Snapshots</h3>
+                                        {renderBackupList(manualOnlineBackups)}
+                                    </div>
+                                     <div className='space-y-2'>
+                                        <h3 className="font-semibold text-sm">Automated Nightly Backups</h3>
+                                        <p className='text-xs text-muted-foreground'>Automated backups run daily at midnight. This functionality is configured on the backend.</p>
+                                        {renderBackupList(autoOnlineBackups)}
+                                    </div>
                                     {onlineBackupPreview && (
                                         <Card>
                                              <CardHeader className="flex-row items-center justify-between pb-4"><CardTitle className="text-base">Restore Preview</CardTitle>
