@@ -56,7 +56,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
       form.reset({
         fullName: userToEdit.fullName,
         position: userToEdit.position,
-        departmentId: userToEdit.departmentId || "",
+        departmentId: userToEdit.departmentId || "__NONE__",
         canAccessRequisitions: userToEdit.customPermissions?.canAccessRequisitions,
         canAccessChat: userToEdit.customPermissions?.canAccessChat,
         canAccessAllTasks: userToEdit.customPermissions?.canAccessAllTasks,
@@ -86,12 +86,13 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
     setIsLoading(true);
     try {
       const userRef = doc(firestore, "users", userToEdit.id);
-      const selectedDepartment = departments?.find(d => d.id === values.departmentId);
+      const isNoDepartment = values.departmentId === "__NONE__";
+      const selectedDepartment = isNoDepartment ? null : departments?.find(d => d.id === values.departmentId);
       
       const updateData = {
         fullName: values.fullName,
         position: values.position,
-        departmentId: values.departmentId || null,
+        departmentId: isNoDepartment ? null : values.departmentId,
         departmentName: selectedDepartment?.name || null,
         customPermissions: {
             canAccessRequisitions: values.canAccessRequisitions,
@@ -177,7 +178,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                             </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                            <SelectItem value="">No Department</SelectItem>
+                            <SelectItem value="__NONE__">No Department</SelectItem>
                             {departments?.map(d => <SelectItem key={d.id} value={d.id}>{d.name}</SelectItem>)}
                         </SelectContent>
                     </Select>
