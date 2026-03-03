@@ -12,7 +12,6 @@ import type { UserProfile } from "@/lib/types";
 import { useSuperAdmin } from "@/hooks/useSuperAdmin";
 import { usePermissions, type Permissions } from "@/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { useRouter } from "next/navigation";
 
 
@@ -55,9 +54,8 @@ export default function RequisitionsPage() {
     authUser ? doc(firestore, "users", authUser.uid) : null
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-  const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile?.orgId);
-
   const permissions = usePermissions(userProfile);
+
   const isStaff = !permissions.canApproveHR && !permissions.canApproveFinance && !permissions.canApproveMD && !permissions.canManageStaff;
   const visibleTabs = getVisibleTabs(permissions, isStaff);
   const [activeTab, setActiveTab] = useState(visibleTabs[0]);
@@ -68,12 +66,12 @@ export default function RequisitionsPage() {
     }
   });
 
-  if (!isConfigLoading && !isProfileLoading && !systemConfig?.finance_access) {
+  if (!isProfileLoading && !permissions.canAccessRequisitions) {
     return (
          <div className="flex flex-col items-center justify-center h-full text-center p-8">
             <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
             <h1 className="text-2xl font-bold font-headline">Access Denied</h1>
-            <p className="text-muted-foreground mt-2">The financial requisitions module is currently disabled for your organization.</p>
+            <p className="text-muted-foreground mt-2">The financial requisitions module is currently disabled for your account or organization.</p>
             <Button onClick={() => router.push('/dashboard')} className="mt-6">Return to Dashboard</Button>
           </div>
     )
@@ -81,7 +79,7 @@ export default function RequisitionsPage() {
 
   return (
     <div className="space-y-6 relative min-h-[calc(100vh-10rem)]">
-      {isConfigLoading || isProfileLoading ? (
+      {isProfileLoading ? (
         <Skeleton className="h-[calc(100vh-12rem)] w-full" />
       ) : (
         <>

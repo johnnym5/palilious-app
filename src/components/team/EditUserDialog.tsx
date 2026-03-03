@@ -4,7 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { UserProfile, UserPosition } from "@/lib/types";
 import { useState, useEffect } from "react";
@@ -15,12 +15,18 @@ import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Separator } from "../ui/separator";
+import { Switch } from "../ui/switch";
 
 const positions: UserPosition[] = ["Staff", "HR Manager", "Finance Manager", "Managing Director", "Organization Administrator"];
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
   position: z.string().min(1, { message: "Position is required." }),
+  canAccessRequisitions: z.boolean().optional(),
+  canAccessChat: z.boolean().optional(),
+  canAccessAllTasks: z.boolean().optional(),
+  canAccessAllWorkbooks: z.boolean().optional(),
 });
 
 interface EditUserDialogProps {
@@ -37,10 +43,6 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
-    defaultValues: {
-      fullName: userToEdit.fullName,
-      position: userToEdit.position,
-    },
   });
 
   useEffect(() => {
@@ -48,6 +50,10 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
       form.reset({
         fullName: userToEdit.fullName,
         position: userToEdit.position,
+        canAccessRequisitions: userToEdit.customPermissions?.canAccessRequisitions,
+        canAccessChat: userToEdit.customPermissions?.canAccessChat,
+        canAccessAllTasks: userToEdit.customPermissions?.canAccessAllTasks,
+        canAccessAllWorkbooks: userToEdit.customPermissions?.canAccessAllWorkbooks,
       });
     }
   }, [userToEdit, form]);
@@ -73,10 +79,19 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
     setIsLoading(true);
     try {
       const userRef = doc(firestore, "users", userToEdit.id);
-      updateDocumentNonBlocking(userRef, {
+      
+      const updateData = {
         fullName: values.fullName,
         position: values.position,
-      });
+        customPermissions: {
+            canAccessRequisitions: values.canAccessRequisitions,
+            canAccessChat: values.canAccessChat,
+            canAccessAllTasks: values.canAccessAllTasks,
+            canAccessAllWorkbooks: values.canAccessAllWorkbooks,
+        }
+      };
+
+      updateDocumentNonBlocking(userRef, updateData);
 
       toast({
         title: "User Updated",
@@ -97,7 +112,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[425px]">
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Edit Staff Member</DialogTitle>
           <DialogDescription>
@@ -144,12 +159,72 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                 <Input disabled value={userToEdit.email} />
                 <p className="text-[0.8rem] text-muted-foreground">Email address cannot be changed.</p>
              </FormItem>
-            <DialogFooter className="gap-y-2">
+
+             <Separator className="my-4"/>
+
+             <div className="space-y-2">
+                <h4 className="text-sm font-medium">Module Access Overrides</h4>
+                <p className="text-sm text-muted-foreground">
+                    Grant or revoke access to modules, overriding the user's role. This is ignored if a module is disabled for the whole organization.
+                </p>
+             </div>
+
+             <div className="space-y-4 rounded-lg border p-4">
+                <FormField
+                    control={form.control}
+                    name="canAccessRequisitions"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between">
+                            <FormLabel>Requisitions</FormLabel>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="canAccessChat"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between">
+                            <FormLabel>Chat</FormLabel>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="canAccessAllTasks"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between">
+                            <div className="space-y-0.5">
+                                <FormLabel>View All Tasks</FormLabel>
+                                <FormDescription className="text-xs">Allows user to see all tasks in the organization.</FormDescription>
+                            </div>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="canAccessAllWorkbooks"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between">
+                             <div className="space-y-0.5">
+                                <FormLabel>View All Workbooks</FormLabel>
+                                <FormDescription className="text-xs">Allows user to see all workbooks in the organization.</FormDescription>
+                            </div>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )}
+                 />
+             </div>
+
+
+            <DialogFooter className="gap-y-2 pt-4">
                 <Button type="button" variant="outline" onClick={handlePasswordReset}>
                     Send Password Reset
                 </Button>
                 <div className="flex-1" />
-                <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
+                <Button type="button" variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
                 <Button type="submit" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Save Changes

@@ -58,6 +58,16 @@
                 "taskAssignments": { "type": "boolean" },
                 "announcements": { "type": "boolean" }
             }
+        },
+        "customPermissions": {
+            "type": "object",
+            "description": "User-specific permission overrides that supplement their role-based access.",
+            "properties": {
+                "canAccessRequisitions": { "type": "boolean" },
+                "canAccessChat": { "type": "boolean" },
+                "canAccessAllTasks": { "type": "boolean" },
+                "canAccessAllWorkbooks": { "type": "boolean" }
+            }
         }
       },
       "required": [

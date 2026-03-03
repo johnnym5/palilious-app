@@ -96,13 +96,10 @@ export default function AppSidebar({ isMobile = false }) {
       <div className="flex flex-1 flex-col justify-between">
         <nav className="grid items-start gap-1 p-4 text-sm font-medium">
           {mainNavItems.map((item) => {
-            if (item.href === "/requisitions" && !isConfigLoading && !systemConfig?.finance_access) {
+            if (item.href === "/requisitions" && !permissions.canAccessRequisitions) {
                 return null;
             }
-            if (item.href === "/chat" && !isConfigLoading && systemConfig?.chat_enabled === false) {
-                return null;
-            }
-            if (item.href === "/workbook" && !permissions.canManageStaff) {
+            if (item.href === "/chat" && !permissions.canAccessChat) {
                 return null;
             }
             return <NavLink key={item.href} {...item} />

@@ -13,6 +13,10 @@ export interface Permissions {
   canManageCompany: boolean;
   canClockIn: boolean;
   canEditOwnProfile: boolean;
+  canAccessRequisitions: boolean;
+  canAccessChat: boolean;
+  canAccessAllTasks: boolean;
+  canAccessAllWorkbooks: boolean;
 }
 
 const positionPermissions: Record<UserPosition, Partial<Permissions>> = {
@@ -48,6 +52,10 @@ const defaultPermissions: Permissions = {
   canManageCompany: false,
   canClockIn: true,
   canEditOwnProfile: true,
+  canAccessRequisitions: false,
+  canAccessChat: false,
+  canAccessAllTasks: false,
+  canAccessAllWorkbooks: false,
 };
 
 export function usePermissions(userProfile: UserProfile | null): Permissions {
@@ -57,7 +65,6 @@ export function usePermissions(userProfile: UserProfile | null): Permissions {
   const permissions = useMemo(() => {
     if (isSuperAdmin) {
       return { 
-          ...defaultPermissions,
           canApproveHR: true,
           canApproveFinance: true,
           canApproveMD: true,
@@ -66,6 +73,10 @@ export function usePermissions(userProfile: UserProfile | null): Permissions {
           canManageCompany: true,
           canClockIn: true,
           canEditOwnProfile: true,
+          canAccessRequisitions: true,
+          canAccessChat: true,
+          canAccessAllTasks: true,
+          canAccessAllWorkbooks: true,
       };
     }
 
@@ -73,16 +84,42 @@ export function usePermissions(userProfile: UserProfile | null): Permissions {
       return defaultPermissions;
     }
 
-    const userPermissions = positionPermissions[userProfile.position] || {};
+    const rolePerms = positionPermissions[userProfile.position] || {};
+    const customPerms = userProfile.customPermissions || {};
 
-    // Staff can only edit their profile if the system config allows it.
-    const canEditOwnProfile = userProfile.position !== 'Staff' || (systemConfig?.allow_self_edit ?? true);
-
-    return {
-      ...defaultPermissions,
-      ...userPermissions,
-      canEditOwnProfile,
+    const perms: Permissions = {
+        ...defaultPermissions,
+        ...rolePerms,
     };
+
+    // 1. Base module access is gated by the org-wide SystemConfig
+    // Staff should have access to create requisitions if module is on
+    perms.canAccessRequisitions = systemConfig?.finance_access ?? false;
+    perms.canAccessChat = systemConfig?.chat_enabled ?? false;
+
+    // 2. "View All" permissions are typically tied to management roles
+    perms.canAccessAllTasks = !!rolePerms.canManageStaff;
+    perms.canAccessAllWorkbooks = !!rolePerms.canManageStaff;
+
+    // 3. Apply user-specific custom permissions as overrides
+    // A custom permission cannot grant access if the global switch is off.
+    if (typeof customPerms.canAccessRequisitions === 'boolean') {
+        perms.canAccessRequisitions = customPerms.canAccessRequisitions && (systemConfig?.finance_access ?? true);
+    }
+    if (typeof customPerms.canAccessChat === 'boolean') {
+        perms.canAccessChat = customPerms.canAccessChat && (systemConfig?.chat_enabled ?? true);
+    }
+    if (typeof customPerms.canAccessAllTasks === 'boolean') {
+        perms.canAccessAllTasks = customPerms.canAccessAllTasks;
+    }
+     if (typeof customPerms.canAccessAllWorkbooks === 'boolean') {
+        perms.canAccessAllWorkbooks = customPerms.canAccessAllWorkbooks;
+    }
+    
+    // 4. Special cases
+    perms.canEditOwnProfile = userProfile.position !== 'Staff' || (systemConfig?.allow_self_edit ?? true);
+
+    return perms;
   }, [isSuperAdmin, userProfile, systemConfig]);
 
   return permissions;

@@ -44,6 +44,12 @@ export interface UserProfile {
     taskAssignments?: boolean;
     announcements?: boolean;
   };
+  customPermissions?: {
+    canAccessRequisitions?: boolean;
+    canAccessChat?: boolean;
+    canAccessAllTasks?: boolean;
+    canAccessAllWorkbooks?: boolean;
+  };
 }
 
 export type AttendanceStatus = "PENDING" | "APPROVED" | "REJECTED";

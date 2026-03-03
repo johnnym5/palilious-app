@@ -23,9 +23,7 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
         
         const tasksRef = collection(firestore, 'tasks');
 
-        // Queries are simplified to avoid needing a composite index.
-        // Sorting will be handled on the client-side.
-        if (permissions.canManageStaff || isSuperAdmin) {
+        if (permissions.canAccessAllTasks || isSuperAdmin) {
             return query(
                 tasksRef, 
                 where('orgId', '==', userProfile.orgId)
@@ -36,7 +34,7 @@ export function TaskBoard({ userProfile, permissions }: TaskBoardProps) {
                 where('assignedTo', '==', userProfile.id)
             );
         }
-    }, [firestore, userProfile, permissions.canManageStaff, isSuperAdmin]);
+    }, [firestore, userProfile, permissions.canAccessAllTasks, isSuperAdmin]);
 
     const { data: tasks, isLoading } = useCollection<Task>(tasksQuery);
     
