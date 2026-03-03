@@ -1,19 +1,27 @@
 'use client';
 import { useState } from 'react';
-import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { UserProfile, Workbook } from '@/lib/types';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, ShieldAlert, BookCopy } from 'lucide-react';
+import { Plus, ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { useRouter } from 'next/navigation';
 import { NewWorkbookDialog } from '@/components/workbook/NewWorkbookDialog';
+import { EditWorkbookDialog } from '@/components/workbook/EditWorkbookDialog';
 import { format } from 'date-fns';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { useToast } from '@/hooks/use-toast';
 
 function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
     const firestore = useFirestore();
+    const { toast } = useToast();
+    const [workbookToEdit, setWorkbookToEdit] = useState<Workbook | null>(null);
+    const [workbookToDelete, setWorkbookToDelete] = useState<Workbook | null>(null);
+
     const workbooksQuery = useMemoFirebase(() => {
         return query(
             collection(firestore, 'workbooks'),
@@ -22,6 +30,14 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
     }, [firestore, userProfile]);
 
     const { data: workbooks, isLoading } = useCollection<Workbook>(workbooksQuery);
+
+    const handleDelete = () => {
+        if (!workbookToDelete) return;
+        const workbookRef = doc(firestore, 'workbooks', workbookToDelete.id);
+        deleteDocumentNonBlocking(workbookRef);
+        toast({ title: "Workbook Deleted", description: `"${workbookToDelete.title}" has been removed.` });
+        setWorkbookToDelete(null);
+    };
 
     if (isLoading) {
         return <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -40,21 +56,67 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {workbooks.map(workbook => (
-                <Card key={workbook.id} className="hover:shadow-md transition-shadow cursor-pointer">
-                    <CardHeader>
-                        <CardTitle>{workbook.title}</CardTitle>
-                        <CardDescription>{workbook.description || "No description."}</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                        <p className="text-xs text-muted-foreground">
-                            Created by {workbook.creatorName} on {format(new Date(workbook.createdAt), 'PP')}
-                        </p>
-                    </CardContent>
-                </Card>
-            ))}
-        </div>
+        <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {workbooks.map(workbook => (
+                    <Card key={workbook.id} className="group hover:shadow-md transition-shadow">
+                        <CardHeader className="flex flex-row items-start justify-between">
+                            <div className='flex-1 pr-2'>
+                                <CardTitle className="truncate">{workbook.title}</CardTitle>
+                                <CardDescription className="line-clamp-1">{workbook.description || "No description."}</CardDescription>
+                            </div>
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+                                        <MoreHorizontal className="h-4 w-4" />
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end">
+                                    <DropdownMenuItem onClick={() => setWorkbookToEdit(workbook)}>
+                                        <Edit className="mr-2 h-4 w-4" />
+                                        <span>Edit</span>
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => setWorkbookToDelete(workbook)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                        <Trash2 className="mr-2 h-4 w-4" />
+                                        <span>Delete</span>
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
+                        </CardHeader>
+                        <CardContent>
+                            <p className="text-xs text-muted-foreground">
+                                Created by {workbook.creatorName} on {format(new Date(workbook.createdAt), 'PP')}
+                            </p>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            {workbookToEdit && (
+                <EditWorkbookDialog
+                    open={!!workbookToEdit}
+                    onOpenChange={(isOpen) => !isOpen && setWorkbookToEdit(null)}
+                    workbook={workbookToEdit}
+                />
+            )}
+
+            {workbookToDelete && (
+                <AlertDialog open={!!workbookToDelete} onOpenChange={(isOpen) => !isOpen && setWorkbookToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>
+                                This action cannot be undone. This will permanently delete the workbook "{workbookToDelete.title}".
+                            </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
+        </>
     )
 }
 
