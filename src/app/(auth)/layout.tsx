@@ -10,7 +10,8 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
 
   useEffect(() => {
     if (!isUserLoading && user) {
-      router.replace('/dashboard');
+      // Redirect to the root page to let it handle role-based routing
+      router.replace('/');
     }
   }, [user, isUserLoading, router]);
 
