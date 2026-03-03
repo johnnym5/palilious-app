@@ -19,6 +19,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
 import { SystemConfigForm } from '@/components/company/SystemConfigForm';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 const orgFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
@@ -130,7 +131,11 @@ export default function CompanySettingsPage() {
             <CardDescription>Manage global feature toggles and operational settings.</CardDescription>
             </CardHeader>
             <CardContent>
-                {isLoading ? <Skeleton className="h-96 w-full" /> : (systemConfig ? <SystemConfigForm systemConfig={systemConfig} /> : <p>System configuration not found.</p>)}
+                {isLoading ? <Skeleton className="h-96 w-full" /> : (systemConfig ? (
+                    <ScrollArea className="h-96 pr-6">
+                        <SystemConfigForm systemConfig={systemConfig} />
+                    </ScrollArea>
+                ) : <p>System configuration not found.</p>)}
             </CardContent>
         </Card>
       </div>
