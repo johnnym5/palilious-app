@@ -1,9 +1,150 @@
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
-    match /{document=**} {
-      // This allows anyone to read or write any data forever.
-      allow read, write: if true;
+    
+    // --- Helper Functions ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isSuperAdmin() {
+      return isSignedIn() && request.auth.token.email == 'superadmin@palilious.com';
+    }
+
+    function getUserData(userId) {
+      return get(/databases/$(database)/documents/users/$(userId)).data;
+    }
+
+    function isOrgMember(orgId) {
+      return isSignedIn() && getUserData(request.auth.uid).orgId == orgId;
+    }
+    
+    function getPosition(userId) {
+        return getUserData(userId).position;
+    }
+
+    function isOrgAdmin(orgId) {
+        return isOrgMember(orgId) && getPosition(request.auth.uid) == 'Organization Administrator';
+    }
+
+    function isManager(orgId) {
+        return isOrgMember(orgId) && getPosition(request.auth.uid) in ['Organization Administrator', 'Managing Director', 'HR Manager'];
+    }
+
+    // --- Collection Rules ---
+
+    // Organizations can be read by anyone to facilitate login.
+    // Creation is open for registration.
+    // Updates are restricted to the owner or an org admin.
+    match /organizations/{orgId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn();
+      allow update: if isOrgAdmin(orgId) || isSuperAdmin();
+    }
+    
+    // Feedback can be created by anyone, but only read/updated by super admin.
+    match /feedback/{feedbackId} {
+        allow read, update: if isSuperAdmin();
+        allow create: if true;
+    }
+
+    // Users can be read by anyone in the same org.
+    // Users can update their own profiles.
+    // Admins can create and update users in their org.
+    match /users/{userId} {
+      allow read: if isOrgMember(resource.data.orgId) || isSuperAdmin();
+      allow create: if isManager(request.resource.data.orgId) || isSuperAdmin();
+      allow update: if (request.auth.uid == userId) || isManager(resource.data.orgId) || isSuperAdmin();
+    }
+    
+    // Departments can be read by any org member.
+    // Only admins can modify departments.
+    match /departments/{departmentId} {
+      allow read: if isOrgMember(resource.data.orgId) || isSuperAdmin();
+      allow create, update, delete: if isOrgAdmin(resource.data.orgId) || isSuperAdmin();
+    }
+
+    // System configs are readable by all org members.
+    // Only admins can change them.
+    match /system_configs/{configId} {
+      allow read: if isOrgMember(resource.data.orgId) || isSuperAdmin();
+      allow update: if isOrgAdmin(resource.data.orgId) || isSuperAdmin();
+    }
+
+    // Requisitions can be created by any org member.
+    // Reading and updating are role-based.
+    match /requisitions/{requisitionId} {
+      allow read: if isOrgMember(resource.data.orgId) || isSuperAdmin();
+      allow create: if isOrgMember(request.resource.data.orgId);
+      allow update: if (isManager(resource.data.orgId) || request.auth.uid == resource.data.createdBy) || isSuperAdmin();
+    }
+
+    // Tasks are readable by the assignee, creator, shared users, or managers.
+    // Tasks can be created by any org member.
+    // Updates are restricted to assignee or managers.
+    match /tasks/{taskId} {
+      allow read: if (isOrgMember(resource.data.orgId) && (request.auth.uid == resource.data.assignedTo || request.auth.uid == resource.data.createdBy || resource.data.sharedWith.hasAny([request.auth.uid]) || isManager(resource.data.orgId))) || isSuperAdmin();
+      allow create: if isOrgMember(request.resource.data.orgId);
+      allow update, delete: if (isOrgMember(resource.data.orgId) && (request.auth.uid == resource.data.assignedTo || request.auth.uid == resource.data.createdBy || isManager(resource.data.orgId))) || isSuperAdmin();
+    }
+
+    // Workbooks can be created by any org member.
+    // Read/write access depends on the `visibleTo` and `sharedWith` arrays.
+    match /workbooks/{workbookId} {
+      allow read: if (isSignedIn() && resource.data.visibleTo.hasAny([request.auth.uid])) || isSuperAdmin();
+      allow create: if isOrgMember(request.resource.data.orgId);
+      allow update: if (isSignedIn() && (request.auth.uid == resource.data.createdBy || resource.data.sharedWith.hasAny([request.auth.uid]))) || isSuperAdmin();
+      allow delete: if (isSignedIn() && request.auth.uid == resource.data.createdBy) || isSuperAdmin();
+      
+      // Sheet access is inherited from the parent workbook.
+      match /sheets/{sheetId} {
+        allow read, write: if (isSignedIn() && get(/databases/$(database)/documents/workbooks/$(workbookId)).data.visibleTo.hasAny([request.auth.uid])) || isSuperAdmin();
+      }
+    }
+
+    // Chat messages can only be accessed by participants of the chat.
+    match /chats/{chatId} {
+      allow read, write: if (isSignedIn() && resource.data.participants.hasAny([request.auth.uid])) || isSuperAdmin();
+      
+      match /messages/{messageId} {
+         allow read, write: if (isSignedIn() && get(/databases/$(database)/documents/chats/$(chatId)).data.participants.hasAny([request.auth.uid])) || isSuperAdmin();
+      }
+    }
+
+    // Announcements can be read by any org member.
+    // Only managers can create or modify them.
+    match /announcements/{announcementId} {
+      allow read: if isOrgMember(resource.data.orgId) || isSuperAdmin();
+      allow create, update, delete: if isManager(request.resource.data.orgId) || isSuperAdmin();
+    }
+    
+    // Notifications are private to the assigned user.
+    match /notifications/{notificationId} {
+      allow read, update: if request.auth.uid == resource.data.userId;
+      allow create: if isSignedIn(); // Can be created by the system/other users
+    }
+
+    // Attendance can be created by the user it belongs to.
+    // It can be read by the user or managers.
+    // It can be updated by managers (for approval).
+    match /attendance/{attendanceId} {
+      allow read: if (isOrgMember(resource.data.orgId) && (request.auth.uid == resource.data.userId || isManager(resource.data.orgId))) || isSuperAdmin();
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow update: if (isOrgMember(resource.data.orgId) && (isManager(resource.data.orgId) || request.auth.uid == resource.data.userId)) || isSuperAdmin();
+    }
+    
+    // Leave requests follow similar logic to attendance.
+    match /leave_requests/{leaveRequestId} {
+      allow read: if (isOrgMember(resource.data.orgId) && (request.auth.uid == resource.data.userId || isManager(resource.data.orgId))) || isSuperAdmin();
+      allow create: if request.auth.uid == request.resource.data.userId;
+      allow update: if (isOrgMember(resource.data.orgId) && isManager(resource.data.orgId)) || isSuperAdmin();
+    }
+
+    // Daily reports can be created by the user and read by managers.
+    match /daily_reports/{reportId} {
+        allow read: if (isOrgMember(resource.data.orgId) && (request.auth.uid == resource.data.userId || isManager(resource.data.orgId))) || isSuperAdmin();
+        allow create: if request.auth.uid == request.resource.data.userId;
     }
   }
 }
