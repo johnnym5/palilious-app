@@ -60,6 +60,12 @@ service cloud.firestore {
       allow update: if isSuperAdmin() || request.auth.uid == userId || (isUserInOrg(getUser(userId).data.orgId) && isManager(request.auth.uid));
       allow delete: if isSuperAdmin() || (isUserInOrg(getUser(userId).data.orgId) && isOrgAdmin(request.auth.uid));
     }
+    
+    // Notifications can be created by anyone in the org, but only modified by the recipient.
+    match /notifications/{notificationId} {
+      allow create: if isSuperAdmin() || isUserInOrg(request.resource.data.orgId);
+      allow read, update, delete: if isSuperAdmin() || (resource.data != null && resource.data.userId == request.auth.uid);
+    }
 
     // --- Organization-Scoped Data ---
     // All data below this point requires a user to be signed in and belong to the org.

@@ -189,6 +189,17 @@ export interface ChatMessage {
     timestamp: string; // ISO String for timestamp
 }
 
+export interface Notification {
+  id: string;
+  orgId: string;
+  userId: string; // The user who receives the notification
+  title: string;
+  description: string;
+  href: string; // URL to navigate to on click
+  isRead: boolean;
+  createdAt: string; // ISO String
+}
+
 export type WorkbookRole = "VIEWER" | "EDITOR" | "MANAGER";
 
 export interface Workbook {

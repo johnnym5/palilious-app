@@ -15,7 +15,7 @@ import { useState, useEffect } from "react";
 import { useFirestore, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, UserProfile, ActivityEntry, Permissions } from "@/lib/types";
+import type { Task, UserProfile, ActivityEntry, Permissions, Notification } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
 import { cn, sanitizeInput } from "@/lib/utils";
 import { format } from "date-fns";
@@ -187,7 +187,20 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
             type: 'STANDARD',
         };
 
-        await addDocumentNonBlocking(collection(firestore, 'tasks'), newTask);
+        const taskDocRef = await addDocumentNonBlocking(collection(firestore, 'tasks'), newTask);
+        
+        if (taskDocRef && currentUserProfile.id !== assigneeId) {
+            const notification: Omit<Notification, 'id'> = {
+                orgId: currentUserProfile.orgId,
+                userId: assigneeId,
+                title: 'New Mission Assigned',
+                description: `"${sanitizeInput(values.title)}"`,
+                href: `/tasks?taskId=${taskDocRef.id}`,
+                isRead: false,
+                createdAt: now,
+            };
+            addDocumentNonBlocking(collection(firestore, 'notifications'), notification);
+        }
         
         toast({ title: "Task Assigned", description: `${values.title} has been assigned to ${assignedUser.fullName}.`});
         handleDialogClose();

@@ -13,6 +13,7 @@ import {
   UserProfile,
   ActivityEntry,
   RequisitionStatus,
+  Notification
 } from '@/lib/types'
 import { Permissions } from '@/hooks/usePermissions'
 import { RequisitionStatusBadge } from './RequisitionStatusBadge'
@@ -30,8 +31,8 @@ import {
   Paperclip,
 } from 'lucide-react'
 import { Button } from '../ui/button'
-import { doc, arrayUnion } from 'firebase/firestore'
-import { useFirestore, updateDocumentNonBlocking } from '@/firebase'
+import { doc, arrayUnion, collection } from 'firebase/firestore'
+import { useFirestore, updateDocumentNonBlocking, addDocumentNonBlocking } from '@/firebase'
 import { useToast } from '@/hooks/use-toast'
 import {
   AlertDialog,
@@ -172,6 +173,20 @@ export function RequisitionDetailDialog({
       status: nextStatus,
       activity: arrayUnion(activityEntry),
     })
+
+    // Add notification for the creator
+    if (currentUserProfile.id !== requisition.createdBy) {
+      const notification: Omit<Notification, 'id'> = {
+          orgId: requisition.orgId,
+          userId: requisition.createdBy,
+          title: `Requisition Updated`,
+          description: `"${requisition.title}" is now ${nextStatus.replace(/_/g, ' ')}.`,
+          href: `/requisitions?reqId=${requisition.id}`,
+          isRead: false,
+          createdAt: new Date().toISOString(),
+      };
+      addDocumentNonBlocking(collection(firestore, 'notifications'), notification);
+    }
 
     toast({ title: 'Success', description: 'Requisition status has been updated.' })
     setIsSubmitting(false);

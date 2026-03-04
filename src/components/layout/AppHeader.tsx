@@ -14,6 +14,7 @@ import type { UserProfile } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { UniversalSearch } from './UniversalSearch';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Notifications } from './Notifications';
 
 
 export default function AppHeader() {
@@ -56,7 +57,7 @@ export default function AppHeader() {
       <div className="flex-1">
         {userProfile && <UniversalSearch userProfile={userProfile} />}
       </div>
-      <div className='flex items-center gap-4'>
+      <div className='flex items-center gap-2'>
         <div className='hidden sm:flex items-center gap-2 text-muted-foreground'>
             <Clock className='h-4 w-4' />
             {currentTime ? (
@@ -65,6 +66,7 @@ export default function AppHeader() {
               <Skeleton className="h-4 w-40" />
             )}
         </div>
+        <Notifications />
         <ThemeToggle />
         <UserNav />
       </div>

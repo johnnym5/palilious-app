@@ -440,6 +440,21 @@
         "status": { "type": "string", "enum": ["NEW", "READ"] }
       },
       "required": ["organizationName", "name", "contactInfo", "message", "createdAt", "status"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "type": "object",
+      "description": "Represents an in-app notification for a user.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "userId": { "type": "string", "description": "The ID of the user who should receive the notification." },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "href": { "type": "string", "description": "The URL the notification should link to." },
+        "isRead": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "userId", "title", "href", "isRead", "createdAt"]
     }
   },
   "auth": {
@@ -643,6 +658,22 @@
                 {
                     "name": "feedbackId",
                     "description": "The unique ID for the feedback."
+                }
+            ]
+        }
+    },
+    {
+        "path": "/notifications/{notificationId}",
+        "definition": {
+            "entityName": "Notification",
+            "schema": {
+                "$ref": "#/entities/Notification"
+            },
+            "description": "Stores in-app user notifications.",
+            "params": [
+                {
+                    "name": "notificationId",
+                    "description": "The notification's unique ID."
                 }
             ]
         }
