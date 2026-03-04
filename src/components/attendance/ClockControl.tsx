@@ -4,13 +4,15 @@ import { useState, useEffect } from "react";
 import { Button } from "../ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../ui/card";
 import { format, differenceInSeconds } from 'date-fns';
-import { Clock, Loader2, LogIn, LogOut, ShieldQuestion } from "lucide-react";
-import type { UserProfile, Attendance, SystemConfig } from "@/lib/types";
+import { Clock, Loader2, LogIn, LogOut, ShieldQuestion, Building, Briefcase } from "lucide-react";
+import type { UserProfile, Attendance, SystemConfig, AttendanceLocation } from "@/lib/types";
 import type { Permissions } from "@/hooks/usePermissions";
 import { useFirestore, useCollection, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, limit, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "../ui/skeleton";
+import { RadioGroup, RadioGroupItem } from "../ui/radio-group";
+import { Label } from "../ui/label";
 
 interface ClockControlProps {
   userProfile: UserProfile | null;
@@ -27,6 +29,7 @@ export function ClockControl({ userProfile, permissions, systemConfig }: ClockCo
     const [shiftDuration, setShiftDuration] = useState("00:00:00");
     const [today, setToday] = useState<string>('');
     const [dateDisplay, setDateDisplay] = useState('');
+    const [location, setLocation] = useState<AttendanceLocation>('OFFICE');
     
     useEffect(() => {
         // Set date on client side to avoid hydration mismatch
@@ -109,6 +112,7 @@ export function ClockControl({ userProfile, permissions, systemConfig }: ClockCo
                 date: todayDateString,
                 clockIn: now.toISOString(),
                 status: 'PENDING',
+                location,
                 remarks,
             };
 
@@ -223,15 +227,33 @@ export function ClockControl({ userProfile, permissions, systemConfig }: ClockCo
                         }
                     </>
                 ) : (
-                    <Button
-                        size="lg"
-                        className="w-full h-20 text-lg bg-emerald-600 hover:bg-emerald-700"
-                        disabled={isSubmitting}
-                        onClick={handleClockIn}
-                    >
-                        {isSubmitting ? <Loader2 className="animate-spin"/> : <LogIn />}
-                        Clock In
-                    </Button>
+                    <>
+                        <RadioGroup
+                            defaultValue="OFFICE"
+                            onValueChange={(value: AttendanceLocation) => setLocation(value)}
+                            className="grid grid-cols-2 gap-4 mb-4"
+                        >
+                            <Label htmlFor="office" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                <RadioGroupItem value="OFFICE" id="office" className="sr-only" />
+                                <Building className="mb-3 h-6 w-6" />
+                                In Office
+                            </Label>
+                            <Label htmlFor="remote" className="flex flex-col items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-primary [&:has([data-state=checked])]:border-primary cursor-pointer">
+                                <RadioGroupItem value="REMOTE" id="remote" className="sr-only" />
+                                <Briefcase className="mb-3 h-6 w-6" />
+                                Remote
+                            </Label>
+                        </RadioGroup>
+                        <Button
+                            size="lg"
+                            className="w-full h-20 text-lg bg-emerald-600 hover:bg-emerald-700"
+                            disabled={isSubmitting}
+                            onClick={handleClockIn}
+                        >
+                            {isSubmitting ? <Loader2 className="animate-spin"/> : <LogIn />}
+                            Clock In
+                        </Button>
+                    </>
                 )}
             </CardContent>
         </Card>

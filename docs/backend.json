@@ -74,7 +74,8 @@
                 "canAccessRequisitions": { "type": "boolean" },
                 "canAccessChat": { "type": "boolean" },
                 "canAccessAllTasks": { "type": "boolean" },
-                "canAccessAllWorkbooks": { "type": "boolean" }
+                "canAccessAllWorkbooks": { "type": "boolean" },
+                "canManageAnnouncements": { "type": "boolean" }
             }
         }
       },
@@ -127,6 +128,11 @@
           "format": "date-time",
           "description": "The ISO timestamp when the user clocked out."
         },
+        "location": {
+            "type": "string",
+            "enum": ["OFFICE", "REMOTE"],
+            "description": "The location where the user clocked in from."
+        },
         "status": {
             "type": "string",
             "enum": ["PENDING", "APPROVED", "REJECTED"],
@@ -168,7 +174,8 @@
         "orgId",
         "date",
         "clockIn",
-        "status"
+        "status",
+        "location"
       ]
     },
     "Requisition": {

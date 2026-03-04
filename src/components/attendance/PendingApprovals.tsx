@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { Button } from "../ui/button";
 import { Check, X } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "../ui/badge";
 
 interface PendingApprovalsProps {
   userProfile: UserProfile;
@@ -62,18 +63,19 @@ export function PendingApprovals({ userProfile }: PendingApprovalsProps) {
             <TableRow>
               <TableHead>Staff Member</TableHead>
               <TableHead>Clock-In Time</TableHead>
+              <TableHead>Location</TableHead>
               <TableHead className="text-right">Actions</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && Array.from({ length: 3 }).map((_, i) => (
               <TableRow key={i}>
-                <TableCell colSpan={3}><Skeleton className="h-6 w-full" /></TableCell>
+                <TableCell colSpan={4}><Skeleton className="h-6 w-full" /></TableCell>
               </TableRow>
             ))}
             {!isLoading && pendingRecords?.length === 0 && (
               <TableRow>
-                  <TableCell colSpan={3} className="h-24 text-center">
+                  <TableCell colSpan={4} className="h-24 text-center">
                       No pending approvals.
                   </TableCell>
               </TableRow>
@@ -82,6 +84,9 @@ export function PendingApprovals({ userProfile }: PendingApprovalsProps) {
               <TableRow key={record.id}>
                 <TableCell className="font-medium">{record.userName}</TableCell>
                 <TableCell>{format(new Date(record.clockIn), 'PPP, p')}</TableCell>
+                <TableCell>
+                  <Badge variant="secondary" className="capitalize">{record.location?.toLowerCase()}</Badge>
+                </TableCell>
                 <TableCell className="text-right space-x-2">
                     <Button variant="ghost" size="icon" className="text-destructive/80 hover:text-destructive" onClick={() => handleDecision(record, 'REJECTED')}>
                         <X className="h-4 w-4" />

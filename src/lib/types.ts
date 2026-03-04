@@ -64,6 +64,7 @@ export interface UserProfile {
 }
 
 export type AttendanceStatus = "PENDING" | "APPROVED" | "REJECTED";
+export type AttendanceLocation = "OFFICE" | "REMOTE";
 
 export interface Attendance {
     id: string;
@@ -74,6 +75,7 @@ export interface Attendance {
     clockIn: string; // ISO String for timestamp
     clockOut?: string; // ISO String for timestamp
     status: AttendanceStatus;
+    location: AttendanceLocation;
     approvedBy?: string; // userId
     approvedAt?: string; // ISO String
     remarks?: Array<'EARLY' | 'LATE' | 'OVERTIME' | 'UNDERTIME'>;

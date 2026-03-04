@@ -58,18 +58,19 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
               <TableHead>Clock In</TableHead>
               <TableHead>Clock Out</TableHead>
               <TableHead>Duration</TableHead>
+              <TableHead>Location</TableHead>
               <TableHead className="text-right">Remarks</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading && Array.from({ length: 5 }).map((_, i) => (
               <TableRow key={i}>
-                <TableCell colSpan={5}><Skeleton className="h-6 w-full" /></TableCell>
+                <TableCell colSpan={6}><Skeleton className="h-6 w-full" /></TableCell>
               </TableRow>
             ))}
             {!isLoading && attendanceHistory?.length === 0 && (
               <TableRow>
-                  <TableCell colSpan={5} className="h-24 text-center">
+                  <TableCell colSpan={6} className="h-24 text-center">
                       No attendance history found.
                   </TableCell>
               </TableRow>
@@ -80,6 +81,9 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
                 <TableCell>{format(new Date(record.clockIn), 'p')}</TableCell>
                 <TableCell>{record.clockOut ? format(new Date(record.clockOut), 'p') : '—'}</TableCell>
                 <TableCell className="font-mono">{calculateDuration(record.clockIn, record.clockOut)}</TableCell>
+                <TableCell>
+                  <Badge variant="outline" className="capitalize">{record.location?.toLowerCase()}</Badge>
+                </TableCell>
                 <TableCell className="text-right space-x-1">
                     {record.remarks?.map(remark => (
                         <Badge key={remark} variant="secondary" className={cn(
