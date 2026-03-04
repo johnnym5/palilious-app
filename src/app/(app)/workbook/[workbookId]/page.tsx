@@ -18,6 +18,16 @@ import { RenameSheetDialog } from '@/components/workbook/RenameSheetDialog';
 import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
 import { usePermissions } from '@/hooks/usePermissions';
 
+
+// This function is required for static exports of dynamic routes.
+// Since workbook IDs are dynamic and fetched from Firestore,
+// we cannot know them at build time. Returning an empty array
+// means no workbook pages will be pre-generated. Navigation to
+// these pages will be handled on the client-side.
+export async function generateStaticParams() {
+    return [];
+}
+
 interface WorkbookPermissions {
     canView: boolean;
     canEdit: boolean;

@@ -23,7 +23,7 @@ let persistenceEnabled = false;
 export function getSdks(firebaseApp: FirebaseApp) {
   const firestore = getFirestore(firebaseApp);
 
-  if (!persistenceEnabled) {
+  if (typeof window !== 'undefined' && !persistenceEnabled) {
     persistenceEnabled = true; // Attempt only once
     enableIndexedDbPersistence(firestore)
       .catch((err) => {
