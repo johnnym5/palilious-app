@@ -12,6 +12,7 @@ import { LeaveBalanceCard } from "@/components/leave/LeaveBalanceCard";
 import { MyLeaveHistory } from "@/components/leave/MyLeaveHistory";
 import { RequestLeaveDialog } from "@/components/leave/RequestLeaveDialog";
 import { PendingLeaveApprovals } from "@/components/leave/PendingLeaveApprovals";
+import { TeamLeaveCalendar } from "@/components/leave/TeamLeaveCalendar";
 
 export default function LeavePage() {
   const { user: authUser } = useUser();
@@ -57,18 +58,24 @@ export default function LeavePage() {
           )}
        </div>
       
-      {permissions.canApproveHR ? (
+      {permissions.canManageStaff ? (
         <Tabs defaultValue="my-leave">
           <TabsList>
             <TabsTrigger value="my-leave">My Leave</TabsTrigger>
-            <TabsTrigger value="approvals">Team Requests</TabsTrigger>
+            {permissions.canApproveHR && <TabsTrigger value="approvals">Team Requests</TabsTrigger>}
+            <TabsTrigger value="calendar">Team Calendar</TabsTrigger>
           </TabsList>
           <TabsContent value="my-leave" className="mt-4 space-y-6">
               <LeaveBalanceCard />
               {userProfile && <MyLeaveHistory userProfile={userProfile} />}
           </TabsContent>
-          <TabsContent value="approvals" className="mt-4">
-              {userProfile && <PendingLeaveApprovals userProfile={userProfile} />}
+          {permissions.canApproveHR && (
+            <TabsContent value="approvals" className="mt-4">
+                {userProfile && <PendingLeaveApprovals userProfile={userProfile} />}
+            </TabsContent>
+          )}
+           <TabsContent value="calendar" className="mt-4">
+              {userProfile && <TeamLeaveCalendar userProfile={userProfile} />}
           </TabsContent>
         </Tabs>
       ) : (
