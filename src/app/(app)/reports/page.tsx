@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from 'next/navigation';
 import { ShieldAlert } from "lucide-react";
 import { FinancialReport } from '@/components/reports/FinancialReport';
+import { AttendanceReport } from "@/components/reports/AttendanceReport";
 
 export default function ReportsPage() {
   const { user: authUser } = useUser();
@@ -43,6 +44,7 @@ export default function ReportsPage() {
       </div>
       <div className="grid gap-6 lg:grid-cols-1 items-start">
         {userProfile && <FinancialReport userProfile={userProfile} />}
+        {userProfile && <AttendanceReport userProfile={userProfile} />}
       </div>
     </div>
   );
