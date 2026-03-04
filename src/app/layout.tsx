@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: 'Palilious',
   description: 'Staff Internal Control & Automation',
   manifest: '/manifest.json',
+  icons: null,
 };
 
 export const viewport: Viewport = {
