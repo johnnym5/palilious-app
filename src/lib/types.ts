@@ -136,7 +136,6 @@ export interface Task {
   createdBy: string; // userId
   activity: ActivityEntry[];
   createdAt: string; // ISO string
-  attachmentUrl?: string;
   workbookId?: string;
   sheetId?: string;
   sharedWith?: string[];

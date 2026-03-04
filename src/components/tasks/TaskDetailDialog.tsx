@@ -11,7 +11,7 @@ import {
 import type { Task, UserProfile, ActivityEntry, SubTask } from '@/lib/types';
 import type { Permissions } from '@/hooks/usePermissions';
 import { format } from 'date-fns';
-import { Calendar, CheckSquare, History, Info, Link as LinkIcon, User, Plus, Trash2, Share2, Pencil, BookOpenCheck } from 'lucide-react';
+import { Calendar, CheckSquare, History, Info, BookOpenCheck, User, Plus, Trash2, Share2, Pencil } from 'lucide-react';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
@@ -89,7 +89,6 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
         type: 'COMMENT',
         actorId: currentUserProfile.id,
         actorName: currentUserProfile.fullName,
-        actorAvatarUrl: currentUserProfile.avatarURL || '',
         timestamp: new Date().toISOString(),
         text: commentText,
     };
@@ -194,22 +193,13 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                   {task.dueDate ? format(new Date(task.dueDate), 'PP') : 'N/A'}
                 </span>
               </div>
-               {task.workbookId ? (
+               {task.workbookId && (
                  <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2 text-muted-foreground">
                       <BookOpenCheck className="h-4 w-4" /> Workbook
                     </span>
                     <Link href={`/workbook/${task.workbookId}`} onClick={() => onOpenChange(false)} className='font-medium text-primary hover:underline truncate max-w-[100px]'>
                         View Sheet
-                    </Link>
-                  </div>
-               ) : task.attachmentUrl && (
-                  <div className="flex items-center justify-between">
-                    <span className="flex items-center gap-2 text-muted-foreground">
-                      <LinkIcon className="h-4 w-4" /> Document
-                    </span>
-                    <Link href={task.attachmentUrl} target="_blank" rel="noopener noreferrer" className='font-medium text-primary hover:underline truncate max-w-[100px]'>
-                        View File
                     </Link>
                   </div>
                )}

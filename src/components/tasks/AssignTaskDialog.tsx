@@ -10,17 +10,15 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Loader2, Paperclip } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFirestore, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, UserProfile, ActivityEntry, Permissions, Notification } from "@/lib/types";
+import type { Task, UserProfile, ActivityEntry, Permissions, Notification, Workbook, Sheet } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn, sanitizeInput } from "@/lib/utils";
 import { format } from "date-fns";
-import { useFileUpload } from "@/hooks/useFileUpload";
-import { Progress } from "../ui/progress";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
@@ -28,7 +26,8 @@ const formSchema = z.object({
   assignedTo: z.string().optional(),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
   dueDate: z.date().optional(),
-  attachment: z.custom<File>().optional(),
+  workbookId: z.string().optional(),
+  sheetId: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -50,15 +49,16 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
-  const { isUploading, uploadProgress, uploadFile } = useFileUpload();
-  const [fileName, setFileName] = useState<string | null>(null);
-
-  const isBusy = isLoading || isUploading;
 
   const usersQuery = useMemoFirebase(() => 
     currentUserProfile ? query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId)) : null
   , [firestore, currentUserProfile]);
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
+
+  const workbooksQuery = useMemoFirebase(() => 
+    currentUserProfile ? query(collection(firestore, 'workbooks'), where('orgId', '==', currentUserProfile.orgId)) : null
+  , [firestore, currentUserProfile]);
+  const { data: workbooks, isLoading: areWorkbooksLoading } = useCollection<Workbook>(workbooksQuery);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -66,21 +66,19 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
       title: "",
       description: "",
       priority: "LEVEL_1",
-      attachment: undefined,
     },
   });
 
-  const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      form.setValue('attachment', file);
-      setFileName(file.name);
-    }
-  };
+  const selectedWorkbookId = form.watch('workbookId');
+
+  const sheetsQuery = useMemoFirebase(() =>
+      selectedWorkbookId ? query(collection(firestore, `workbooks/${selectedWorkbookId}/sheets`)) : null
+  , [firestore, selectedWorkbookId]);
+  const { data: sheets, isLoading: areSheetsLoading } = useCollection<Sheet>(sheetsQuery);
+
 
   const handleDialogClose = () => {
     form.reset();
-    setFileName(null);
     onOpenChange(false);
   }
 
@@ -90,11 +88,11 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
             title: initialData?.title || "",
             description: initialData?.description || "",
             priority: "LEVEL_1",
-            attachment: undefined,
             assignedTo: undefined,
             dueDate: undefined,
+            workbookId: initialData?.workbookId,
+            sheetId: initialData?.sheetId,
         });
-        setFileName(null);
     }
   }, [initialData, open, form]);
 
@@ -148,12 +146,6 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
     setIsLoading(true);
 
     try {
-        let attachmentUrl: string | undefined = undefined;
-        if (values.attachment) {
-            const filePath = `tasks/${currentUserProfile.orgId}/${Date.now()}_${values.attachment.name}`;
-            attachmentUrl = await uploadFile(values.attachment, filePath);
-        }
-
         const now = new Date().toISOString();
         const initialActivity: ActivityEntry = {
             type: 'LOG',
@@ -177,9 +169,8 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
             createdBy: currentUserProfile.id,
             activity: [initialActivity],
             createdAt: now,
-            attachmentUrl: attachmentUrl,
-            workbookId: initialData?.workbookId,
-            sheetId: initialData?.sheetId,
+            workbookId: values.workbookId || initialData?.workbookId,
+            sheetId: values.sheetId || initialData?.sheetId,
             sharedWith: [],
             subTasks: [],
             type: 'STANDARD',
@@ -228,26 +219,27 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
                 )} />
                 
                 {!initialData?.workbookId && (
-                     <FormField
-                        control={form.control}
-                        name="attachment"
-                        render={({ field }) => (
-                            <FormItem>
-                                <FormLabel>Attachment (Optional)</FormLabel>
-                                <FormControl>
-                                    <Input id="task-attachment-file" type="file" className="hidden" onChange={handleFileChange} disabled={isBusy} />
-                                </FormControl>
-                                <label htmlFor="task-attachment-file" className="flex items-center gap-2 text-sm text-muted-foreground cursor-pointer border p-2 rounded-md hover:bg-accent transition-colors">
-                                    <Paperclip className="h-4 w-4" />
-                                    <span className="truncate">{fileName || 'Upload a file'}</span>
-                                </label>
-                                <FormMessage />
-                            </FormItem>
+                     <div className="space-y-2">
+                        <FormField control={form.control} name="workbookId" render={({ field }) => (
+                            <FormItem><FormLabel>Attach Workbook (Optional)</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl><SelectTrigger disabled={areWorkbooksLoading}><SelectValue placeholder="Select a workbook" /></SelectTrigger></FormControl>
+                                <SelectContent>{workbooks?.map(wb => <SelectItem key={wb.id} value={wb.id}>{wb.title}</SelectItem>)}</SelectContent>
+                            </Select>
+                            <FormMessage /></FormItem>
+                        )} />
+                        {selectedWorkbookId && (
+                             <FormField control={form.control} name="sheetId" render={({ field }) => (
+                                <FormItem>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                    <FormControl><SelectTrigger disabled={areSheetsLoading}><SelectValue placeholder="Select a sheet" /></SelectTrigger></FormControl>
+                                    <SelectContent>{sheets?.map(sh => <SelectItem key={sh.id} value={sh.id}>{sh.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                                <FormMessage /></FormItem>
+                            )} />
                         )}
-                    />
+                     </div>
                 )}
-                 {isUploading && <Progress value={uploadProgress} className="w-full h-2" />}
-
 
                 <div className="grid grid-cols-2 gap-4">
                     {permissions.canManageStaff && (
@@ -291,8 +283,8 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
                     <FormMessage /></FormItem>
                  )} />
 
-                <Button type="submit" className="w-full" disabled={isBusy}>
-                    {isBusy && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Button type="submit" className="w-full" disabled={isLoading}>
+                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     {permissions.canManageStaff ? 'Assign Mission' : 'Create Mission'}
                 </Button>
             </form>
