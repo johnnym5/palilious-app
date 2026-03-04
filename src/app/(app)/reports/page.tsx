@@ -4,16 +4,16 @@ import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Button } from "@/components/ui/button";
-import { useRouter } from 'next/navigation';
-import { ShieldAlert } from "lucide-react";
 import { FinancialReport } from '@/components/reports/FinancialReport';
 import { AttendanceReport } from "@/components/reports/AttendanceReport";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { SubmitDailyReport } from "@/components/reports/SubmitDailyReport";
+import { MyDailyReports } from "@/components/reports/MyDailyReports";
+import { TeamDailyReports } from "@/components/reports/TeamDailyReports";
 
 export default function ReportsPage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null,
@@ -25,27 +25,35 @@ export default function ReportsPage() {
     return <Skeleton className="h-screen w-full" />
   }
 
-  if (!isProfileLoading && !permissions.canManageStaff) {
-      return (
-           <div className="flex flex-col items-center justify-center h-full text-center p-8">
-              <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-              <h1 className="text-2xl font-bold font-headline">Access Denied</h1>
-              <p className="text-muted-foreground mt-2">You do not have permission to view reports.</p>
-              <Button onClick={() => router.push('/dashboard')} className="mt-6">Return to Dashboard</Button>
-            </div>
-      )
-  }
-  
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Reports & Analytics</h1>
-        <p className="text-muted-foreground">Visualize your organization's performance and key metrics.</p>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Reports</h1>
+        <p className="text-muted-foreground">
+            {permissions.canManageStaff ? "Analyze performance and review team reports." : "Submit your daily report and view your history."}
+        </p>
       </div>
-      <div className="grid gap-6 lg:grid-cols-1 items-start">
-        {userProfile && <FinancialReport userProfile={userProfile} />}
-        {userProfile && <AttendanceReport userProfile={userProfile} />}
-      </div>
+
+      {permissions.canManageStaff ? (
+        <Tabs defaultValue="analytics">
+          <TabsList className="grid grid-cols-2">
+            <TabsTrigger value="analytics">Analytics</TabsTrigger>
+            <TabsTrigger value="team-reports">Team Reports</TabsTrigger>
+          </TabsList>
+          <TabsContent value="analytics" className="mt-4 space-y-6">
+            {userProfile && <FinancialReport userProfile={userProfile} />}
+            {userProfile && <AttendanceReport userProfile={userProfile} />}
+          </TabsContent>
+          <TabsContent value="team-reports" className="mt-4">
+            {userProfile && <TeamDailyReports userProfile={userProfile} />}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="grid gap-6 lg:grid-cols-2 items-start">
+            {userProfile && <SubmitDailyReport userProfile={userProfile} />}
+            {userProfile && <MyDailyReports userProfile={userProfile} />}
+        </div>
+      )}
     </div>
   );
 }

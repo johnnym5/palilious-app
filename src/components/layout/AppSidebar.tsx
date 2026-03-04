@@ -19,7 +19,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Avatar, AvatarFallback } from "../ui/avatar";
 import { useAuth, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import type { UserProfile, Organization } from "@/lib/types";
@@ -38,11 +38,11 @@ const mainNavItems = [
   { href: "/tasks", icon: ListTodo, label: "Tasks" },
   { href: "/workbook", icon: BookOpenCheck, label: "Workbook" },
   { href: "/chat", icon: MessagesSquare, label: "Chat" },
+  { href: "/reports", icon: BarChart, label: "Reports" },
 ];
 
 const adminNavItems = [
-    { href: "/company", icon: Settings, label: "Settings", permission: 'canManageCompany' },
-    { href: "/reports", icon: BarChart, label: "Reports", permission: 'canManageStaff' },
+    { href: "/settings", icon: Settings, label: "Settings", permission: 'canManageCompany' },
 ] as const;
 
 export default function AppSidebar({ isMobile = false }) {
@@ -112,16 +112,8 @@ export default function AppSidebar({ isMobile = false }) {
           
           {isProfileLoading || isConfigLoading ? <Skeleton className="h-8 w-full" /> : (
             userProfile && adminNavItems
-              .filter(item => {
-                  if (item.permission === 'canManageStaff') {
-                      // ORG_ADMIN can always see this. Others depend on the toggle.
-                      return userProfile.position === 'Organization Administrator' || (systemConfig?.admin_tools && permissions.canManageStaff);
-                  }
-                  return permissions[item.permission];
-              })
-              .map((item) => (
-                  <NavLink key={item.href} {...item} />
-              ))
+              .filter(item => permissions[item.permission])
+              .map((item) => <NavLink key={item.href} {...item} />)
           )}
         </nav>
 
@@ -131,7 +123,6 @@ export default function AppSidebar({ isMobile = false }) {
                   <Skeleton className="h-10 w-10 rounded-full" />
                 ) : (
                   <Avatar className="h-10 w-10">
-                      
                       <AvatarFallback>{userProfile?.fullName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                 )}

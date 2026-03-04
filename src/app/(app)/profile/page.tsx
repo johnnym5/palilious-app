@@ -5,7 +5,7 @@ import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,6 +19,7 @@ import { useToast } from '@/hooks/use-toast';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { usePermissions, Permissions } from '@/hooks/usePermissions';
 import { Switch } from '@/components/ui/switch';
+import { Label } from '@/components/ui/label';
 
 const profileFormSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -257,7 +258,6 @@ export default function ProfilePage() {
             <Skeleton className="h-24 w-24 rounded-full" />
         ) : (
             <Avatar className="h-24 w-24 border-2 border-primary">
-                
                 <AvatarFallback className="text-3xl">{userProfile?.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
             </Avatar>
         )}

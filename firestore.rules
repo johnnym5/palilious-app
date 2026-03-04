@@ -92,6 +92,11 @@ service cloud.firestore {
      match /departments/{deptId} {
       allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
     }
+    match /daily_reports/{reportId} {
+      allow create: if isUserInOrg(request.resource.data.orgId);
+      allow read: if isUserInOrg(resource.data.orgId) && (isManager(request.auth.uid) || resource.data.userId == request.auth.uid);
+      allow update, delete: if isUserInOrg(resource.data.orgId) && resource.data.userId == request.auth.uid;
+    }
     
     // Chats are only accessible by participants
     match /chats/{chatId} {

@@ -490,6 +490,31 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["orgId", "userId", "userName", "leaveType", "startDate", "endDate", "reason", "status", "createdAt"]
+    },
+    "DailyReport": {
+      "title": "Daily Report",
+      "type": "object",
+      "description": "A daily work report submitted by a staff member.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "reportDate": { "type": "string", "format": "date" },
+        "content": { "type": "string", "description": "The main content of the report." },
+        "completedTasks": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "taskId": { "type": "string" },
+                    "title": { "type": "string" }
+                },
+                "required": ["taskId", "title"]
+            }
+        },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "userId", "userName", "reportDate", "content", "createdAt"]
     }
   },
   "auth": {
@@ -725,6 +750,22 @@
           {
             "name": "leaveRequestId",
             "description": "The unique ID for the leave request."
+          }
+        ]
+      }
+    },
+    {
+      "path": "/daily_reports/{reportId}",
+      "definition": {
+        "entityName": "DailyReport",
+        "schema": {
+          "$ref": "#/entities/DailyReport"
+        },
+        "description": "Stores daily reports submitted by users.",
+        "params": [
+          {
+            "name": "reportId",
+            "description": "The unique ID for the daily report."
           }
         ]
       }
