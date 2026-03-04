@@ -30,7 +30,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Calendar } from '../ui/calendar';
+import { format } from 'date-fns';
 
 interface SheetDataTableProps {
   sheet: Sheet;
@@ -240,6 +242,30 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                                                                 {columnConfig.selectOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
                                                             </SelectContent>
                                                         </Select>
+                                                    ) : columnConfig?.type === 'date' ? (
+                                                         <Popover open={true} onOpenChange={() => setEditingCell(null)}>
+                                                            <PopoverTrigger asChild>
+                                                                <Button variant="outline" className="h-8 -mx-2 -my-1 w-full justify-start text-left font-normal">
+                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
+                                                                    {row[header] ? format(new Date(row[header]), 'PPP') : <span>Pick a date</span>}
+                                                                </Button>
+                                                            </PopoverTrigger>
+                                                            <PopoverContent className="w-auto p-0">
+                                                                <Calendar
+                                                                    mode="single"
+                                                                    selected={row[header] ? new Date(row[header]) : undefined}
+                                                                    onSelect={(date) => {
+                                                                        const isoDate = date?.toISOString();
+                                                                        handleCellUpdate(rowIndex, header, isoDate);
+                                                                        const newData = [...data];
+                                                                        newData[rowIndex][header] = isoDate;
+                                                                        saveChanges({ data: newData }, 'Cell updated.');
+                                                                        setEditingCell(null);
+                                                                    }}
+                                                                    initialFocus
+                                                                />
+                                                            </PopoverContent>
+                                                        </Popover>
                                                     ) : (
                                                         <Input
                                                             autoFocus
@@ -253,7 +279,11 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                                                     )}
                                                 </>
                                             ) : (
-                                                <span className="block min-h-[2rem] py-2 truncate">{row[header]}</span>
+                                                <span className="block min-h-[2rem] py-2 truncate">
+                                                    {columnConfig?.type === 'date' && row[header]
+                                                        ? format(new Date(row[header]), 'PPP')
+                                                        : row[header]}
+                                                </span>
                                             )}
                                         </TableCell>
                                     )})}
