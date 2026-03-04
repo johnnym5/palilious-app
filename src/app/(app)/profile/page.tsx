@@ -18,6 +18,7 @@ import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { usePermissions, Permissions } from '@/hooks/usePermissions';
+import { Switch } from '@/components/ui/switch';
 
 const profileFormSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -160,6 +161,84 @@ function PasswordChangeForm() {
     )
 }
 
+function PreferencesForm({ userProfile }: { userProfile: UserProfile }) {
+    const firestore = useFirestore();
+    const { toast } = useToast();
+
+    const handleNotificationChange = (key: 'requisitionUpdates' | 'taskAssignments' | 'announcements', value: boolean) => {
+        const userRef = doc(firestore, 'users', userProfile.id);
+        const updatePath = `notificationPreferences.${key}`;
+        
+        updateDocumentNonBlocking(userRef, {
+            [updatePath]: value
+        });
+
+        toast({ title: "Settings Saved", description: "Your notification preferences have been updated." });
+    };
+
+    return (
+        <div className="space-y-8">
+            <div className="space-y-4">
+                <h3 className="text-lg font-medium">Notifications</h3>
+                <div className="space-y-4 rounded-lg border p-4">
+                    <div className="flex flex-row items-center justify-between">
+                        <Label htmlFor="requisition-updates" className="flex flex-col space-y-1">
+                            <span>Requisition Updates</span>
+                            <span className="font-normal leading-snug text-muted-foreground">
+                                Get notified about status changes to your requisitions.
+                            </span>
+                        </Label>
+                        <Switch 
+                            id="requisition-updates"
+                            checked={userProfile.notificationPreferences?.requisitionUpdates ?? false}
+                            onCheckedChange={(checked) => handleNotificationChange('requisitionUpdates', checked)}
+                        />
+                    </div>
+                     <div className="flex flex-row items-center justify-between">
+                        <Label htmlFor="task-assignments" className="flex flex-col space-y-1">
+                            <span>Task Assignments</span>
+                            <span className="font-normal leading-snug text-muted-foreground">
+                                Get notified when a new task is assigned to you.
+                            </span>
+                        </Label>
+                        <Switch 
+                            id="task-assignments" 
+                            checked={userProfile.notificationPreferences?.taskAssignments ?? false}
+                            onCheckedChange={(checked) => handleNotificationChange('taskAssignments', checked)}
+                        />
+                    </div>
+                     <div className="flex flex-row items-center justify-between">
+                        <Label htmlFor="announcements" className="flex flex-col space-y-1">
+                            <span>New Announcements</span>
+                            <span className="font-normal leading-snug text-muted-foreground">
+                                Get notified when your organization posts an announcement.
+                            </span>
+                        </Label>
+                        <Switch 
+                            id="announcements" 
+                            checked={userProfile.notificationPreferences?.announcements ?? false}
+                            onCheckedChange={(checked) => handleNotificationChange('announcements', checked)}
+                        />
+                    </div>
+                </div>
+            </div>
+             <div className="space-y-4">
+                <h3 className="text-lg font-medium">Appearance</h3>
+                 <div className="space-y-4 rounded-lg border p-4">
+                    <div className="flex flex-row items-center justify-between">
+                        <Label htmlFor="theme" className="flex flex-col space-y-1">
+                            <span>Theme</span>
+                            <span className="font-normal leading-snug text-muted-foreground">
+                                Change the application theme in the top right corner.
+                            </span>
+                        </Label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    )
+}
+
 export default function ProfilePage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
@@ -198,9 +277,10 @@ export default function ProfilePage() {
       </div>
       
       <Tabs defaultValue="profile" className="w-full">
-        <TabsList className='grid w-full grid-cols-2 max-w-md'>
-          <TabsTrigger value="profile">Profile Details</TabsTrigger>
+        <TabsList className='grid w-full grid-cols-3 max-w-lg'>
+          <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
+          <TabsTrigger value="preferences">Preferences</TabsTrigger>
         </TabsList>
         <TabsContent value="profile">
           <Card>
@@ -221,6 +301,26 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
                <PasswordChangeForm />
+            </CardContent>
+          </Card>
+        </TabsContent>
+         <TabsContent value="preferences">
+           <Card>
+            <CardHeader>
+              <CardTitle>My Preferences</CardTitle>
+              <CardDescription>Customize your Palilious experience.</CardDescription>
+            </CardHeader>
+            <CardContent>
+               {isProfileLoading ? (
+                    <div className="space-y-8">
+                         <Skeleton className="h-24 w-full" />
+                         <Skeleton className="h-12 w-full" />
+                    </div>
+                ): userProfile ? (
+                    <PreferencesForm userProfile={userProfile} />
+                ) : (
+                    <p className="text-muted-foreground">Could not load user settings.</p>
+                )}
             </CardContent>
           </Card>
         </TabsContent>

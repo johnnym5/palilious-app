@@ -41,8 +41,7 @@ const mainNavItems = [
 ];
 
 const adminNavItems = [
-    { href: "/team", icon: Users, label: "Team Management", permission: 'canManageStaff' },
-    { href: "/company", icon: Building2, label: "Company Settings", permission: 'canManageCompany' },
+    { href: "/company", icon: Settings, label: "Settings", permission: 'canManageCompany' },
     { href: "/reports", icon: BarChart, label: "Reports", permission: 'canManageStaff' },
 ] as const;
 
@@ -124,10 +123,6 @@ export default function AppSidebar({ isMobile = false }) {
                   <NavLink key={item.href} {...item} />
               ))
           )}
-
-          <div className="my-2 h-px w-full bg-border" />
-          <NavLink href="/profile" icon={UserIcon} label="Profile" />
-          <NavLink href="/settings" icon={Settings} label="Settings" />
         </nav>
 
         <div className="mt-auto border-t p-4">
