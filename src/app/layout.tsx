@@ -1,4 +1,4 @@
-import type { Metadata } from 'next';
+import type { Metadata, Viewport } from 'next';
 import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
@@ -8,6 +8,9 @@ export const metadata: Metadata = {
   title: 'Palilious',
   description: 'Staff Internal Control & Automation',
   manifest: '/manifest.json',
+};
+
+export const viewport: Viewport = {
   themeColor: '#1f2937',
 };
 
