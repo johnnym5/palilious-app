@@ -1,20 +1,21 @@
 'use client';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import type { UserProfile, Chat } from '@/lib/types';
-import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { doc } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, query, where } from 'firebase/firestore';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Skeleton } from '@/components/ui/skeleton';
 import { MessageSquareOff } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
 
 export default function ChatPage() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
     const router = useRouter();
+    const searchParams = useSearchParams();
     
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
     const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
@@ -25,13 +26,28 @@ export default function ChatPage() {
     const { data: currentUserProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
     const permissions = usePermissions(currentUserProfile);
     
+    const targetUserId = searchParams.get('with');
+
+    // Fetch all users to find the one from the URL param
+    const allUsersQuery = useMemoFirebase(() => 
+        currentUserProfile ? query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId)) : null,
+    [firestore, currentUserProfile]);
+    const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(allUsersQuery);
+
+    useEffect(() => {
+        if (targetUserId && allUsers && !selectedUser) {
+            const userToSelect = allUsers.find(u => u.id === targetUserId);
+            if (userToSelect) {
+                setSelectedUser(userToSelect);
+            }
+        }
+    }, [targetUserId, allUsers, selectedUser]);
+    
     const handleSelectConversation = (item: Chat | UserProfile) => {
         if ('participants' in item) { // It's a Chat object
             setSelectedChat(item);
             const otherParticipantId = item.participants.find(p => p !== currentUserProfile?.id);
             if (otherParticipantId && item.participantProfiles[otherParticipantId]) {
-                 // We need a partial UserProfile here. ChatWindow might need the full one.
-                 // For now, let's just create a partial one.
                  const otherUser = {
                      id: otherParticipantId,
                      ...item.participantProfiles[otherParticipantId]
@@ -45,7 +61,9 @@ export default function ChatPage() {
     };
 
 
-    if (isProfileLoading) {
+    const isLoading = isProfileLoading || areUsersLoading;
+
+    if (isLoading) {
         return (
             <div className="h-full flex flex-col">
                  <div className="flex items-center justify-between mb-4">

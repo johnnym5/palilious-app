@@ -7,8 +7,8 @@ import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { useMemo, useState } from "react";
-import { RequestAssistanceDialog } from "../tasks/RequestAssistanceDialog";
+import { useMemo } from "react";
+import { useRouter } from "next/navigation";
 
 interface StatusFeedProps {
   userProfile: UserProfile | null;
@@ -17,7 +17,7 @@ interface StatusFeedProps {
 
 export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
   const firestore = useFirestore();
-  const [targetUser, setTargetUser] = useState<UserProfile | null>(null);
+  const router = useRouter();
 
   const usersQuery = useMemoFirebase(() => {
     if (!firestore || !userProfile) return null;
@@ -63,7 +63,7 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
                         className="flex items-center gap-4 p-2 rounded-lg transition-colors hover:bg-secondary cursor-pointer"
                         onClick={() => {
                           if (user.id !== userProfile?.id) {
-                            setTargetUser(user);
+                            router.push(`/chat?with=${user.id}`);
                           }
                         }}
                       >
@@ -89,16 +89,6 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
           </ScrollArea>
         </CardContent>
       </Card>
-      {targetUser && userProfile && (
-        <RequestAssistanceDialog
-          targetUser={targetUser}
-          currentUserProfile={userProfile}
-          open={!!targetUser}
-          onOpenChange={(isOpen) => !isOpen && setTargetUser(null)}
-        />
-      )}
     </>
   );
 }
-
-    
