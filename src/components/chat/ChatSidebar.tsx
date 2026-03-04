@@ -10,14 +10,16 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Input } from '../ui/input';
 import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
+import { Separator } from '../ui/separator';
+import { Hash, User } from 'lucide-react';
 
 interface ChatSidebarProps {
     currentUserProfile: UserProfile | null;
     onSelectConversation: (item: Chat | UserProfile) => void;
-    selectedUser: UserProfile | null;
+    selectedChatId?: string | null;
 }
 
-export function ChatSidebar({ currentUserProfile, onSelectConversation, selectedUser }: ChatSidebarProps) {
+export function ChatSidebar({ currentUserProfile, onSelectConversation, selectedChatId }: ChatSidebarProps) {
     const firestore = useFirestore();
     const [searchTerm, setSearchTerm] = useState('');
 
@@ -45,6 +47,14 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
             user.fullName.toLowerCase().includes(searchTerm.toLowerCase())
         );
     }, [searchTerm, allUsers, currentUserProfile]);
+
+    const { channels, directMessages } = useMemo(() => {
+        if (!chats) return { channels: [], directMessages: [] };
+        return {
+            channels: chats.filter(c => c.type === 'CHANNEL'),
+            directMessages: chats.filter(c => c.type === 'DIRECT'),
+        };
+    }, [chats]);
 
     const isSearching = searchTerm.length > 0;
     const isLoading = isLoadingChats || isLoadingUsers;
@@ -83,8 +93,7 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                             key={user.id}
                             onClick={() => onSelectConversation(user)}
                             className={cn(
-                                "w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors",
-                                selectedUser?.id === user.id ? "bg-secondary" : "hover:bg-secondary/50"
+                                "w-full flex items-center gap-3 p-2 rounded-lg text-left transition-colors hover:bg-secondary/50",
                             )}
                         >
                             <Avatar className="h-10 w-10">
@@ -97,34 +106,60 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                             </div>
                         </button>
                     ))}
-                    {!isLoading && !isSearching && chats?.map(chat => {
-                        const otherParticipant = getOtherParticipant(chat);
-                        return (
-                            <button
-                                key={chat.id}
-                                onClick={() => onSelectConversation(chat)}
-                                className={cn(
-                                    "w-full flex items-start gap-3 p-2 rounded-lg text-left transition-colors",
-                                    selectedUser?.id === otherParticipant.id ? "bg-secondary" : "hover:bg-secondary/50"
-                                )}
-                            >
-                                <Avatar className="h-10 w-10">
-                                    <AvatarImage src={otherParticipant.avatarURL} />
-                                    <AvatarFallback>{otherParticipant.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 truncate">
-                                    <p className="font-medium text-sm text-foreground">{otherParticipant.fullName}</p>
-                                    <p className="text-xs text-muted-foreground truncate">{chat.lastMessage?.text}</p>
-                                </div>
-                                {chat.lastMessage?.timestamp && (
-                                    <span className="text-xs text-muted-foreground pt-1">{formatDistanceToNow(new Date(chat.lastMessage.timestamp), { addSuffix: true })}</span>
-                                )}
-                            </button>
-                        )
-                    })}
+                    {!isLoading && !isSearching && (
+                        <>
+                            <p className="px-2 pt-2 text-xs font-semibold text-muted-foreground uppercase">Channels</p>
+                            {channels.map(chat => (
+                                <button
+                                    key={chat.id}
+                                    onClick={() => onSelectConversation(chat)}
+                                    className={cn(
+                                        "w-full flex items-start gap-3 p-2 rounded-lg text-left transition-colors",
+                                        selectedChatId === chat.id ? "bg-secondary" : "hover:bg-secondary/50"
+                                    )}
+                                >
+                                    <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
+                                        <Hash className="h-5 w-5 text-muted-foreground" />
+                                    </div>
+                                    <div className="flex-1 truncate">
+                                        <p className="font-medium text-sm text-foreground">{chat.name}</p>
+                                        <p className="text-xs text-muted-foreground truncate">{chat.lastMessage?.senderName}: {chat.lastMessage?.text}</p>
+                                    </div>
+                                </button>
+                            ))}
+
+                            <Separator className="my-2" />
+                            <p className="px-2 pt-2 text-xs font-semibold text-muted-foreground uppercase">Direct Messages</p>
+                            {directMessages.map(chat => {
+                                const otherParticipant = getOtherParticipant(chat);
+                                return (
+                                    <button
+                                        key={chat.id}
+                                        onClick={() => onSelectConversation(chat)}
+                                        className={cn(
+                                            "w-full flex items-start gap-3 p-2 rounded-lg text-left transition-colors",
+                                            selectedChatId === chat.id ? "bg-secondary" : "hover:bg-secondary/50"
+                                        )}
+                                    >
+                                        <Avatar className="h-10 w-10">
+                                            <AvatarImage src={otherParticipant.avatarURL} />
+                                            <AvatarFallback>{otherParticipant.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
+                                        </Avatar>
+                                        <div className="flex-1 truncate">
+                                            <p className="font-medium text-sm text-foreground">{otherParticipant.fullName}</p>
+                                            <p className="text-xs text-muted-foreground truncate">{chat.lastMessage?.text}</p>
+                                        </div>
+                                        {chat.lastMessage?.timestamp && (
+                                            <span className="text-xs text-muted-foreground pt-1">{formatDistanceToNow(new Date(chat.lastMessage.timestamp), { addSuffix: true })}</span>
+                                        )}
+                                    </button>
+                                )
+                            })}
+                        </>
+                    )}
                      {!isLoading && (isSearching ? searchResults.length === 0 : chats?.length === 0) && (
                         <p className="p-4 text-center text-sm text-muted-foreground">
-                            {isSearching ? 'No users found.' : 'No recent conversations.'}
+                            {isSearching ? 'No users found.' : 'No conversations. Start one!'}
                         </p>
                      )}
                 </div>

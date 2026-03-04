@@ -6,10 +6,11 @@ import { doc, collection, query, where } from 'firebase/firestore';
 import { ChatSidebar } from '@/components/chat/ChatSidebar';
 import { ChatWindow } from '@/components/chat/ChatWindow';
 import { Skeleton } from '@/components/ui/skeleton';
-import { MessageSquareOff } from 'lucide-react';
+import { MessageSquareOff, PlusCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
+import { CreateChannelDialog } from '@/components/chat/CreateChannelDialog';
 
 export default function ChatPage() {
     const { user: authUser } = useUser();
@@ -18,7 +19,7 @@ export default function ChatPage() {
     const searchParams = useSearchParams();
     
     const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-    const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+    const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
 
     const userProfileRef = useMemoFirebase(() => 
         authUser ? doc(firestore, 'users', authUser.uid) : null,
@@ -35,28 +36,40 @@ export default function ChatPage() {
     const { data: allUsers, isLoading: areUsersLoading } = useCollection<UserProfile>(allUsersQuery);
 
     useEffect(() => {
-        if (targetUserId && allUsers && !selectedUser) {
+        if (targetUserId && allUsers && !selectedChat) {
             const userToSelect = allUsers.find(u => u.id === targetUserId);
             if (userToSelect) {
-                setSelectedUser(userToSelect);
+                // This is a new DM, so we only set the other user. ChatWindow will handle creating it.
+                setSelectedChat({
+                    id: '', // Temporary
+                    orgId: currentUserProfile?.orgId || '',
+                    type: 'DIRECT',
+                    participants: [currentUserProfile?.id || '', userToSelect.id],
+                    participantProfiles: {
+                        [currentUserProfile?.id || '']: { fullName: currentUserProfile?.fullName || '', avatarURL: currentUserProfile?.avatarURL },
+                        [userToSelect.id]: { fullName: userToSelect.fullName, avatarURL: userToSelect.avatarURL },
+                    },
+                    updatedAt: new Date().toISOString(),
+                });
             }
         }
-    }, [targetUserId, allUsers, selectedUser]);
+    }, [targetUserId, allUsers, selectedChat, currentUserProfile]);
     
     const handleSelectConversation = (item: Chat | UserProfile) => {
         if ('participants' in item) { // It's a Chat object
             setSelectedChat(item);
-            const otherParticipantId = item.participants.find(p => p !== currentUserProfile?.id);
-            if (otherParticipantId && item.participantProfiles[otherParticipantId]) {
-                 const otherUser = {
-                     id: otherParticipantId,
-                     ...item.participantProfiles[otherParticipantId]
-                 } as UserProfile
-                 setSelectedUser(otherUser);
-            }
-        } else { // It's a UserProfile object
-            setSelectedUser(item);
-            setSelectedChat(null); // Clear selected chat when a new user is selected
+        } else { // It's a UserProfile object, start a new DM
+             setSelectedChat({
+                id: '', // Temporary
+                orgId: currentUserProfile?.orgId || '',
+                type: 'DIRECT',
+                participants: [currentUserProfile?.id || '', item.id],
+                 participantProfiles: {
+                    [currentUserProfile?.id || '']: { fullName: currentUserProfile?.fullName || '', avatarURL: currentUserProfile?.avatarURL },
+                    [item.id]: { fullName: item.fullName, avatarURL: item.avatarURL },
+                },
+                updatedAt: new Date().toISOString(),
+            });
         }
     };
 
@@ -105,16 +118,24 @@ export default function ChatPage() {
                     Chat privately with members of your team.
                   </p>
                  </div>
+                 {currentUserProfile && (
+                     <CreateChannelDialog open={isCreateChannelOpen} onOpenChange={setIsCreateChannelOpen} currentUserProfile={currentUserProfile}>
+                        <Button variant="outline" onClick={() => setIsCreateChannelOpen(true)}>
+                            <PlusCircle className="mr-2" />
+                            New Channel
+                        </Button>
+                     </CreateChannelDialog>
+                 )}
              </div>
             <div className="flex-1 flex border bg-card/50 rounded-xl overflow-hidden">
                 <ChatSidebar 
                     currentUserProfile={currentUserProfile} 
                     onSelectConversation={handleSelectConversation}
-                    selectedUser={selectedUser}
+                    selectedChatId={selectedChat?.id}
                 />
                 <ChatWindow 
                     currentUserProfile={currentUserProfile} 
-                    selectedUser={selectedUser}
+                    selectedChat={selectedChat}
                 />
             </div>
         </div>

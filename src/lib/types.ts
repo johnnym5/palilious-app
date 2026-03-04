@@ -162,9 +162,14 @@ export interface Announcement {
   viewedBy?: string[]; // Array of userIds
 }
 
+export type ChatType = 'DIRECT' | 'CHANNEL';
+
 export interface Chat {
     id: string;
     orgId: string;
+    type: ChatType;
+    name?: string; // For channels
+    createdBy?: string; // For channels
     participants: string[]; // userIds
     participantProfiles: { // Map userId to a mini profile
         [key: string]: {
@@ -175,6 +180,7 @@ export interface Chat {
     lastMessage?: {
         text: string;
         senderId: string;
+        senderName: string;
         timestamp: string;
     };
     updatedAt: string; // ISO String for timestamp
@@ -185,6 +191,8 @@ export interface ChatMessage {
     chatId: string;
     orgId: string;
     senderId: string;
+    senderName: string;
+    senderAvatarUrl?: string;
     content: string;
     timestamp: string; // ISO String for timestamp
 }

@@ -316,43 +316,50 @@
       ]
     },
     "Chat": {
-        "title": "Chat",
-        "type": "object",
-        "description": "Represents a chat conversation between two or more users.",
-        "properties": {
-            "orgId": { "type": "string" },
-            "participants": {
-                "type": "array",
-                "items": { "type": "string" },
-                "description": "Array of user IDs participating in the chat."
-            },
-            "participantProfiles": {
-                "type": "object"
-            },
-            "lastMessage": {
-                "type": "object",
-                "properties": {
-                    "text": { "type": "string" },
-                    "senderId": { "type": "string" },
-                    "timestamp": { "type": "string", "format": "date-time" }
-                }
-            },
-            "updatedAt": { "type": "string", "format": "date-time" }
+      "title": "Chat",
+      "type": "object",
+      "description": "Represents a chat conversation, which can be a direct message or a group channel.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "name": { "type": "string", "description": "The name of the channel. Null for direct messages." },
+        "type": { "type": "string", "enum": ["DIRECT", "CHANNEL"], "description": "The type of chat." },
+        "createdBy": { "type": "string", "description": "The user ID of the channel creator. Null for direct messages." },
+        "participants": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Array of user IDs participating in the chat."
         },
-        "required": ["orgId", "participants", "participantProfiles", "updatedAt"]
+        "participantProfiles": {
+          "type": "object",
+          "description": "A map of participant IDs to their profile details for quick access."
+        },
+        "lastMessage": {
+          "type": "object",
+          "properties": {
+            "text": { "type": "string" },
+            "senderId": { "type": "string" },
+            "senderName": { "type": "string" },
+            "timestamp": { "type": "string", "format": "date-time" }
+          }
+        },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "participants", "type", "updatedAt"]
     },
     "ChatMessage": {
-        "title": "ChatMessage",
-        "type": "object",
-        "description": "Represents a single message within a chat.",
-        "properties": {
-            "chatId": { "type": "string" },
-            "orgId": { "type": "string" },
-            "senderId": { "type": "string" },
-            "content": { "type": "string" },
-            "timestamp": { "type": "string", "format": "date-time" }
-        },
-        "required": ["chatId", "orgId", "senderId", "content", "timestamp"]
+      "title": "ChatMessage",
+      "type": "object",
+      "description": "Represents a single message within a chat.",
+      "properties": {
+        "chatId": { "type": "string" },
+        "orgId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "senderAvatarUrl": { "type": "string", "format": "uri" },
+        "content": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["chatId", "orgId", "senderId", "senderName", "content", "timestamp"]
     },
     "Announcement": {
       "title": "Announcement",
