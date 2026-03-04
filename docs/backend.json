@@ -474,6 +474,25 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["orgId", "userId", "title", "href", "isRead", "createdAt"]
+    },
+    "LeaveRequest": {
+      "title": "LeaveRequest",
+      "type": "object",
+      "description": "Represents a single leave request from a user.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "leaveType": { "type": "string", "enum": ["ANNUAL", "SICK", "UNPAID", "MATERNITY", "PATERNITY"] },
+        "startDate": { "type": "string", "format": "date-time" },
+        "endDate": { "type": "string", "format": "date-time" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "approvedBy": { "type": "string" },
+        "approvedAt": { "type": "string", "format": "date-time" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["orgId", "userId", "userName", "leaveType", "startDate", "endDate", "reason", "status", "createdAt"]
     }
   },
   "auth": {
@@ -696,6 +715,22 @@
                 }
             ]
         }
+    },
+    {
+      "path": "/leave_requests/{leaveRequestId}",
+      "definition": {
+        "entityName": "LeaveRequest",
+        "schema": {
+          "$ref": "#/entities/LeaveRequest"
+        },
+        "description": "Stores user leave requests.",
+        "params": [
+          {
+            "name": "leaveRequestId",
+            "description": "The unique ID for the leave request."
+          }
+        ]
+      }
     }
     ]
   }

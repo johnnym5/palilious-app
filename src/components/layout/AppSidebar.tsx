@@ -15,6 +15,7 @@ import {
   User as UserIcon,
   Settings,
   BarChart,
+  CalendarPlus,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -32,6 +33,7 @@ import { useSystemConfig } from "@/hooks/useSystemConfig";
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { href: "/attendance", icon: CalendarCheck2, label: "Attendance" },
+  { href: "/leave", icon: CalendarPlus, label: "Leave Management" },
   { href: "/requisitions", icon: ReceiptText, label: "Requisitions" },
   { href: "/tasks", icon: ListTodo, label: "Tasks" },
   { href: "/workbook", icon: BookOpenCheck, label: "Workbook" },

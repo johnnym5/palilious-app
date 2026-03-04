@@ -1,0 +1,82 @@
+'use client';
+import { useUser, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
+import { doc } from "firebase/firestore";
+import type { UserProfile } from "@/lib/types";
+import { usePermissions } from "@/hooks/usePermissions";
+import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Plus } from "lucide-react";
+import { LeaveBalanceCard } from "@/components/leave/LeaveBalanceCard";
+import { MyLeaveHistory } from "@/components/leave/MyLeaveHistory";
+import { RequestLeaveDialog } from "@/components/leave/RequestLeaveDialog";
+import { PendingLeaveApprovals } from "@/components/leave/PendingLeaveApprovals";
+
+export default function LeavePage() {
+  const { user: authUser } = useUser();
+  const firestore = useFirestore();
+  const [isRequestOpen, setIsRequestOpen] = useState(false);
+
+  const userProfileRef = useMemoFirebase(() => 
+    authUser ? doc(firestore, "users", authUser.uid) : null,
+  [firestore, authUser]);
+  const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const permissions = usePermissions(userProfile);
+
+  const isLoading = isProfileLoading;
+
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <Skeleton className="h-10 w-1/2" />
+        <div className="grid gap-8 lg:grid-cols-3">
+          <Skeleton className="h-40 w-full" />
+          <Skeleton className="h-96 w-full lg:col-span-2" />
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+       <div className="flex items-center justify-between">
+         <div>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Leave Management</h1>
+          <p className="text-muted-foreground">
+            Request time off and manage your leave balance.
+          </p>
+         </div>
+          {userProfile && (
+            <RequestLeaveDialog open={isRequestOpen} onOpenChange={setIsRequestOpen} userProfile={userProfile}>
+              <Button onClick={() => setIsRequestOpen(true)}>
+                  <Plus className="mr-2" />
+                  Request Leave
+              </Button>
+            </RequestLeaveDialog>
+          )}
+       </div>
+      
+      {permissions.canApproveHR ? (
+        <Tabs defaultValue="my-leave">
+          <TabsList>
+            <TabsTrigger value="my-leave">My Leave</TabsTrigger>
+            <TabsTrigger value="approvals">Team Requests</TabsTrigger>
+          </TabsList>
+          <TabsContent value="my-leave" className="mt-4 space-y-6">
+              <LeaveBalanceCard />
+              {userProfile && <MyLeaveHistory userProfile={userProfile} />}
+          </TabsContent>
+          <TabsContent value="approvals" className="mt-4">
+              {userProfile && <PendingLeaveApprovals userProfile={userProfile} />}
+          </TabsContent>
+        </Tabs>
+      ) : (
+        <div className="space-y-6">
+            <LeaveBalanceCard />
+            {userProfile && <MyLeaveHistory userProfile={userProfile} />}
+        </div>
+      )}
+    </div>
+  );
+}

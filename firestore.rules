@@ -78,6 +78,11 @@ service cloud.firestore {
     match /attendance/{attendanceId} {
       allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
     }
+     match /leave_requests/{leaveRequestId} {
+      allow create: if isUserInOrg(request.resource.data.orgId);
+      allow read: if isSuperAdmin() || isUserInOrg(resource.data.orgId);
+      allow update, delete: if isSuperAdmin() || (isUserInOrg(resource.data.orgId) && isManager(request.auth.uid));
+    }
     match /announcements/{announcementId} {
       allow read, create, update, delete: if isSuperAdmin() || (resource.data != null && isUserInOrg(resource.data.orgId));
     }

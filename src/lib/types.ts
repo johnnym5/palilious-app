@@ -266,3 +266,21 @@ export interface Permissions {
   canAccessAllWorkbooks: boolean;
   canManageAnnouncements: boolean;
 }
+
+export type LeaveType = "ANNUAL" | "SICK" | "UNPAID" | "MATERNITY" | "PATERNITY";
+export type LeaveStatus = "PENDING" | "APPROVED" | "REJECTED";
+
+export interface LeaveRequest {
+  id: string;
+  orgId: string;
+  userId: string;
+  userName: string;
+  leaveType: LeaveType;
+  startDate: string; // ISO String
+  endDate: string; // ISO String
+  reason: string;
+  status: LeaveStatus;
+  approvedBy?: string; // userId
+  approvedAt?: string; // ISO String
+  createdAt: string; // ISO String
+}
