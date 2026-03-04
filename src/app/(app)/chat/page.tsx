@@ -113,9 +113,9 @@ export default function ChatPage() {
         <div className="h-full flex flex-col">
              <div className="flex items-center justify-between mb-4">
                  <div>
-                  <h1 className="text-3xl font-bold font-headline tracking-tight">Direct Messages</h1>
+                  <h1 className="text-3xl font-bold font-headline tracking-tight">Internal Messaging</h1>
                   <p className="text-muted-foreground">
-                    Chat privately with members of your team.
+                    Create channels or chat privately with team members.
                   </p>
                  </div>
                  {currentUserProfile && (

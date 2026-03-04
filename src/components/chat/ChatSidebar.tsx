@@ -108,8 +108,13 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                     ))}
                     {!isLoading && !isSearching && (
                         <>
-                            <p className="px-2 pt-2 text-xs font-semibold text-muted-foreground uppercase">Channels</p>
-                            {channels.map(chat => (
+                            <div className="flex items-center px-2 pt-2 text-xs font-semibold text-muted-foreground uppercase">
+                                <Hash className="h-4 w-4 mr-2" />
+                                Channels
+                            </div>
+                            {channels.length === 0 ? (
+                                <p className="p-2 text-center text-xs text-muted-foreground">No channels yet.</p>
+                            ): channels.map(chat => (
                                 <button
                                     key={chat.id}
                                     onClick={() => onSelectConversation(chat)}
@@ -129,8 +134,13 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                             ))}
 
                             <Separator className="my-2" />
-                            <p className="px-2 pt-2 text-xs font-semibold text-muted-foreground uppercase">Direct Messages</p>
-                            {directMessages.map(chat => {
+                             <div className="flex items-center px-2 pt-2 text-xs font-semibold text-muted-foreground uppercase">
+                                <User className="h-4 w-4 mr-2" />
+                                Direct Messages
+                            </div>
+                            {directMessages.length === 0 ? (
+                                 <p className="p-2 text-center text-xs text-muted-foreground">No direct messages yet.</p>
+                            ) : directMessages.map(chat => {
                                 const otherParticipant = getOtherParticipant(chat);
                                 return (
                                     <button
