@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Loader2, Sparkles } from "lucide-react";
+import { CalendarIcon, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFirestore, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
@@ -19,9 +19,6 @@ import type { Task, UserProfile, ActivityEntry, Permissions, Notification, Workb
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn, sanitizeInput } from "@/lib/utils";
 import { format } from "date-fns";
-import { Separator } from "../ui/separator";
-import { Label } from "../ui/label";
-import { createTaskFromNaturalLanguage } from "@/ai/flows/create-task-flow";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
@@ -50,8 +47,6 @@ interface AssignTaskDialogProps {
 
 export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserProfile, permissions }: AssignTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [aiPrompt, setAiPrompt] = useState('');
-  const [isAiLoading, setIsAiLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
 
@@ -84,7 +79,6 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
 
   const handleDialogClose = () => {
     form.reset();
-    setAiPrompt('');
     onOpenChange(false);
   }
 
@@ -99,32 +93,8 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
             workbookId: initialData?.workbookId,
             sheetId: initialData?.sheetId,
         });
-        setAiPrompt('');
     }
   }, [initialData, open, form]);
-
-  const handleGenerateWithAi = async () => {
-    if (!aiPrompt.trim()) return;
-    setIsAiLoading(true);
-    try {
-        const result = await createTaskFromNaturalLanguage(aiPrompt);
-        form.setValue('title', result.title);
-        form.setValue('description', result.description);
-        form.setValue('priority', result.priority);
-        if (result.dueDate) {
-            // Adjust for timezone offset by creating date as UTC
-            const [year, month, day] = result.dueDate.split('-').map(Number);
-            form.setValue('dueDate', new Date(Date.UTC(year, month - 1, day)));
-        }
-        toast({ title: 'AI Complete', description: 'Task details have been generated.' });
-    } catch (error) {
-        console.error("AI generation failed:", error);
-        toast({ variant: 'destructive', title: 'AI Error', description: 'Could not generate task details.' });
-    } finally {
-        setIsAiLoading(false);
-    }
-  }
-
 
   async function onSubmit(values: FormData) {
     const assigneeId = permissions.canManageStaff && values.assignedTo ? values.assignedTo : currentUserProfile.id;
@@ -235,26 +205,11 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
         <DialogHeader>
           <DialogTitle>Assign New Directive</DialogTitle>
           <DialogDescription>
-            Delegate a new mission to a member of your team, or generate it with AI.
+            Delegate a new mission to a member of your team.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                
-                <div className="space-y-2">
-                    <Label>Generate with AI</Label>
-                    <Textarea 
-                        placeholder="e.g., Draft the Q3 marketing report, it's high priority and due next Friday..."
-                        value={aiPrompt}
-                        onChange={(e) => setAiPrompt(e.target.value)}
-                    />
-                    <Button type="button" variant="outline" size="sm" onClick={handleGenerateWithAi} disabled={isAiLoading}>
-                        {isAiLoading ? <Loader2 className="animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Generate
-                    </Button>
-                </div>
-                <Separator />
-
                 <FormField control={form.control} name="title" render={({ field }) => (
                     <FormItem><FormLabel>Title</FormLabel><FormControl><Input placeholder="e.g., Finalize Q3 Report" {...field} /></FormControl><FormMessage /></FormItem>
                 )} />
