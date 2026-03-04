@@ -10,6 +10,7 @@ import type { Permissions } from "@/hooks/usePermissions";
 import { useFirestore, useCollection, addDocumentNonBlocking, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, limit, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { Skeleton } from "../ui/skeleton";
 
 interface ClockControlProps {
   userProfile: UserProfile | null;
@@ -24,18 +25,25 @@ export function ClockControl({ userProfile, permissions, systemConfig }: ClockCo
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [attendanceRecord, setAttendanceRecord] = useState<Attendance | null>(null);
     const [shiftDuration, setShiftDuration] = useState("00:00:00");
+    const [today, setToday] = useState<string>('');
+    const [dateDisplay, setDateDisplay] = useState('');
     
-    const today = format(new Date(), 'yyyy-MM-dd');
+    useEffect(() => {
+        // Set date on client side to avoid hydration mismatch
+        setToday(format(new Date(), 'yyyy-MM-dd'));
+        setDateDisplay(format(new Date(), 'PPPP'));
+    }, []);
 
-    const attendanceQuery = useMemoFirebase(() => 
-        userProfile ? query(
+    const attendanceQuery = useMemoFirebase(() => {
+        if (!userProfile || !today) return null;
+        return query(
             collection(firestore, 'attendance'),
             where('userId', '==', userProfile.id),
             where('date', '==', today),
             where('status', 'in', ['PENDING', 'APPROVED']),
             limit(1)
-        ) : null
-    , [firestore, userProfile?.id, today]);
+        );
+    }, [firestore, userProfile?.id, today]);
     
     const { data: attendanceData, isLoading: isAttendanceLoading } = useCollection<Attendance>(attendanceQuery);
     
@@ -76,6 +84,7 @@ export function ClockControl({ userProfile, permissions, systemConfig }: ClockCo
         try {
             const remarks: Attendance['remarks'] = [];
             const now = new Date();
+            const todayDateString = format(now, 'yyyy-MM-dd');
 
             if (systemConfig?.work_hours?.start) {
                 const [startHour, startMinute] = systemConfig.work_hours.start.split(':').map(Number);
@@ -97,7 +106,7 @@ export function ClockControl({ userProfile, permissions, systemConfig }: ClockCo
                 userId: userProfile.id,
                 userName: userProfile.fullName,
                 orgId: userProfile.orgId,
-                date: today,
+                date: todayDateString,
                 clockIn: now.toISOString(),
                 status: 'PENDING',
                 remarks,
@@ -188,7 +197,7 @@ export function ClockControl({ userProfile, permissions, systemConfig }: ClockCo
         <Card>
             <CardHeader className="text-center">
                 <CardTitle>Time Clock</CardTitle>
-                <CardDescription>{format(new Date(), 'PPPP')}</CardDescription>
+                <CardDescription>{dateDisplay || <Skeleton className="h-5 w-32 mx-auto" />}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-center">
                 {isClockedIn ? (
