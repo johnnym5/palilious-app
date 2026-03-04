@@ -28,6 +28,7 @@ const formSchema = z.object({
   canAccessChat: z.boolean().optional(),
   canAccessAllTasks: z.boolean().optional(),
   canAccessAllWorkbooks: z.boolean().optional(),
+  canManageAnnouncements: z.boolean().optional(),
 });
 
 interface EditUserDialogProps {
@@ -82,6 +83,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
         canAccessChat: userToEdit.customPermissions?.canAccessChat,
         canAccessAllTasks: userToEdit.customPermissions?.canAccessAllTasks,
         canAccessAllWorkbooks: userToEdit.customPermissions?.canAccessAllWorkbooks,
+        canManageAnnouncements: userToEdit.customPermissions?.canManageAnnouncements,
       });
     }
   }, [userToEdit, form, open]);
@@ -128,6 +130,7 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
             canAccessChat: values.canAccessChat || false,
             canAccessAllTasks: values.canAccessAllTasks || false,
             canAccessAllWorkbooks: values.canAccessAllWorkbooks || false,
+            canManageAnnouncements: values.canManageAnnouncements || false,
         }
       };
 
@@ -272,6 +275,19 @@ export function EditUserDialog({ userToEdit, open, onOpenChange }: EditUserDialo
                              <div className="space-y-0.5">
                                 <FormLabel>View All Workbooks</FormLabel>
                                 <FormDescription className="text-xs">Allows user to see all workbooks in the organization.</FormDescription>
+                            </div>
+                            <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
+                        </FormItem>
+                    )}
+                 />
+                 <FormField
+                    control={form.control}
+                    name="canManageAnnouncements"
+                    render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between">
+                             <div className="space-y-0.5">
+                                <FormLabel>Manage Announcements</FormLabel>
+                                <FormDescription className="text-xs">Allows user to create, edit, and delete announcements.</FormDescription>
                             </div>
                             <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                         </FormItem>

@@ -17,6 +17,7 @@ export interface Permissions {
   canAccessChat: boolean;
   canAccessAllTasks: boolean;
   canAccessAllWorkbooks: boolean;
+  canManageAnnouncements: boolean;
 }
 
 // Maps new descriptive roles to the original, simpler roles used for permission logic.
@@ -41,6 +42,7 @@ const positionPermissions: Record<'Staff' | 'HR Manager' | 'Finance Manager' | '
   'HR Manager': {
     canApproveHR: true,
     canManageStaff: true,
+    canManageAnnouncements: true,
   },
   'Finance Manager': {
     canApproveFinance: true,
@@ -49,6 +51,7 @@ const positionPermissions: Record<'Staff' | 'HR Manager' | 'Finance Manager' | '
   'Managing Director': {
     canApproveMD: true,
     canManageStaff: true,
+    canManageAnnouncements: true,
   },
   'Organization Administrator': {
     canApproveHR: true,
@@ -57,6 +60,7 @@ const positionPermissions: Record<'Staff' | 'HR Manager' | 'Finance Manager' | '
     canDisburse: true,
     canManageStaff: true,
     canManageCompany: true,
+    canManageAnnouncements: true,
   },
 };
 
@@ -73,6 +77,7 @@ const defaultPermissions: Permissions = {
   canAccessChat: false,
   canAccessAllTasks: false,
   canAccessAllWorkbooks: false,
+  canManageAnnouncements: false,
 };
 
 export function usePermissions(userProfile: UserProfile | null): Permissions {
@@ -94,6 +99,7 @@ export function usePermissions(userProfile: UserProfile | null): Permissions {
           canAccessChat: true,
           canAccessAllTasks: true,
           canAccessAllWorkbooks: true,
+          canManageAnnouncements: true,
       };
     }
 
@@ -132,6 +138,9 @@ export function usePermissions(userProfile: UserProfile | null): Permissions {
     }
      if (typeof customPerms.canAccessAllWorkbooks === 'boolean') {
         perms.canAccessAllWorkbooks = customPerms.canAccessAllWorkbooks;
+    }
+    if (typeof customPerms.canManageAnnouncements === 'boolean') {
+        perms.canManageAnnouncements = customPerms.canManageAnnouncements;
     }
     
     // 4. Special cases

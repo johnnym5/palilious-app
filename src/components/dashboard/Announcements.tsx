@@ -118,7 +118,7 @@ export function Announcements() {
                                             <span>
                                                 {announcement.authorName} - {formatDistanceToNow(new Date(announcement.createdAt), { addSuffix: true })}
                                             </span>
-                                            {announcement.isPinned && permissions.canManageStaff && (
+                                            {announcement.isPinned && permissions.canManageAnnouncements && (
                                                 <span className="flex items-center gap-1 text-primary/80">
                                                     <Eye className="h-3 w-3" />
                                                     {announcement.viewedBy?.length || 0}
@@ -126,7 +126,7 @@ export function Announcements() {
                                             )}
                                         </div>
                                     </div>
-                                    {permissions.canManageStaff && (
+                                    {permissions.canManageAnnouncements && (
                                         <DropdownMenu>
                                             <DropdownMenuTrigger asChild>
                                                 <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">

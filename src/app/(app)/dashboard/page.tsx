@@ -143,7 +143,7 @@ export default function DashboardPage() {
                     <RecentConversations />
                 </div>
             </div>
-             {permissions.canManageStaff && userProfile && (
+             {permissions.canManageAnnouncements && userProfile && (
                 <NewAnnouncementDialog open={isAddOpen} onOpenChange={setIsAddOpen} userProfile={userProfile}>
                     <Button 
                         className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 

@@ -59,6 +59,7 @@ export interface UserProfile {
     canAccessChat?: boolean;
     canAccessAllTasks?: boolean;
     canAccessAllWorkbooks?: boolean;
+    canManageAnnouncements?: boolean;
   };
 }
 
@@ -236,4 +237,5 @@ export interface Permissions {
   canAccessChat: boolean;
   canAccessAllTasks: boolean;
   canAccessAllWorkbooks: boolean;
+  canManageAnnouncements: boolean;
 }
