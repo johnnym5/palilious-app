@@ -51,6 +51,10 @@ export function AddColumnDialog({ children, open, onOpenChange, sheet }: AddColu
     setIsLoading(true);
 
     const newHeaders = [...sheet.headers, sanitizedName];
+    const newColumnConfig = {
+      ...(sheet.columnConfig || {}),
+      [sanitizedName]: { type: 'text' }
+    };
     const newData = sheet.data.map(row => ({
         ...row,
         [sanitizedName]: ""
@@ -61,6 +65,7 @@ export function AddColumnDialog({ children, open, onOpenChange, sheet }: AddColu
         updateDocumentNonBlocking(sheetRef, {
             headers: newHeaders,
             data: newData,
+            columnConfig: newColumnConfig,
         });
 
         toast({

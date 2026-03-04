@@ -217,12 +217,18 @@ export interface Workbook {
   }[];
 }
 
+export interface ColumnConfig {
+    type: 'text' | 'number' | 'date' | 'select';
+    selectOptions?: string[];
+}
+
 export interface Sheet {
   id: string;
   workbookId: string;
   name: string;
   data: Record<string, any>[];
   headers: string[];
+  columnConfig?: Record<string, ColumnConfig>;
   createdAt: string; // ISO String
 }
 

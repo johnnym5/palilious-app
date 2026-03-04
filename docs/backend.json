@@ -422,6 +422,18 @@
           "description": "An array of strings representing the column headers.",
           "items": { "type": "string" }
         },
+        "columnConfig": {
+            "type": "object",
+            "description": "Configuration for each column, keyed by header name.",
+            "additionalProperties": {
+                "type": "object",
+                "properties": {
+                    "type": { "type": "string", "enum": ["text", "number", "date", "select"] },
+                    "selectOptions": { "type": "array", "items": { "type": "string" } }
+                },
+                "required": ["type"]
+            }
+        },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["workbookId", "name", "data", "headers", "createdAt"]

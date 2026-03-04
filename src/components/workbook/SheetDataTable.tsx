@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useState, useEffect } from 'react';
 import type { Sheet } from '@/lib/types';
@@ -10,7 +10,7 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, MoreVertical, FileDown } from 'lucide-react';
+import { Plus, Trash2, MoreVertical, FileDown, Settings, Type, Hash, Calendar as CalendarIcon, ChevronsUpDown } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,21 +20,30 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { AddColumnDialog } from './AddColumnDialog';
+import { ConfigureColumnDialog } from './ConfigureColumnDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+
 
 interface SheetDataTableProps {
   sheet: Sheet;
   permissions: {
     canEdit: boolean;
   };
+}
+
+const TYPE_ICONS: Record<string, React.ElementType> = {
+    text: Type,
+    number: Hash,
+    date: CalendarIcon,
+    select: ChevronsUpDown,
 }
 
 export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
@@ -45,6 +54,8 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     const [editingCell, setEditingCell] = useState<{ rowIndex: number; header: string } | null>(null);
     const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
     const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
+    const [columnToConfigure, setColumnToConfigure] = useState<string | null>(null);
+
 
     // Update local state if the sheet prop changes (e.g., user switches tabs)
     useEffect(() => {
@@ -58,7 +69,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         setData(newData);
     };
 
-    const saveChanges = (payload: { data?: Record<string, any>[]; headers?: string[] }, toastMessage: string) => {
+    const saveChanges = (payload: { data?: Record<string, any>[]; headers?: string[], columnConfig?: any }, toastMessage: string) => {
         if (!firestore || Object.keys(payload).length === 0 || !permissions.canEdit) return;
         const sheetRef = doc(firestore, `workbooks/${sheet.workbookId}/sheets`, sheet.id);
         updateDocumentNonBlocking(sheetRef, payload);
@@ -103,6 +114,9 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         if (!columnToDelete || !permissions.canEdit) return;
 
         const newHeaders = headers.filter(h => h !== columnToDelete);
+        const newColumnConfig = { ...sheet.columnConfig };
+        delete newColumnConfig[columnToDelete];
+
         const newData = data.map(row => {
             const newRow = {...row};
             delete newRow[columnToDelete];
@@ -111,7 +125,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
 
         setHeaders(newHeaders);
         setData(newData);
-        saveChanges({ data: newData, headers: newHeaders }, `Column "${columnToDelete}" has been deleted.`);
+        saveChanges({ data: newData, headers: newHeaders, columnConfig: newColumnConfig }, `Column "${columnToDelete}" has been deleted.`);
         setColumnToDelete(null);
     }
     
@@ -150,10 +164,15 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                 <Table>
                     <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
                         <TableRow>
-                            {headers.map(header => (
+                            {headers.map(header => {
+                                const Icon = TYPE_ICONS[sheet.columnConfig?.[header]?.type || 'text'];
+                                return (
                                 <TableHead key={header}>
                                     <div className="flex items-center justify-between group">
-                                        <span>{header}</span>
+                                        <div className="flex items-center gap-2">
+                                            <Icon className="h-4 w-4 text-muted-foreground" />
+                                            <span>{header}</span>
+                                        </div>
                                         {permissions.canEdit && (
                                             <DropdownMenu>
                                                 <DropdownMenuTrigger asChild>
@@ -162,6 +181,10 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                                                     </Button>
                                                 </DropdownMenuTrigger>
                                                 <DropdownMenuContent>
+                                                    <DropdownMenuItem onSelect={() => setColumnToConfigure(header)}>
+                                                        <Settings className="mr-2 h-4 w-4"/>
+                                                        Configure Column
+                                                    </DropdownMenuItem>
                                                     <DropdownMenuItem 
                                                         className="text-destructive focus:text-destructive"
                                                         onSelect={() => setColumnToDelete(header)}>
@@ -173,7 +196,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                                         )}
                                     </div>
                                 </TableHead>
-                            ))}
+                            )})}
                             <TableHead className="w-[50px] sticky right-0 bg-background/95 backdrop-blur">
                                 <span className="sr-only">Actions</span>
                             </TableHead>
@@ -189,26 +212,51 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                         ) : (
                             data.map((row, rowIndex) => (
                                 <TableRow key={rowIndex}>
-                                    {headers.map(header => (
+                                    {headers.map(header => {
+                                        const columnConfig = sheet.columnConfig?.[header];
+                                        return (
                                         <TableCell 
                                             key={`${rowIndex}-${header}`}
                                             onDoubleClick={() => permissions.canEdit && setEditingCell({ rowIndex, header })}
                                             className={permissions.canEdit ? 'cursor-cell' : ''}
                                         >
                                             {editingCell?.rowIndex === rowIndex && editingCell?.header === header ? (
-                                                <Input
-                                                    autoFocus
-                                                    value={row[header] || ''}
-                                                    onChange={(e) => handleCellUpdate(rowIndex, header, e.target.value)}
-                                                    onBlur={handleBlurSave}
-                                                    onKeyDown={handleEnterSave}
-                                                    className="h-8"
-                                                />
+                                                <>
+                                                    {columnConfig?.type === 'select' && columnConfig.selectOptions ? (
+                                                        <Select
+                                                            value={row[header] || ''}
+                                                            onValueChange={(value) => {
+                                                                handleCellUpdate(rowIndex, header, value);
+                                                                const newData = [...data];
+                                                                newData[rowIndex][header] = value;
+                                                                saveChanges({ data: newData }, 'Cell updated.');
+                                                                setEditingCell(null);
+                                                            }}
+                                                        >
+                                                            <SelectTrigger className="h-8 -mx-2 -my-1">
+                                                                <SelectValue />
+                                                            </SelectTrigger>
+                                                            <SelectContent>
+                                                                {columnConfig.selectOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <Input
+                                                            autoFocus
+                                                            value={row[header] || ''}
+                                                            onChange={(e) => handleCellUpdate(rowIndex, header, e.target.value)}
+                                                            onBlur={handleBlurSave}
+                                                            onKeyDown={handleEnterSave}
+                                                            className="h-8"
+                                                            type={columnConfig?.type === 'number' ? 'number' : 'text'}
+                                                        />
+                                                    )}
+                                                </>
                                             ) : (
                                                 <span className="block min-h-[2rem] py-2 truncate">{row[header]}</span>
                                             )}
                                         </TableCell>
-                                    ))}
+                                    )})}
                                     <TableCell className="sticky right-0 bg-background/95 backdrop-blur">
                                         {permissions.canEdit && (
                                             <AlertDialog>
@@ -260,6 +308,15 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                     Export as Excel
                 </Button>
             </div>
+
+             {columnToConfigure && (
+                <ConfigureColumnDialog
+                    open={!!columnToConfigure}
+                    onOpenChange={(isOpen) => !isOpen && setColumnToConfigure(null)}
+                    sheet={sheet}
+                    header={columnToConfigure}
+                />
+            )}
 
             {columnToDelete && (
                  <AlertDialog open={!!columnToDelete} onOpenChange={(isOpen) => !isOpen && setColumnToDelete(null)}>
