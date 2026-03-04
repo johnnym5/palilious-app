@@ -3,10 +3,8 @@
 import { Button } from '@/components/ui/button';
 import { FileQuestion } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 export default function NotFound() {
-  const router = useRouter();
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col items-center justify-center p-8 text-center">
@@ -19,12 +17,6 @@ export default function NotFound() {
         </p>
 
         <div className="mt-8 flex flex-wrap justify-center gap-4">
-            <Button
-                onClick={() => router.back()}
-                variant="outline"
-            >
-                Go Back
-            </Button>
             <Button asChild>
                 <Link href="/dashboard">Go to Dashboard</Link>
             </Button>
