@@ -160,7 +160,7 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
             type: 'LOG',
             actorId: currentUserProfile.id,
             actorName: currentUserProfile.fullName,
-            actorAvatarUrl: currentUserProfile.avatarURL,
+            actorAvatarUrl: currentUserProfile.avatarURL || '',
             timestamp: now,
             text: `created the mission and assigned it to ${assignedUser.fullName}.`,
             fromStatus: 'N/A',

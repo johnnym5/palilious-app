@@ -74,7 +74,7 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
             orgId: currentUserProfile.orgId,
             senderId: currentUserProfile.id,
             senderName: currentUserProfile.fullName,
-            senderAvatarUrl: currentUserProfile.avatarURL,
+            senderAvatarUrl: currentUserProfile.avatarURL || '',
             content: newMessage,
             timestamp,
         };

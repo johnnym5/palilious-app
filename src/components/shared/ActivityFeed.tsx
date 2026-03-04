@@ -95,7 +95,7 @@ export function ActivityFeed({
       </ScrollArea>
       <form onSubmit={handleSubmit} className="mt-4 flex items-center gap-2 border-t pt-4">
         <Avatar className="h-8 w-8">
-          <AvatarImage src={currentUserProfile.avatarURL} />
+          <AvatarImage src={currentUserProfile.avatarURL || ''} />
           <AvatarFallback>
             {currentUserProfile.fullName
               .split(' ')

@@ -97,7 +97,7 @@ export function NewRequisitionDialog({ children, open, onOpenChange, userProfile
             type: 'LOG',
             actorId: userProfile.id,
             actorName: userProfile.fullName,
-            actorAvatarUrl: userProfile.avatarURL,
+            actorAvatarUrl: userProfile.avatarURL || '',
             timestamp: now,
             text: `created the requisition and sent for HR approval.`,
             fromStatus: 'N/A',

@@ -52,7 +52,7 @@ export function CompletionBriefDialog({ isOpen, onOpenChange, task, userProfile 
             type: 'COMMENT',
             actorId: userProfile.id,
             actorName: userProfile.fullName,
-            actorAvatarUrl: userProfile.avatarURL,
+            actorAvatarUrl: userProfile.avatarURL || '',
             timestamp: now,
             text: sanitizeInput(values.brief),
         };
@@ -61,7 +61,7 @@ export function CompletionBriefDialog({ isOpen, onOpenChange, task, userProfile 
             type: 'LOG',
             actorId: userProfile.id,
             actorName: userProfile.fullName,
-            actorAvatarUrl: userProfile.avatarURL,
+            actorAvatarUrl: userProfile.avatarURL || '',
             timestamp: now,
             text: `submitted the mission for review.`,
             fromStatus: task.status,

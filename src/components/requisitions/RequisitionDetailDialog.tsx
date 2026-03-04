@@ -117,7 +117,7 @@ export function RequisitionDetailDialog({
         type: 'COMMENT',
         actorId: currentUserProfile.id,
         actorName: currentUserProfile.fullName,
-        actorAvatarUrl: currentUserProfile.avatarURL,
+        actorAvatarUrl: currentUserProfile.avatarURL || '',
         timestamp: new Date().toISOString(),
         text: commentText,
     };
@@ -161,7 +161,7 @@ export function RequisitionDetailDialog({
       type: 'LOG',
       actorId: currentUserProfile.id,
       actorName: currentUserProfile.fullName,
-      actorAvatarUrl: currentUserProfile.avatarURL,
+      actorAvatarUrl: currentUserProfile.avatarURL || '',
       timestamp: new Date().toISOString(),
       text: logText,
       fromStatus: requisition.status,

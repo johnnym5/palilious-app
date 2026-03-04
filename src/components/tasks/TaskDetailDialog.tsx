@@ -89,7 +89,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
         type: 'COMMENT',
         actorId: currentUserProfile.id,
         actorName: currentUserProfile.fullName,
-        actorAvatarUrl: currentUserProfile.avatarURL,
+        actorAvatarUrl: currentUserProfile.avatarURL || '',
         timestamp: new Date().toISOString(),
         text: commentText,
     };
