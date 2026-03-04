@@ -45,7 +45,7 @@ import {
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { Textarea } from '../ui/textarea'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { ActivityFeed } from '../shared/ActivityFeed'
 import { Badge } from '../ui/badge'
 import Link from 'next/link'
@@ -85,10 +85,15 @@ export function RequisitionDetailDialog({
   const { toast } = useToast()
   const [rejectionReason, setRejectionReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isUrgent, setIsUrgent] = useState(false);
 
-  const isUrgent =
-    requisition.status === 'PENDING_HR' &&
-    differenceInHours(new Date(), new Date(requisition.createdAt)) > 24
+  useEffect(() => {
+    if (requisition.status === 'PENDING_HR' && differenceInHours(new Date(), new Date(requisition.createdAt)) > 24) {
+      setIsUrgent(true);
+    } else {
+      setIsUrgent(false);
+    }
+  }, [requisition.status, requisition.createdAt]);
 
   const canTakeAction = () => {
     if (!currentUserProfile || !permissions) return false

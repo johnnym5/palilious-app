@@ -6,21 +6,21 @@ import { Menu, Clock } from "lucide-react";
 import AppSidebar from "./AppSidebar";
 import { VisuallyHidden } from "@radix-ui/react-visually-hidden";
 import { usePathname } from 'next/navigation';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
-import { usePermissions } from '@/hooks/usePermissions';
-import { doc, collection, query, where } from 'firebase/firestore';
-import type { UserProfile, Task, Requisition } from '@/lib/types';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
 import { ThemeToggle } from './ThemeToggle';
 import { UniversalSearch } from './UniversalSearch';
+import { Skeleton } from '@/components/ui/skeleton';
 
 
 export default function AppHeader() {
   const pathname = usePathname();
   const { user } = useUser();
   const firestore = useFirestore();
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
 
   // Get user profile and permissions
   const userProfileRef = useMemoFirebase(() => 
@@ -29,6 +29,7 @@ export default function AppHeader() {
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
+    setCurrentTime(new Date());
     const timer = setInterval(() => setCurrentTime(new Date()), 1000);
     return () => clearInterval(timer);
   }, []);
@@ -58,7 +59,11 @@ export default function AppHeader() {
       <div className='flex items-center gap-4'>
         <div className='hidden sm:flex items-center gap-2 text-muted-foreground'>
             <Clock className='h-4 w-4' />
-            <p className="text-sm">{format(currentTime, 'PPP, p')}</p>
+            {currentTime ? (
+              <p className="text-sm">{format(currentTime, 'PPP, p')}</p>
+            ) : (
+              <Skeleton className="h-4 w-40" />
+            )}
         </div>
         <ThemeToggle />
         <UserNav />
