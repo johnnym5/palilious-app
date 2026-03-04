@@ -49,7 +49,6 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad, onSele
             type: 'LOG',
             actorId: userProfile.id,
             actorName: userProfile.fullName,
-            actorAvatarUrl: userProfile.avatarURL || '',
             timestamp: new Date().toISOString(),
             text: logText,
             fromStatus: task.status,
@@ -76,7 +75,6 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad, onSele
             type: 'LOG',
             actorId: userProfile.id,
             actorName: userProfile.fullName,
-            actorAvatarUrl: userProfile.avatarURL || '',
             timestamp: new Date().toISOString(),
             text: `approved the assistance request.`,
             fromStatus: task.status,
@@ -99,7 +97,6 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad, onSele
             type: 'LOG',
             actorId: userProfile.id,
             actorName: userProfile.fullName,
-            actorAvatarUrl: userProfile.avatarURL || '',
             timestamp: new Date().toISOString(),
             text: `rejected the assistance request.`,
             fromStatus: task.status,
@@ -138,7 +135,7 @@ export function TaskCard({ task, userProfile, permissions, personnelLoad, onSele
                 <CardFooter className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                            <AvatarImage src={undefined} />
+                            
                             <AvatarFallback className="text-xs">{task.assignedToName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <div className='flex items-center gap-2'>

@@ -127,7 +127,7 @@ export function ShareWorkbookDialog({ workbook, open, onOpenChange, currentUserP
                     <div className="space-y-2">
                         {owner && (
                             <div className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8"><AvatarImage src={owner.avatarURL} /><AvatarFallback>{owner.fullName.split(" ").map(n=>n[0]).join('')}</AvatarFallback></Avatar>
+                                <Avatar className="h-8 w-8"><AvatarFallback>{owner.fullName.split(" ").map(n=>n[0]).join('')}</AvatarFallback></Avatar>
                                 <div className="flex-1">
                                     <p className="font-semibold text-sm">{owner.fullName}</p>
                                     <p className="text-xs text-muted-foreground">{owner.email}</p>
@@ -139,7 +139,7 @@ export function ShareWorkbookDialog({ workbook, open, onOpenChange, currentUserP
                         )}
                          {sharedUsers.map(user => (
                              <div key={user.id} className="flex items-center gap-3">
-                                <Avatar className="h-8 w-8"><AvatarImage src={user.avatarURL} /><AvatarFallback>{user.fullName.split(" ").map(n=>n[0]).join('')}</AvatarFallback></Avatar>
+                                <Avatar className="h-8 w-8"><AvatarFallback>{user.fullName.split(" ").map(n=>n[0]).join('')}</AvatarFallback></Avatar>
                                 <div className="flex-1">
                                     <p className="font-semibold text-sm">{user.fullName}</p>
                                     <p className="text-xs text-muted-foreground">{user.email}</p>

@@ -10,7 +10,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { ShieldAlert, Plus, MoreVertical, Trash2, Edit, ListTodo } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SheetDataTable } from '@/components/workbook/SheetDataTable';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddSheetDialog } from '@/components/workbook/AddSheetDialog';
@@ -56,6 +56,7 @@ export default function WorkbookDetailPage() {
 
     const workbookId = params.workbookId as string;
 
+    const [activeTab, setActiveTab] = useState<string | undefined>();
     const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
     const [sheetToRename, setSheetToRename] = useState<Sheet | null>(null);
     const [sheetToDelete, setSheetToDelete] = useState<Sheet | null>(null);
@@ -73,6 +74,12 @@ export default function WorkbookDetailPage() {
         query(collection(firestore, `workbooks/${workbookId}/sheets`)), 
     [firestore, workbookId]);
     const { data: sheets, isLoading: areSheetsLoading } = useCollection<Sheet>(sheetsQuery);
+    
+    useEffect(() => {
+        if (!activeTab && sheets && sheets.length > 0) {
+            setActiveTab(sheets[0].id);
+        }
+    }, [sheets, activeTab]);
 
     const workbookPermissions = useWorkbookPermissions(workbook, userProfile);
     const generalPermissions = usePermissions(userProfile);
@@ -125,7 +132,7 @@ export default function WorkbookDetailPage() {
 
                 {sheets && sheets.length > 0 ? (
                     <Card>
-                        <Tabs defaultValue={sheets[0].id} className="h-full flex flex-col">
+                        <Tabs defaultValue={sheets[0].id} value={activeTab} onValueChange={setActiveTab} className="h-full flex flex-col">
                             <CardHeader>
                                 <div className='flex items-center gap-2'>
                                     <TabsList>
@@ -189,6 +196,21 @@ export default function WorkbookDetailPage() {
                 )}
             </div>
             
+            {activeTab && workbookPermissions.canEdit && userProfile && (
+                <Button
+                    className="fixed bottom-6 right-24 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40"
+                    onClick={() => {
+                        const currentSheet = sheets?.find(s => s.id === activeTab);
+                        if (currentSheet) {
+                            setSheetToMakeTask(currentSheet);
+                        }
+                    }}
+                    aria-label="Create Task from Sheet"
+                >
+                    <ListTodo className="h-8 w-8" />
+                </Button>
+            )}
+
             {sheetToRename && (
                 <RenameSheetDialog
                     open={!!sheetToRename}

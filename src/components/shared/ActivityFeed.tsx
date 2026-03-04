@@ -56,7 +56,7 @@ export function ActivityFeed({
           {(activity || []).map((entry, index) => (
             <div key={index} className="flex items-start gap-3">
               <Avatar className="h-8 w-8 border">
-                <AvatarImage src={entry.actorAvatarUrl} />
+                
                 <AvatarFallback>
                   {entry.actorName
                     .split(' ')
@@ -95,7 +95,7 @@ export function ActivityFeed({
       </ScrollArea>
       <form onSubmit={handleSubmit} className="mt-4 flex items-center gap-2 border-t pt-4">
         <Avatar className="h-8 w-8">
-          <AvatarImage src={currentUserProfile.avatarURL || ''} />
+          
           <AvatarFallback>
             {currentUserProfile.fullName
               .split(' ')

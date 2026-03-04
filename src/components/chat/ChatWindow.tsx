@@ -74,7 +74,6 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
             orgId: currentUserProfile.orgId,
             senderId: currentUserProfile.id,
             senderName: currentUserProfile.fullName,
-            senderAvatarUrl: currentUserProfile.avatarURL || '',
             content: newMessage,
             timestamp,
         };
@@ -123,7 +122,7 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
     const otherParticipant = !isChannel ? selectedChat.participantProfiles[selectedChat.participants.find(p => p !== currentUserProfile.id) || ''] : null;
 
     const getSenderProfile = (senderId: string) => {
-        return selectedChat.participantProfiles[senderId] || { fullName: 'Unknown User', avatarURL: '' };
+        return selectedChat.participantProfiles[senderId] || { fullName: 'Unknown User' };
     }
     
     return (
@@ -136,7 +135,7 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
                     </div>
                  ) : (
                     <Avatar className="h-10 w-10">
-                        <AvatarImage src={otherParticipant?.avatarURL} />
+                        
                         <AvatarFallback>{otherParticipant?.fullName?.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                     </Avatar>
                  )}
@@ -159,7 +158,7 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
                             message.senderId === currentUserProfile.id ? "ml-auto flex-row-reverse" : "mr-auto"
                         )}>
                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={sender.avatarURL} />
+                                
                                 <AvatarFallback>{sender.fullName.split(" ").map(n=>n[0]).join('')}</AvatarFallback>
                             </Avatar>
                             <div className={cn(

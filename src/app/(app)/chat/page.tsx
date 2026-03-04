@@ -46,8 +46,8 @@ export default function ChatPage() {
                     type: 'DIRECT',
                     participants: [currentUserProfile?.id || '', userToSelect.id],
                     participantProfiles: {
-                        [currentUserProfile?.id || '']: { fullName: currentUserProfile?.fullName || '', avatarURL: currentUserProfile?.avatarURL },
-                        [userToSelect.id]: { fullName: userToSelect.fullName, avatarURL: userToSelect.avatarURL },
+                        [currentUserProfile?.id || '']: { fullName: currentUserProfile?.fullName || '' },
+                        [userToSelect.id]: { fullName: userToSelect.fullName },
                     },
                     updatedAt: new Date().toISOString(),
                 });
@@ -65,8 +65,8 @@ export default function ChatPage() {
                 type: 'DIRECT',
                 participants: [currentUserProfile?.id || '', item.id],
                  participantProfiles: {
-                    [currentUserProfile?.id || '']: { fullName: currentUserProfile?.fullName || '', avatarURL: currentUserProfile?.avatarURL },
-                    [item.id]: { fullName: item.fullName, avatarURL: item.avatarURL },
+                    [currentUserProfile?.id || '']: { fullName: currentUserProfile?.fullName || '' },
+                    [item.id]: { fullName: item.fullName },
                 },
                 updatedAt: new Date().toISOString(),
             });

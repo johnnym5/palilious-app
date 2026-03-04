@@ -64,7 +64,6 @@ export function RequestAssistanceDialog({ open, onOpenChange, targetUser, curren
             type: 'LOG',
             actorId: currentUserProfile.id,
             actorName: currentUserProfile.fullName,
-            actorAvatarUrl: currentUserProfile.avatarURL,
             timestamp: now,
             text: `requested assistance from ${targetUser.fullName}.`,
         };

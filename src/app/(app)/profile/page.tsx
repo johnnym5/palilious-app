@@ -178,7 +178,7 @@ export default function ProfilePage() {
             <Skeleton className="h-24 w-24 rounded-full" />
         ) : (
             <Avatar className="h-24 w-24 border-2 border-primary">
-                <AvatarImage src={userProfile?.avatarURL} />
+                
                 <AvatarFallback className="text-3xl">{userProfile?.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
             </Avatar>
         )}

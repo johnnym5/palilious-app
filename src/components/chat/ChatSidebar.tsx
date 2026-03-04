@@ -60,10 +60,10 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
     const isLoading = isLoadingChats || isLoadingUsers;
 
     const getOtherParticipant = (chat: Chat) => {
-        if (!currentUserProfile) return { id: '', fullName: 'Unknown', avatarURL: '' };
+        if (!currentUserProfile) return { id: '', fullName: 'Unknown' };
         const otherId = chat.participants.find(p => p !== currentUserProfile.id);
         if (!otherId || !chat.participantProfiles[otherId]) {
-            return { id: '', fullName: 'Unknown', avatarURL: '' };
+            return { id: '', fullName: 'Unknown' };
         }
         return { id: otherId, ...chat.participantProfiles[otherId] };
     }
@@ -97,7 +97,7 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                             )}
                         >
                             <Avatar className="h-10 w-10">
-                                <AvatarImage src={user.avatarURL} alt={user.fullName} />
+                                
                                 <AvatarFallback>{user.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 truncate">
@@ -142,7 +142,7 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                                         )}
                                     >
                                         <Avatar className="h-10 w-10">
-                                            <AvatarImage src={otherParticipant.avatarURL} />
+                                            
                                             <AvatarFallback>{otherParticipant.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 truncate">

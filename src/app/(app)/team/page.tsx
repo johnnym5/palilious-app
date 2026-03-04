@@ -133,7 +133,7 @@ export default function TeamPage() {
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarImage src={user.avatarURL} alt={user.fullName} />
+                              
                               <AvatarFallback>{user.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                             </Avatar>
                             <div>

@@ -64,7 +64,7 @@ export function CreateChannelDialog({ children, open, onOpenChange, currentUserP
     const allParticipantIds = [...new Set([currentUserProfile.id, ...data.participants])];
     const participantProfiles = allUsers?.reduce((acc, user) => {
         if (allParticipantIds.includes(user.id)) {
-            acc[user.id] = { fullName: user.fullName, avatarURL: user.avatarURL || "" };
+            acc[user.id] = { fullName: user.fullName };
         }
         return acc;
     }, {} as Chat['participantProfiles']) || {};
@@ -102,7 +102,7 @@ export function CreateChannelDialog({ children, open, onOpenChange, currentUserP
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
                 <FormField
                     control={form.control}
                     name="name"
@@ -141,7 +141,7 @@ export function CreateChannelDialog({ children, open, onOpenChange, currentUserP
                                                 />
                                             </FormControl>
                                             <Avatar className="h-8 w-8">
-                                                <AvatarImage src={user.avatarURL} />
+                                                
                                                 <AvatarFallback>{user.fullName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                                             </Avatar>
                                             <FormLabel className="font-normal flex-1 cursor-pointer">

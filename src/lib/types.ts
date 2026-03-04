@@ -45,7 +45,6 @@ export interface UserProfile {
   position: UserPosition;
   departmentId?: string;
   departmentName?: string;
-  avatarURL?: string;
   joinedDate: string; // ISO String for timestamp
   status?: UserStatus;
   lastSeen?: string; // ISO String
@@ -92,7 +91,6 @@ export interface ActivityEntry {
     type: ActivityType;
     actorId: string; // userId
     actorName: string;
-    actorAvatarUrl?: string;
     timestamp: string; // ISO String for timestamp
     text: string; // The content of the log or comment
     
@@ -174,7 +172,6 @@ export interface Chat {
     participantProfiles: { // Map userId to a mini profile
         [key: string]: {
             fullName: string;
-            avatarURL?: string;
         }
     };
     lastMessage?: {
@@ -192,7 +189,6 @@ export interface ChatMessage {
     orgId: string;
     senderId: string;
     senderName: string;
-    senderAvatarUrl?: string;
     content: string;
     timestamp: string; // ISO String for timestamp
 }

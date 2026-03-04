@@ -8,7 +8,6 @@
         "type": { "type": "string", "enum": ["LOG", "COMMENT"] },
         "actorId": { "type": "string" },
         "actorName": { "type": "string" },
-        "actorAvatarUrl": { "type": "string", "format": "uri" },
         "text": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" },
         "fromStatus": { "type": "string" },
@@ -355,7 +354,6 @@
         "orgId": { "type": "string" },
         "senderId": { "type": "string" },
         "senderName": { "type": "string" },
-        "senderAvatarUrl": { "type": "string", "format": "uri" },
         "content": { "type": "string" },
         "timestamp": { "type": "string", "format": "date-time" }
       },

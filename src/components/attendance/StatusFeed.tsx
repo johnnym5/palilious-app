@@ -68,7 +68,7 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
                         }}
                       >
                          <Avatar className="relative h-10 w-10">
-                              <AvatarImage src={user.avatarURL} alt={user.fullName} />
+                              
                               <AvatarFallback>{user.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                               {user.status === 'ONLINE' && (
                                   <div className="absolute -bottom-0.5 -right-0.5 rounded-full h-3.5 w-3.5 bg-background p-0.5">
