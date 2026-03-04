@@ -68,3 +68,4 @@ Palilious is built on a scalable architecture that allows for numerous future en
 - **Team Chat Channels**: Expand the chat module to support group conversations and topic-based channels.
 - **Reporting & Analytics**: Develop a dedicated module for generating and visualizing reports on attendance, financial spending, and team productivity.
 - **Calendar & Leave Management**: Introduce a formal system for requesting, approving, and tracking employee leave.
+
