@@ -1,18 +1,28 @@
 'use client';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Megaphone, Pin, Eye } from "lucide-react";
-import { useUser, useDoc, useMemoFirebase, useCollection, useFirestore, updateDocumentNonBlocking } from "@/firebase";
+import { Megaphone, Pin, Eye, MoreVertical, Edit, Trash2 } from "lucide-react";
+import { useUser, useDoc, useMemoFirebase, useCollection, useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { UserProfile, Announcement } from "@/lib/types";
 import { collection, doc, query, where, orderBy, arrayUnion, limit } from "firebase/firestore";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Skeleton } from "../ui/skeleton";
 import { formatDistanceToNow } from "date-fns";
-import { useMemo, useEffect } from "react";
+import { useMemo, useEffect, useState } from "react";
+import { Button } from "../ui/button";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "../ui/dropdown-menu";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { EditAnnouncementDialog } from "./EditAnnouncementDialog";
+import { useToast } from "@/hooks/use-toast";
+
 
 export function Announcements() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
+    const { toast } = useToast();
     
+    const [annToEdit, setAnnToEdit] = useState<Announcement | null>(null);
+    const [annToDelete, setAnnToDelete] = useState<Announcement | null>(null);
+
     const userProfileRef = useMemoFirebase(() => 
         authUser ? doc(firestore, "users", authUser.uid) : null,
     [firestore, authUser]);
@@ -53,8 +63,23 @@ export function Announcements() {
             });
         }
     }, [sortedAnnouncements, authUser, firestore]);
+    
+    const handleDelete = () => {
+        if (!annToDelete) return;
+        deleteDocumentNonBlocking(doc(firestore, 'announcements', annToDelete.id));
+        toast({ title: "Announcement Deleted", description: `"${annToDelete.title}" has been removed.` });
+        setAnnToDelete(null);
+    }
+    
+    const handlePinToggle = (ann: Announcement) => {
+        updateDocumentNonBlocking(doc(firestore, 'announcements', ann.id), {
+            isPinned: !ann.isPinned
+        });
+        toast({ title: "Updated", description: `Announcement has been ${ann.isPinned ? 'unpinned' : 'pinned'}.` });
+    }
 
     return (
+        <>
         <Card>
             <CardHeader>
                 <CardTitle>Announcements</CardTitle>
@@ -101,6 +126,29 @@ export function Announcements() {
                                             )}
                                         </div>
                                     </div>
+                                    {permissions.canManageStaff && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2">
+                                                    <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent>
+                                                <DropdownMenuItem onSelect={() => handlePinToggle(announcement)}>
+                                                    <Pin className="mr-2 h-4 w-4" />
+                                                    {announcement.isPinned ? 'Unpin' : 'Pin'}
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => setAnnToEdit(announcement)}>
+                                                    <Edit className="mr-2 h-4 w-4" />
+                                                    Edit
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setAnnToDelete(announcement)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" />
+                                                    Delete
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
                                 </div>
                             </li>
                         ))}
@@ -108,5 +156,31 @@ export function Announcements() {
                 </div>
             </CardContent>
         </Card>
+        
+        {annToEdit && (
+            <EditAnnouncementDialog 
+                announcement={annToEdit} 
+                open={!!annToEdit} 
+                onOpenChange={(isOpen) => !isOpen && setAnnToEdit(null)}
+            />
+        )}
+        
+        {annToDelete && (
+            <AlertDialog open={!!annToDelete} onOpenChange={(isOpen) => !isOpen && setAnnToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            This will permanently delete the announcement "{annToDelete.title}".
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+        )}
+        </>
     );
 }
