@@ -16,7 +16,7 @@ import { useFirestore, useCollection, addDocumentNonBlocking, useMemoFirebase } 
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Task, UserProfile, ActivityEntry, Permissions, Notification } from "@/lib/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn, sanitizeInput } from "@/lib/utils";
 import { format } from "date-fns";
 import { useFileUpload } from "@/hooks/useFileUpload";
@@ -34,7 +34,6 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface AssignTaskDialogProps {
-  children?: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: {
@@ -47,7 +46,7 @@ interface AssignTaskDialogProps {
   permissions: Permissions;
 }
 
-export function AssignTaskDialog({ children, open, onOpenChange, initialData, currentUserProfile, permissions }: AssignTaskDialogProps) {
+export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserProfile, permissions }: AssignTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -212,7 +211,6 @@ export function AssignTaskDialog({ children, open, onOpenChange, initialData, cu
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      {children && <DialogTrigger asChild>{children}</DialogTrigger>}
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Assign New Directive</DialogTitle>

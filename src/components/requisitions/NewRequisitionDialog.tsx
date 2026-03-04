@@ -13,7 +13,7 @@ import { useFirestore, useUser, useDoc, addDocumentNonBlocking, useMemoFirebase 
 import { collection, query, where, getDocs, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Requisition, UserProfile, ActivityEntry } from "@/lib/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { useFileUpload } from "@/hooks/useFileUpload";
 import { Progress } from "@/components/ui/progress";
@@ -29,13 +29,12 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface NewRequisitionDialogProps {
-  children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userProfile: UserProfile | null;
 }
 
-export function NewRequisitionDialog({ children, open, onOpenChange, userProfile }: NewRequisitionDialogProps) {
+export function NewRequisitionDialog({ open, onOpenChange, userProfile }: NewRequisitionDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -141,7 +140,6 @@ export function NewRequisitionDialog({ children, open, onOpenChange, userProfile
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>New Requisition</DialogTitle>

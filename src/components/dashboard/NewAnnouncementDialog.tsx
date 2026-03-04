@@ -14,7 +14,7 @@ import { useFirestore, addDocumentNonBlocking } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Announcement, UserProfile } from "@/lib/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters long." }),
@@ -25,13 +25,12 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface NewAnnouncementDialogProps {
-  children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userProfile: UserProfile;
 }
 
-export function NewAnnouncementDialog({ children, open, onOpenChange, userProfile }: NewAnnouncementDialogProps) {
+export function NewAnnouncementDialog({ open, onOpenChange, userProfile }: NewAnnouncementDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -91,7 +90,6 @@ export function NewAnnouncementDialog({ children, open, onOpenChange, userProfil
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>New Announcement</DialogTitle>

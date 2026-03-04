@@ -136,7 +136,7 @@ export default function RequisitionsPage() {
             </CardContent>
           </Card>
 
-          <NewRequisitionDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen} userProfile={userProfile}>
+          <>
             <Button 
                 className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
                 onClick={() => setIsNewRequestOpen(true)}
@@ -144,7 +144,8 @@ export default function RequisitionsPage() {
             >
               <Plus className="h-8 w-8" />
             </Button>
-          </NewRequisitionDialog>
+            <NewRequisitionDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen} userProfile={userProfile} />
+          </>
 
           {selectedRequest && userProfile && (
                 <RequisitionDetailDialog

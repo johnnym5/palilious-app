@@ -13,7 +13,7 @@ import { useFirestore, addDocumentNonBlocking } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { Workbook, UserProfile, Sheet } from "@/lib/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import * as XLSX from 'xlsx';
 import { sanitizeInput } from "@/lib/utils";
@@ -26,7 +26,6 @@ const formSchema = z.object({
 type FormData = z.infer<typeof formSchema>;
 
 interface NewWorkbookDialogProps {
-  children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userProfile: UserProfile;
@@ -38,7 +37,7 @@ interface ParsedSheet {
     headers: string[];
 }
 
-export function NewWorkbookDialog({ children, open, onOpenChange, userProfile }: NewWorkbookDialogProps) {
+export function NewWorkbookDialog({ open, onOpenChange, userProfile }: NewWorkbookDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -175,7 +174,6 @@ export function NewWorkbookDialog({ children, open, onOpenChange, userProfile }:
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Create New Workbook</DialogTitle>

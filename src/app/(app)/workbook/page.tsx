@@ -193,15 +193,16 @@ export default function WorkbookPage() {
 
        <WorkbookList userProfile={userProfile} />
       
-       <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile}>
-            <Button 
-                className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
-                onClick={() => setIsNewWorkbookOpen(true)}
-                aria-label="New Workbook"
-            >
-              <Plus className="h-8 w-8" />
-            </Button>
-        </NewWorkbookDialog>
+       <>
+         <Button 
+             className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
+             onClick={() => setIsNewWorkbookOpen(true)}
+             aria-label="New Workbook"
+         >
+           <Plus className="h-8 w-8" />
+         </Button>
+         <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile} />
+       </>
     </div>
   );
 }

@@ -144,15 +144,16 @@ export default function DashboardPage() {
                 </div>
             </div>
              {permissions.canManageAnnouncements && userProfile && (
-                <NewAnnouncementDialog open={isAddOpen} onOpenChange={setIsAddOpen} userProfile={userProfile}>
-                    <Button 
-                        className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
-                        onClick={() => setIsAddOpen(true)}
-                        aria-label="New Announcement"
-                    >
-                        <Plus className="h-8 w-8" />
-                    </Button>
-                </NewAnnouncementDialog>
+               <>
+                 <Button 
+                     className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
+                     onClick={() => setIsAddOpen(true)}
+                     aria-label="New Announcement"
+                 >
+                     <Plus className="h-8 w-8" />
+                 </Button>
+                 <NewAnnouncementDialog open={isAddOpen} onOpenChange={setIsAddOpen} userProfile={userProfile} />
+               </>
             )}
         </div>
     );
