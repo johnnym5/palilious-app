@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { SubmitDailyReport } from "@/components/reports/SubmitDailyReport";
 import { MyDailyReports } from "@/components/reports/MyDailyReports";
 import { TeamDailyReports } from "@/components/reports/TeamDailyReports";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { AttendanceHistory } from "@/components/attendance/AttendanceHistory";
 
 export default function ReportsPage() {
   const { user: authUser } = useUser();
@@ -50,8 +52,13 @@ export default function ReportsPage() {
         </Tabs>
       ) : (
         <div className="grid gap-6 lg:grid-cols-2 items-start">
-            {userProfile && <SubmitDailyReport userProfile={userProfile} />}
-            {userProfile && <MyDailyReports userProfile={userProfile} />}
+            <div className="space-y-6">
+                {userProfile && <SubmitDailyReport userProfile={userProfile} />}
+                {userProfile && <MyDailyReports userProfile={userProfile} />}
+            </div>
+             <div className="space-y-6">
+                {userProfile && <AttendanceHistory userProfile={userProfile} />}
+            </div>
         </div>
       )}
     </div>

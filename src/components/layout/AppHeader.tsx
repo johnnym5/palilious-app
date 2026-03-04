@@ -11,7 +11,6 @@ import { format } from 'date-fns';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
-import { ThemeToggle } from './ThemeToggle';
 import { UniversalSearch } from './UniversalSearch';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Notifications } from './Notifications';
@@ -67,7 +66,6 @@ export default function AppHeader() {
             )}
         </div>
         <Notifications />
-        <ThemeToggle />
         <UserNav />
       </div>
     </header>

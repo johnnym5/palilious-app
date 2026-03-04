@@ -29,15 +29,19 @@ import { Skeleton } from "../ui/skeleton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "../ui/badge";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
+import { Separator } from "../ui/separator";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { isSeparator: true },
   { href: "/attendance", icon: CalendarCheck2, label: "Attendance" },
-  { href: "/leave", icon: CalendarPlus, label: "Leave Management" },
-  { href: "/requisitions", icon: ReceiptText, label: "Requisitions" },
-  { href: "/tasks", icon: ListTodo, label: "Tasks" },
-  { href: "/workbook", icon: BookOpenCheck, label: "Workbook" },
+  { href: "/leave", icon: CalendarPlus, label: "Leave" },
   { href: "/chat", icon: MessagesSquare, label: "Chat" },
+  { isSeparator: true },
+  { href: "/tasks", icon: ListTodo, label: "Tasks" },
+  { href: "/workbook", icon: BookOpenCheck, label: "Workbooks" },
+  { href: "/requisitions", icon: ReceiptText, label: "Requisitions" },
+  { isSeparator: true },
   { href: "/reports", icon: BarChart, label: "Reports" },
 ];
 
@@ -98,7 +102,10 @@ export default function AppSidebar({ isMobile = false }) {
       </div>
       <div className="flex flex-1 flex-col justify-between">
         <nav className="grid items-start gap-1 p-4 text-sm font-medium">
-          {mainNavItems.map((item) => {
+          {mainNavItems.map((item, index) => {
+            if ('isSeparator' in item) {
+                return <Separator key={`sep-${index}`} className="my-2" />;
+            }
             if (item.href === "/requisitions" && !permissions.canAccessRequisitions) {
                 return null;
             }

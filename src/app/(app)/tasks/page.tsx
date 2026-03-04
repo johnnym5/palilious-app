@@ -52,7 +52,7 @@ export default function TasksPage() {
     <div className="space-y-6 h-full flex flex-col">
        <div className="flex items-center justify-between">
          <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Smart Tasker</h1>
+          <h1 className="text-3xl font-bold font-headline tracking-tight">Tasks</h1>
           <p className="text-muted-foreground">
             {permissions.canManageStaff ? "Assign and monitor tasks across your team." : "Your personal task board."}
           </p>
@@ -72,7 +72,7 @@ export default function TasksPage() {
         <TaskBoard userProfile={userProfile} permissions={permissions} onTaskSelect={setSelectedTask} />
       )}
       
-      {userProfile && (
+      {userProfile && permissions.canManageStaff && (
         <>
           <Button 
               className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 

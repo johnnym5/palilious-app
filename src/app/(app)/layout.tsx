@@ -10,11 +10,13 @@ import type { UserProfile } from '@/lib/types';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
 import { hexToHslString } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useTheme } from 'next-themes';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
+  const { theme } = useTheme();
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -29,13 +31,27 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
+    // When the config loads or changes, apply the branding color
     if (config?.branding_color) {
       const hslString = hexToHslString(config.branding_color);
       if (hslString) {
         document.documentElement.style.setProperty('--primary', hslString);
       }
+    } else {
+        // When no branding color is set, revert to the default theme color
+        // This requires knowing the default for light/dark themes
+        const defaultPrimaryLight = '232 59% 60%';
+        const defaultPrimaryDark = '232 59% 60%';
+        
+        const currentTheme = theme === 'dark' ? 'dark' : 'light';
+
+        if (currentTheme === 'dark') {
+             document.documentElement.style.setProperty('--primary', defaultPrimaryDark);
+        } else {
+             document.documentElement.style.setProperty('--primary', defaultPrimaryLight);
+        }
     }
-  }, [config]);
+  }, [config, theme]);
 
   if (isUserLoading || !user) {
     return (

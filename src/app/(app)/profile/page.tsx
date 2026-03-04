@@ -13,13 +13,15 @@ import * as z from 'zod';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Moon, Sun } from 'lucide-react';
 import { useState } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { usePermissions, Permissions } from '@/hooks/usePermissions';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
+import { useTheme } from "next-themes";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 const profileFormSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -165,6 +167,7 @@ function PasswordChangeForm() {
 function PreferencesForm({ userProfile }: { userProfile: UserProfile }) {
     const firestore = useFirestore();
     const { toast } = useToast();
+    const { setTheme } = useTheme();
 
     const handleNotificationChange = (key: 'requisitionUpdates' | 'taskAssignments' | 'announcements', value: boolean) => {
         const userRef = doc(firestore, 'users', userProfile.id);
@@ -230,9 +233,29 @@ function PreferencesForm({ userProfile }: { userProfile: UserProfile }) {
                         <Label htmlFor="theme" className="flex flex-col space-y-1">
                             <span>Theme</span>
                             <span className="font-normal leading-snug text-muted-foreground">
-                                Change the application theme in the top right corner.
+                                Change the application's color scheme.
                             </span>
                         </Label>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="outline" size="icon">
+                              <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                              <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                              <span className="sr-only">Toggle theme</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => setTheme("light")}>
+                              Light
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setTheme("dark")}>
+                              Dark
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => setTheme("system")}>
+                              System
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                     </div>
                 </div>
             </div>
