@@ -197,7 +197,7 @@ export function RequisitionDetailDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh]">
+      <DialogContent className="sm:max-w-4xl h-[90vh] w-full">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <span>
@@ -218,8 +218,8 @@ export function RequisitionDetailDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid grid-cols-3 gap-6 py-4 flex-1 overflow-hidden">
-          <div className="col-span-2 space-y-6 flex flex-col">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 py-4 flex-1 overflow-y-auto">
+          <div className="lg:col-span-2 space-y-6 flex flex-col">
             <div className="space-y-2">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
                 <Info className="h-4 w-4" /> Details
@@ -241,7 +241,7 @@ export function RequisitionDetailDialog({
               </div>
             </div>
           </div>
-          <div className="col-span-1 space-y-4 rounded-lg border bg-secondary/30 p-4 h-fit">
+          <div className="lg:col-span-1 space-y-4 rounded-lg border bg-secondary/30 p-4 h-fit">
             <div className="flex items-start justify-between">
               <h4 className="font-semibold">Summary</h4>
             </div>

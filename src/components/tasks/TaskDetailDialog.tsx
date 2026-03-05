@@ -103,7 +103,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh]">
+      <DialogContent className="sm:max-w-4xl h-[90vh] w-full">
         <DialogHeader>
           <div className="flex items-start justify-between">
              <DialogTitle className='max-w-md'>{task.title}</DialogTitle>
@@ -119,7 +119,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
            </DialogDescription>
         </DialogHeader>
 
-        <div className="grid md:grid-cols-3 gap-6 py-4 flex-1 overflow-hidden">
+        <div className="grid md:grid-cols-3 gap-6 py-4 flex-1 overflow-y-auto">
           <div className="md:col-span-2 space-y-6 flex flex-col">
             <div className="space-y-2">
               <h4 className="flex items-center gap-2 text-sm font-semibold text-muted-foreground">
