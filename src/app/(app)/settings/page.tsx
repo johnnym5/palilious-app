@@ -346,7 +346,7 @@ export default function SettingsPage() {
         
         {userProfile && <DepartmentManager userProfile={userProfile} />}
 
-        <div className="grid gap-6 lg:grid-cols-2 items-start">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
             <Card>
                 <CardHeader>
                 <CardTitle>Organization Profile</CardTitle>

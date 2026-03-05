@@ -177,7 +177,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     }
 
     return (
-        <div className="h-[50vh] flex flex-col border rounded-lg">
+        <div className="h-[calc(100vh-24rem)] flex flex-col border rounded-lg">
             <ScrollArea className="flex-grow relative">
                 <Table>
                     <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
@@ -297,7 +297,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                                                     )}
                                                 </>
                                             ) : (
-                                                <span className="block min-h-[2rem] py-2 truncate">
+                                                <span className="block min-h-[2rem] py-2 break-words">
                                                     {columnConfig?.type === 'date' && row[header]
                                                         ? format(new Date(row[header]), 'PPP')
                                                         : row[header]}

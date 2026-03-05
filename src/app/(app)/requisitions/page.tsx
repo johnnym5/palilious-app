@@ -15,6 +15,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { RequisitionDetailDialog } from "@/components/requisitions/RequisitionDetailDialog";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
 
 
 const getVisibleTabs = (permissions: Permissions, isStaff: boolean) => {
@@ -118,9 +119,12 @@ export default function RequisitionsPage() {
             </CardHeader>
             <CardContent>
                 <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <TabsList className={`grid w-full grid-cols-${visibleTabs.length}`}>
-                        {visibleTabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
-                    </TabsList>
+                    <ScrollArea className="w-full pb-2 whitespace-nowrap">
+                        <TabsList>
+                            {visibleTabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
+                        </TabsList>
+                        <ScrollBar orientation="horizontal" />
+                    </ScrollArea>
                     {visibleTabs.map(tab => (
                         <TabsContent key={tab} value={tab} className="mt-4">
                             <RequisitionTable 
