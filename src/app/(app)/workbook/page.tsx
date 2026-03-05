@@ -97,7 +97,7 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
                         <Card key={workbook.id} className="group hover:shadow-md transition-shadow flex flex-col">
                             <CardHeader className="flex flex-row items-start justify-between">
                                 <div className='flex-1 pr-2'>
-                                    <CardTitle className="truncate">{workbook.title}</CardTitle>
+                                    <CardTitle className="break-words">{workbook.title}</CardTitle>
                                     <CardDescription className="line-clamp-1">{workbook.description || "No description."}</CardDescription>
                                 </div>
                             {canManage(workbook) && (
