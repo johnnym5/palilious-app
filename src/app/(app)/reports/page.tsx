@@ -67,14 +67,10 @@ export default function ReportsPage() {
           </TabsContent>
         </Tabs>
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
-            <div className="space-y-6">
-                {userProfile && <SubmitDailyReport userProfile={userProfile} />}
-                {userProfile && <MyDailyReports userProfile={userProfile} />}
-            </div>
-             <div className="space-y-6">
-                {userProfile && <AttendanceHistory userProfile={userProfile} />}
-            </div>
+        <div className="space-y-6">
+            {userProfile && <SubmitDailyReport userProfile={userProfile} />}
+            {userProfile && <MyDailyReports userProfile={userProfile} />}
+            {userProfile && <AttendanceHistory userProfile={userProfile} />}
         </div>
       )}
     </div>
