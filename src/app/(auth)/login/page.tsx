@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { LoginForm } from "@/components/auth/LoginForm";
 import { Logo } from "@/components/Logo";
 import Link from "next/link";
-import { buttonVariants } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { SupportDialog } from "@/components/auth/SupportDialog";
 import { Dialog, DialogTrigger } from "@/components/ui/dialog";
