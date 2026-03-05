@@ -6,10 +6,8 @@ import type { Permissions } from "@/hooks/usePermissions";
 import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { useMemo } from "react";
 import { useRouter } from "next/navigation";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 interface StatusFeedProps {
   userProfile: UserProfile | null;
@@ -50,8 +48,8 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
           <ScrollArea className="h-96">
               <div className="space-y-1">
                  {isLoading && Array.from({ length: 5 }).map((_, i) => (
-                      <div key={i} className="flex items-center gap-4 p-2">
-                          <Skeleton className="h-10 w-10 rounded-full" />
+                      <div key={i} className="flex items-center gap-3 p-2">
+                          <Skeleton className="h-3 w-3 rounded-full" />
                           <div className="space-y-2">
                               <Skeleton className="h-4 w-32" />
                               <Skeleton className="h-3 w-24" />
@@ -59,26 +57,17 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
                       </div>
                  ))}
                  {!isLoading && sortedUsers.map(user => {
-                     const avatarUrl = PlaceHolderImages[user.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl;
                      return (
                      <div 
                         key={user.id} 
-                        className="flex items-center gap-4 p-2 rounded-lg transition-colors hover:bg-secondary cursor-pointer"
+                        className="flex items-center gap-3 p-2 rounded-lg transition-colors hover:bg-secondary cursor-pointer"
                         onClick={() => {
                           if (user.id !== userProfile?.id) {
                             router.push(`/chat?with=${user.id}`);
                           }
                         }}
                       >
-                         <Avatar className="relative h-10 w-10">
-                              <AvatarImage src={avatarUrl} alt={user.fullName} />
-                              <AvatarFallback>{user.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-                              {user.status === 'ONLINE' && (
-                                  <div className="absolute -bottom-0.5 -right-0.5 rounded-full h-3.5 w-3.5 bg-background p-0.5">
-                                      <div className="h-full w-full rounded-full bg-emerald-500" />
-                                  </div>
-                              )}
-                         </Avatar>
+                         <span className={`h-2.5 w-2.5 rounded-full shrink-0 ${user.status === 'ONLINE' ? 'bg-emerald-500' : 'bg-muted'}`} />
                          <div>
                              <p className="font-medium text-sm text-foreground">{user.fullName}</p>
                              <p className="text-xs text-muted-foreground">{user.position}</p>
