@@ -1,217 +1,99 @@
 'use client';
 import { StatCard } from "@/components/dashboard/StatCard";
-import { Briefcase, CheckCircle, Clock, Users, Plus } from "lucide-react";
-import { Announcements } from "@/components/dashboard/Announcements";
+import { CheckCircle, Briefcase } from "lucide-react";
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
-import type { UserProfile, Task, Requisition, TaskStatus, RequisitionStatus } from "@/lib/types";
+import type { UserProfile, Task, Requisition, TaskStatus, RequisitionStatus, Chat } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo, useState, useEffect } from "react";
-import { RecentConversations } from "@/components/dashboard/RecentConversations";
-import { usePermissions } from "@/hooks/usePermissions";
-import { Button } from "@/components/ui/button";
-import { NewAnnouncementDialog } from "@/components/dashboard/NewAnnouncementDialog";
-import { useSystemConfig } from "@/hooks/useSystemConfig";
-
+import { PerformanceCard } from "@/components/dashboard/PerformanceCard";
 
 export default function DashboardPage() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
-    const [isAddOpen, setIsAddOpen] = useState(false);
 
     const userProfileRef = useMemoFirebase(() => 
         authUser ? doc(firestore, 'users', authUser.uid) : null, 
     [firestore, authUser]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-    const permissions = usePermissions(userProfile);
 
-    const { config: systemConfig, isLoading: isConfigLoading } = useSystemConfig(userProfile?.orgId);
-
-    // Query for user's tasks
-    const tasksQuery = useMemoFirebase(() => {
-        if (!authUser) return null;
-        return query(
-            collection(firestore, 'tasks'),
-            where('assignedTo', '==', authUser.uid)
-        );
-    }, [firestore, authUser]);
-    const { data: allTasks, isLoading: tasksLoading } = useCollection<Task>(tasksQuery);
-    
-    const activeTaskCount = useMemo(() => {
-        if (!allTasks) return 0;
-        const activeStatuses: TaskStatus[] = ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW'];
-        return allTasks.filter(task => activeStatuses.includes(task.status)).length;
-    }, [allTasks]);
-
-
-    // Query for user's requisitions
+    // Fetch pending approvals for requisitions and attendance
     const reqsQuery = useMemoFirebase(() => {
-        if (!authUser) return null;
+        if (!userProfile) return null;
+        const inboxStatuses: string[] = [];
+        if (userProfile.position === "HR Manager / Director" || userProfile.position === "Organization Administrator") inboxStatuses.push('PENDING_HR');
+        if (userProfile.position === "Chief Financial Officer (CFO) / Finance Manager" || userProfile.position === "Organization Administrator") inboxStatuses.push('PENDING_FINANCE', 'APPROVED');
+        if (userProfile.position === "CEO / Managing Director" || userProfile.position === "Organization Administrator") inboxStatuses.push('PENDING_MD');
+        
+        if (inboxStatuses.length === 0) return null;
+        
         return query(
             collection(firestore, 'requisitions'),
-            where('createdBy', '==', authUser.uid)
-        );
-    }, [firestore, authUser]);
-    const { data: allReqs, isLoading: reqsLoading } = useCollection<Requisition>(reqsQuery);
-
-    const pendingReqsCount = useMemo(() => {
-        if (!allReqs) return 0;
-        const pendingStatuses: RequisitionStatus[] = ['PENDING_HR', 'PENDING_FINANCE', 'PENDING_MD'];
-        return allReqs.filter(req => pendingStatuses.includes(req.status)).length;
-    }, [allReqs]);
-
-    // Query for org's staff
-    const staffQuery = useMemoFirebase(() => {
-        if (!userProfile) return null;
-        return query(
-            collection(firestore, 'users'),
-            where('orgId', '==', userProfile.orgId)
+            where('orgId', '==', userProfile.orgId),
+            where('status', 'in', [...new Set(inboxStatuses)])
         );
     }, [firestore, userProfile]);
-    const { data: allStaff, isLoading: staffLoading } = useCollection<UserProfile>(staffQuery);
-
-    const onlineStaffCount = useMemo(() => {
-        if (!allStaff) return 0;
-        return allStaff.filter(staff => staff.status === 'ONLINE').length;
-    }, [allStaff]);
-    
-
-    const isLoading = isProfileLoading || tasksLoading || reqsLoading || staffLoading || isConfigLoading;
-    
-    // Progress bar calculations
-    const tasksProgress = Math.min((activeTaskCount / 5) * 100, 100);
-    const reqsProgress = Math.min((pendingReqsCount / 3) * 100, 100);
-    const onlineStaffProgress = allStaff && allStaff.length > 0 ? (onlineStaffCount / allStaff.length) * 100 : 0;
-
-    const [workdayProgress, setWorkdayProgress] = useState<number | null>(null);
-    useEffect(() => {
-        if (isConfigLoading || !userProfile) {
-            return;
-        }
-
-        if (!systemConfig?.work_hours?.start || !systemConfig.work_hours.end) {
-            setWorkdayProgress(userProfile.status === 'ONLINE' ? 100 : 0);
-            return;
-        }
-
-        const calculateProgress = () => {
-            if (userProfile.status !== 'ONLINE') {
-                setWorkdayProgress(0);
-                return;
-            }
-
-            const now = new Date();
-            const [startHour, startMinute] = systemConfig.work_hours.start.split(':').map(Number);
-            const [endHour, endMinute] = systemConfig.work_hours.end.split(':').map(Number);
-
-            const startTime = new Date();
-            startTime.setHours(startHour, startMinute, 0, 0);
-
-            const endTime = new Date();
-            endTime.setHours(endHour, endMinute, 0, 0);
-            
-            if (now < startTime) {
-                setWorkdayProgress(0);
-                return;
-            }
-            if (now > endTime) {
-                setWorkdayProgress(100);
-                return;
-            }
-
-            const totalWorkdaySeconds = (endTime.getTime() - startTime.getTime()) / 1000;
-            const elapsedSeconds = (now.getTime() - startTime.getTime()) / 1000;
-            
-            if (totalWorkdaySeconds <= 0) {
-                setWorkdayProgress(100);
-                return;
-            }
-            
-            const progress = Math.max(0, Math.min((elapsedSeconds / totalWorkdaySeconds) * 100, 100));
-            setWorkdayProgress(progress);
-        };
-
-        calculateProgress();
-        const interval = setInterval(calculateProgress, 60000); // Update every minute
-
-        return () => clearInterval(interval);
-
-    }, [systemConfig, userProfile, isConfigLoading]);
+    const { data: pendingReqs, isLoading: reqsLoading } = useCollection<Requisition>(reqsQuery);
 
 
-    const StatCards = () => (
-         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-            {isLoading ? (
-                <>
-                    <Skeleton className="h-[124px]" />
-                    <Skeleton className="h-[124px]" />
-                    <Skeleton className="h-[124px]" />
-                    <Skeleton className="h-[124px]" />
-                </>
-            ) : (
-                <>
-                    <StatCard 
-                        title="Active Tasks" 
-                        value={activeTaskCount} 
-                        icon={CheckCircle} 
-                        href="/tasks"
-                        progress={tasksProgress}
-                        color="text-sky-500"
-                    />
-                    <StatCard 
-                        title="Clock-in Status" 
-                        value={userProfile?.status || "OFFLINE"} 
-                        icon={Clock} 
-                        href="/attendance"
-                        progress={workdayProgress ?? undefined}
-                        color={userProfile?.status === 'ONLINE' ? "text-emerald-500" : "text-muted-foreground"}
-                    />
-                    <StatCard 
-                        title="Pending Requisitions" 
-                        value={pendingReqsCount} 
-                        icon={Briefcase} 
-                        href="/requisitions"
-                        progress={reqsProgress}
-                        color="text-amber-500"
-                    />
-                    <StatCard 
-                        title="Staff Online" 
-                        value={onlineStaffCount} 
-                        icon={Users}
-                        href="/team"
-                        progress={onlineStaffProgress}
-                        color="text-violet-500"
-                    />
-                </>
-            )}
-        </div>
-    );
+    // Fetch unread messages
+    const chatsQuery = useMemoFirebase(() => 
+        authUser ? query(
+            collection(firestore, 'chats'),
+            where('participants', 'array-contains', authUser.uid)
+        ) : null,
+    [firestore, authUser]);
+    const { data: chats, isLoading: chatsLoading } = useCollection<Chat>(chatsQuery);
+
+    const unreadMessagesCount = useMemo(() => {
+        // This is a simplified count. A real implementation would need to track read statuses per user.
+        // For now, we'll just count chats where the last message isn't from the current user.
+        if (!chats || !authUser) return 0;
+        return chats.filter(chat => chat.lastMessage && chat.lastMessage.senderId !== authUser.uid).length;
+    }, [chats, authUser]);
+
+
+    const isLoading = isProfileLoading || reqsLoading || chatsLoading;
 
     return (
         <div className="flex flex-col gap-8">
-            <StatCards />
-            <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                <div className="lg:col-span-2 space-y-6">
-                    <ActiveTasks />
-                </div>
-                <div className="space-y-6">
-                    <Announcements />
-                    <RecentConversations />
+             {isLoading ? (
+                <Skeleton className="h-40 w-full" />
+             ) : (
+                userProfile && <PerformanceCard userProfile={userProfile} />
+             )}
+
+            <ActiveTasks />
+
+            <div className="space-y-2">
+                <h2 className="text-xl font-bold font-headline">Recent Updates</h2>
+                <div className="grid grid-cols-2 gap-4">
+                     {isLoading ? (
+                        <>
+                            <Skeleton className="h-24" />
+                            <Skeleton className="h-24" />
+                        </>
+                    ) : (
+                        <>
+                            <StatCard 
+                                title="New Messages" 
+                                value={unreadMessagesCount} 
+                                icon={Briefcase} 
+                                href="/chat"
+                                color="text-sky-500"
+                            />
+                            <StatCard 
+                                title="Approvals" 
+                                value={pendingReqs?.length || 0} 
+                                icon={CheckCircle}
+                                href="/requisitions"
+                                color="text-emerald-500"
+                            />
+                        </>
+                    )}
                 </div>
             </div>
-             {permissions.canManageAnnouncements && userProfile && (
-               <>
-                 <Button 
-                     className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
-                     onClick={() => setIsAddOpen(true)}
-                     aria-label="New Announcement"
-                 >
-                     <Plus className="h-8 w-8" />
-                 </Button>
-                 <NewAnnouncementDialog open={isAddOpen} onOpenChange={setIsAddOpen} userProfile={userProfile} />
-               </>
-            )}
         </div>
     );
 }

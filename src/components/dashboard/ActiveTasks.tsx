@@ -1,31 +1,25 @@
 'use client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where } from "firebase/firestore";
+import { collection, query, where, orderBy, limit } from "firebase/firestore";
 import type { Task, TaskStatus } from "@/lib/types";
 import { Skeleton } from "../ui/skeleton";
-import { Circle, Clock, ArrowRight, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { formatDistanceToNow } from "date-fns";
-import { TaskPriorityBadge } from "../tasks/TaskPriorityBadge";
-import { useMemo } from "react";
-
-const statusIcons: Record<Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>, React.ElementType> = {
-    QUEUED: Circle,
-    ACTIVE: Clock,
-    AWAITING_REVIEW: ShieldCheck,
-};
-
-const statusColors: Record<Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>, string> = {
-    QUEUED: "text-muted-foreground",
-    ACTIVE: "text-primary",
-    AWAITING_REVIEW: "text-amber-500",
-}
+import { useMemo, useState } from "react";
+import { TaskCard } from "../tasks/TaskCard";
+import { TaskDetailDialog } from "../tasks/TaskDetailDialog";
+import { usePermissions } from "@/hooks/usePermissions";
 
 export function ActiveTasks() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
+    const [selectedTask, setSelectedTask] = useState<Task | null>(null);
+
+    const userProfileRef = useMemoFirebase(() => 
+        authUser ? doc(firestore, 'users', authUser.uid) : null,
+    [firestore, authUser]);
+    const { data: userProfile } = useDoc(userProfileRef);
+    const permissions = usePermissions(userProfile);
 
     // Simplified query to avoid composite index.
     const tasksQuery = useMemoFirebase(() => {
@@ -33,65 +27,57 @@ export function ActiveTasks() {
         return query(
             collection(firestore, 'tasks'),
             where('assignedTo', '==', authUser.uid),
-            where('status', 'in', ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW'])
+            where('status', 'in', ['QUEUED', 'ACTIVE', 'AWAITING_REVIEW']),
+            orderBy('createdAt', 'desc'),
+            limit(5)
         );
     }, [firestore, authUser]);
 
     const { data: tasks, isLoading } = useCollection<Task>(tasksQuery);
 
-    // Perform sorting and limiting on the client side.
-    const displayedTasks = useMemo(() => {
-        if (!tasks) return [];
-        return tasks.sort((a, b) => {
-            // Sort by status descending (QUEUED > AWAITING_REVIEW > ACTIVE)
-            if (a.status > b.status) return -1;
-            if (a.status < b.status) return 1;
-            
-            // Then by due date ascending
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
-        }).slice(0, 5);
-    }, [tasks]);
-
+    const handleDialogClose = (isOpen: boolean) => {
+        if (!isOpen) {
+          setSelectedTask(null);
+        }
+    };
 
   return (
-    <Card className="h-full">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <div>
-            <CardTitle>Mission Log</CardTitle>
-            <CardDescription>Your most recent, non-archived directives.</CardDescription>
+    <>
+        <div className="space-y-2">
+            <div className="flex items-center justify-between">
+                <h2 className="text-xl font-bold font-headline">Today's Tasks</h2>
+                <Link href="/tasks" passHref>
+                <Button variant="link" size="sm">
+                    View All
+                </Button>
+                </Link>
+            </div>
+            <div className="space-y-3">
+                {isLoading && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-20 w-full" />)}
+                {!isLoading && tasks?.length === 0 && (
+                    <p className="text-sm text-muted-foreground text-center pt-8">No active tasks. Enjoy the quiet!</p>
+                )}
+                {!isLoading && tasks?.map(task => (
+                    <TaskCard 
+                        key={task.id} 
+                        task={task} 
+                        userProfile={userProfile!} 
+                        permissions={permissions}
+                        onSelect={() => setSelectedTask(task)}
+                    />
+                ))}
+            </div>
         </div>
-        <Link href="/tasks" passHref>
-          <Button variant="ghost" size="sm">
-            View All <ArrowRight className="ml-2 h-4 w-4"/>
-          </Button>
-        </Link>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-4">
-            {isLoading && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
-            {!isLoading && displayedTasks.length === 0 && (
-                 <p className="text-sm text-muted-foreground text-center pt-16">No active missions. All clear!</p>
-            )}
-            {!isLoading && displayedTasks.map(task => {
-                const StatusIcon = statusIcons[task.status as Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>];
-                const colorClass = statusColors[task.status as Exclude<TaskStatus, 'ARCHIVED' | 'COMPLETED'>];
-                return (
-                    <div key={task.id} className="flex items-center gap-4 p-2 rounded-lg hover:bg-secondary/50">
-                        <StatusIcon className={`h-5 w-5 ${colorClass}`} />
-                        <div className="flex-1">
-                            <p className="font-medium text-foreground text-sm">{task.title}</p>
-                            <p className="text-xs text-muted-foreground">
-                                {task.dueDate ? `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}` : 'No due date'}
-                            </p>
-                        </div>
-                        <TaskPriorityBadge priority={task.priority} />
-                    </div>
-                )
-            })}
-        </div>
-      </CardContent>
-    </Card>
+
+         {selectedTask && userProfile && (
+            <TaskDetailDialog
+            task={selectedTask}
+            isOpen={!!selectedTask}
+            onOpenChange={handleDialogClose}
+            currentUserProfile={userProfile}
+            permissions={permissions}
+            />
+        )}
+    </>
   );
 }

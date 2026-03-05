@@ -1,28 +1,17 @@
 'use client';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Settings } from "lucide-react";
-import Link from "next/link";
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { Loader2 } from 'lucide-react';
 
 export default function PlaceholderPage() {
+  const router = useRouter();
+  useEffect(() => {
+    router.replace('/settings');
+  }, [router]);
+
   return (
-    <div className="flex items-center justify-center h-full">
-        <Card className="w-full max-w-md text-center">
-            <CardHeader>
-                <CardTitle>Page Consolidated</CardTitle>
-                <CardDescription>
-                    This page's functionality has been merged into the main Settings page for a cleaner experience.
-                </CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Button asChild>
-                    <Link href="/settings">
-                        <Settings className="mr-2" />
-                        Go to Settings
-                    </Link>
-                </Button>
-            </CardContent>
-        </Card>
-    </div>
-  );
+     <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary w-12 h-12" />
+      </div>
+  )
 }

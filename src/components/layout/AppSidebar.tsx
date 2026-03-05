@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
+import { Avatar, AvatarFallback } from "../ui/avatar";
 import { useAuth, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import type { UserProfile, Organization } from "@/lib/types";
@@ -25,7 +25,6 @@ import { signOut } from "firebase/auth";
 import { Skeleton } from "../ui/skeleton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "../ui/badge";
-import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { Separator } from "../ui/separator";
 
 const mainNavItems = [
