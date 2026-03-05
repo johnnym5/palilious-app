@@ -9,7 +9,6 @@ import { Input } from '@/components/ui/input'
 import { Send, MessageSquare, History } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { cn, sanitizeInput } from '@/lib/utils'
-import { PlaceHolderImages } from '@/lib/placeholder-images'
 
 interface ActivityFeedProps {
   activity: ActivityEntry[]
@@ -55,11 +54,9 @@ export function ActivityFeed({
       <ScrollArea className="flex-1 pr-4" ref={scrollAreaRef}>
         <div className="space-y-4">
           {(activity || []).map((entry, index) => {
-             const avatarUrl = PlaceHolderImages[entry.actorId.charCodeAt(0) % PlaceHolderImages.length].imageUrl;
              return (
             <div key={index} className="flex items-start gap-3">
               <Avatar className="h-8 w-8 border">
-                <AvatarImage src={avatarUrl} alt={entry.actorName} />
                 <AvatarFallback>
                   {entry.actorName
                     .split(' ')
@@ -98,7 +95,6 @@ export function ActivityFeed({
       </ScrollArea>
       <form onSubmit={handleSubmit} className="mt-4 flex items-center gap-2 border-t pt-4">
         <Avatar className="h-8 w-8">
-           <AvatarImage src={PlaceHolderImages[currentUserProfile.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl} alt={currentUserProfile.fullName} />
           <AvatarFallback>
             {currentUserProfile.fullName
               .split(' ')

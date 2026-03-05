@@ -37,7 +37,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 
 const orgFormSchema = z.object({
@@ -184,13 +183,11 @@ function StaffDirectory() {
                       ))
                     )}
                     {!areUsersLoading && users?.map(user => {
-                      const avatarUrl = PlaceHolderImages[user.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl;
                       return (
                       <TableRow key={user.id}>
                         <TableCell>
                           <div className="flex items-center gap-3">
                             <Avatar>
-                              <AvatarImage src={avatarUrl} alt={user.fullName} />
                               <AvatarFallback>{user.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                             </Avatar>
                             <div>
@@ -307,7 +304,7 @@ export default function SettingsPage() {
   
   const isLoading = isProfileLoading || isOrgLoading || isConfigLoading;
 
-  if (!isProfileLoading && !permissions.canManageCompany) {
+  if (!isProfileLoading && !permissions.canManageStaff) {
       return (
            <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
@@ -346,30 +343,32 @@ export default function SettingsPage() {
         
         {userProfile && <DepartmentManager userProfile={userProfile} />}
 
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
-            <Card>
-                <CardHeader>
-                <CardTitle>Organization Profile</CardTitle>
-                <CardDescription>Manage your organization's public name.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {organization ? <CompanySettingsForm organization={organization} /> : <p>Organization not found.</p>}
-                </CardContent>
-            </Card>
-            <Card>
-                <CardHeader>
-                <CardTitle>System Configuration</CardTitle>
-                <CardDescription>Manage global feature toggles and operational settings.</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {systemConfig ? (
-                        <ScrollArea className="h-96 pr-6">
-                            <SystemConfigForm systemConfig={systemConfig} />
-                        </ScrollArea>
-                    ) : <p>System configuration not found.</p>}
-                </CardContent>
-            </Card>
-        </div>
+        {permissions.canManageCompany && (
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
+              <Card>
+                  <CardHeader>
+                  <CardTitle>Organization Profile</CardTitle>
+                  <CardDescription>Manage your organization's public name.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      {organization ? <CompanySettingsForm organization={organization} /> : <p>Organization not found.</p>}
+                  </CardContent>
+              </Card>
+              <Card>
+                  <CardHeader>
+                  <CardTitle>System Configuration</CardTitle>
+                  <CardDescription>Manage global feature toggles and operational settings.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                      {systemConfig ? (
+                          <ScrollArea className="h-96 pr-6">
+                              <SystemConfigForm systemConfig={systemConfig} />
+                          </ScrollArea>
+                      ) : <p>System configuration not found.</p>}
+                  </CardContent>
+              </Card>
+          </div>
+        )}
     </div>
   );
 }

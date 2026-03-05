@@ -27,7 +27,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "../ui/badge";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { Separator } from "../ui/separator";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
@@ -41,7 +40,7 @@ const mainNavItems = [
   { href: "/requisitions", icon: ReceiptText, label: "Requisitions" },
   { isSeparator: true },
   { href: "/reports", icon: BarChart, label: "Reports" },
-  { href: "/settings", icon: Settings, label: "Settings", permission: 'canManageCompany' },
+  { href: "/settings", icon: Settings, label: "Settings", permission: 'canManageStaff' },
 ];
 
 
@@ -85,7 +84,6 @@ export default function AppSidebar({ isMobile = false }) {
   };
   
   const orgName = organization?.name ? organization.name.charAt(0).toUpperCase() + organization.name.slice(1) : "";
-  const avatarUrl = userProfile ? PlaceHolderImages[userProfile.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl : '';
 
   if (!authUser) return null;
 
@@ -121,7 +119,6 @@ export default function AppSidebar({ isMobile = false }) {
                   <Skeleton className="h-10 w-10 rounded-full" />
                 ) : (
                   <Avatar className="h-10 w-10">
-                      <AvatarImage src={avatarUrl} alt={userProfile?.fullName} />
                       <AvatarFallback>{userProfile?.fullName?.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                   </Avatar>
                 )}

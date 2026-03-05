@@ -22,7 +22,6 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useTheme } from "next-themes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 const profileFormSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -275,8 +274,6 @@ export default function ProfilePage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
 
-  const avatarUrl = userProfile ? PlaceHolderImages.find(p => p.id === 'avatar1')?.imageUrl : '';
-
   const storageKey = 'profile-view-tab';
   const [activeTab, setActiveTab] = useState(() => {
       if (typeof window !== 'undefined') {
@@ -299,7 +296,6 @@ export default function ProfilePage() {
             <Skeleton className="h-24 w-24 rounded-full" />
         ) : (
             <Avatar className="h-24 w-24 border-2 border-primary">
-                <AvatarImage src={avatarUrl} alt={userProfile?.fullName} />
                 <AvatarFallback className="text-3xl">{userProfile?.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
             </Avatar>
         )}

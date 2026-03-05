@@ -9,7 +9,6 @@ import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { MessageSquare, ArrowRight } from "lucide-react";
 import { Button } from "../ui/button";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 import { useMemo } from "react";
 
 export function RecentConversations() {
@@ -38,16 +37,16 @@ export function RecentConversations() {
     const { data: allUsers, isLoading: isLoadingUsers } = useCollection<UserProfile>(usersQuery);
 
     const getOtherParticipant = (chat: Chat) => {
-        if (!authUser || !allUsers) return { fullName: 'Unknown User', avatarURL: '' };
+        if (!authUser || !allUsers) return { fullName: 'Unknown', isChannel: false };
+        if (chat.type === 'CHANNEL') {
+            return { fullName: chat.name || 'Unnamed Channel', isChannel: true };
+        }
         const otherId = chat.participants.find(p => p !== authUser.uid);
-        if (!otherId) return { fullName: 'Group Chat', avatarURL: '' };
-
+        if (!otherId) return { fullName: 'Unknown User', isChannel: false };
         const userProfile = allUsers.find(u => u.id === otherId);
-        const avatarUrl = userProfile ? PlaceHolderImages[userProfile.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl : '';
-        
-        return { 
-            fullName: userProfile?.fullName || 'Unknown User', 
-            avatarURL: avatarUrl
+        return {
+            fullName: userProfile?.fullName || 'Unknown User',
+            isChannel: false
         };
     }
 
@@ -88,7 +87,6 @@ export function RecentConversations() {
                         return (
                             <Link key={chat.id} href="/chat" className="flex items-center gap-3 p-2 -m-2 rounded-lg hover:bg-secondary/50 transition-colors">
                                 <Avatar>
-                                    <AvatarImage src={otherParticipant.avatarURL} alt={otherParticipant.fullName} />
                                     <AvatarFallback>{otherParticipant.fullName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 truncate">

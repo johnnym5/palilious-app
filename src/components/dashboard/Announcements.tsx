@@ -14,7 +14,6 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { EditAnnouncementDialog } from "./EditAnnouncementDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 
 export function Announcements() {
@@ -107,12 +106,10 @@ export function Announcements() {
                             </li>
                         )}
                         {!isLoading && sortedAnnouncements.map(announcement => {
-                            const avatarUrl = PlaceHolderImages.find(p => p.id === 'avatar2')?.imageUrl;
                             return (
                             <li key={announcement.id} className="py-6">
                                 <div className="flex items-start gap-4">
                                      <Avatar className="h-8 w-8">
-                                        <AvatarImage src={avatarUrl} alt={announcement.authorName} />
                                         <AvatarFallback>{announcement.authorName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                                     </Avatar>
                                     <div className="flex-1">

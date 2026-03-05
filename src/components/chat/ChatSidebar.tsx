@@ -12,7 +12,6 @@ import { useMemo, useState } from 'react';
 import { formatDistanceToNow } from 'date-fns';
 import { Separator } from '../ui/separator';
 import { Hash, User } from 'lucide-react';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface ChatSidebarProps {
     currentUserProfile: UserProfile | null;
@@ -91,7 +90,6 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                         </div>
                     ))}
                     {!isLoading && isSearching && searchResults.map(user => {
-                         const avatarUrl = PlaceHolderImages[user.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl;
                          return (
                         <button
                             key={user.id}
@@ -101,7 +99,6 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                             )}
                         >
                             <Avatar className="h-10 w-10">
-                                <AvatarImage src={avatarUrl} alt={user.fullName} />
                                 <AvatarFallback>{user.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                             </Avatar>
                             <div className="flex-1 truncate">
@@ -146,7 +143,6 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                                  <p className="p-2 text-center text-xs text-muted-foreground">No direct messages yet.</p>
                             ) : directMessages.map(chat => {
                                 const otherParticipant = getOtherParticipant(chat);
-                                const avatarUrl = otherParticipant.id ? PlaceHolderImages[otherParticipant.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl : '';
                                 return (
                                     <button
                                         key={chat.id}
@@ -157,7 +153,6 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
                                         )}
                                     >
                                         <Avatar className="h-10 w-10">
-                                            <AvatarImage src={avatarUrl} alt={otherParticipant.fullName} />
                                             <AvatarFallback>{otherParticipant.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                                         </Avatar>
                                         <div className="flex-1 truncate">

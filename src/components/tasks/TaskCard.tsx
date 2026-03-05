@@ -13,7 +13,6 @@ import { CompletionBriefDialog } from './CompletionBriefDialog';
 import { cn } from '@/lib/utils';
 import { Badge } from '../ui/badge';
 import { useToast } from '@/hooks/use-toast';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface TaskCardProps {
     task: Task;
@@ -110,8 +109,6 @@ export function TaskCard({ task, userProfile, permissions, onSelect }: TaskCardP
         toast({ variant: 'destructive', title: 'Request Rejected' });
     };
     
-    const avatarUrl = PlaceHolderImages[task.assignedTo.charCodeAt(0) % PlaceHolderImages.length].imageUrl;
-
     return (
         <>
             <Card 
@@ -137,7 +134,6 @@ export function TaskCard({ task, userProfile, permissions, onSelect }: TaskCardP
                 <CardFooter className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
                         <Avatar className="h-6 w-6">
-                            <AvatarImage src={avatarUrl} alt={task.assignedToName} />
                             <AvatarFallback className="text-xs">{task.assignedToName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                         </Avatar>
                         <div className='flex items-center gap-2'>

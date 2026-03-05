@@ -10,7 +10,6 @@ import { useCollection, useFirestore, addDocumentNonBlocking, setDocumentNonBloc
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
 import { cn } from '@/lib/utils';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 
 interface ChatWindowProps {
     currentUserProfile: UserProfile | null;
@@ -122,15 +121,10 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
     const isChannel = selectedChat.type === 'CHANNEL';
     const otherParticipantId = selectedChat.participants.find(p => p !== currentUserProfile.id) || '';
     const otherParticipant = !isChannel ? selectedChat.participantProfiles[otherParticipantId] : null;
-    const otherParticipantAvatar = otherParticipantId ? PlaceHolderImages[otherParticipantId.charCodeAt(0) % PlaceHolderImages.length].imageUrl : '';
 
 
     const getSenderProfile = (senderId: string) => {
-        const profile = {
-            ...selectedChat.participantProfiles[senderId],
-            avatarUrl: PlaceHolderImages[senderId.charCodeAt(0) % PlaceHolderImages.length].imageUrl,
-        }
-        return profile || { fullName: 'Unknown User', avatarUrl: '' };
+        return selectedChat.participantProfiles[senderId] || { fullName: 'Unknown User' };
     }
     
     return (
@@ -143,7 +137,6 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
                     </div>
                  ) : (
                     <Avatar className="h-10 w-10">
-                        <AvatarImage src={otherParticipantAvatar} alt={otherParticipant?.fullName} />
                         <AvatarFallback>{otherParticipant?.fullName?.split(" ").map(n => n[0]).join("")}</AvatarFallback>
                     </Avatar>
                  )}
@@ -166,7 +159,6 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
                             message.senderId === currentUserProfile.id ? "ml-auto flex-row-reverse" : "mr-auto"
                         )}>
                              <Avatar className="h-8 w-8">
-                                <AvatarImage src={sender.avatarUrl} alt={sender.fullName} />
                                 <AvatarFallback>{sender.fullName.split(" ").map(n=>n[0]).join('')}</AvatarFallback>
                             </Avatar>
                             <div className={cn(
