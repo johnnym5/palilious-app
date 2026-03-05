@@ -76,11 +76,26 @@ export default function WorkbookDetailPage() {
     [firestore, workbookId]);
     const { data: sheets, isLoading: areSheetsLoading } = useCollection<Sheet>(sheetsQuery);
     
+    const activeTabStorageKey = `workbook-active-tab-${workbookId}`;
+
     useEffect(() => {
-        if (!activeTab && sheets && sheets.length > 0) {
-            setActiveTab(sheets[0].id);
+        if (sheets && sheets.length > 0) {
+            const savedTabId = localStorage.getItem(activeTabStorageKey);
+            const isValidSavedTab = sheets.some(s => s.id === savedTabId);
+            
+            if (savedTabId && isValidSavedTab) {
+                setActiveTab(savedTabId);
+            } else {
+                setActiveTab(sheets[0].id);
+            }
         }
-    }, [sheets, activeTab]);
+    }, [sheets, workbookId, activeTabStorageKey]);
+
+    useEffect(() => {
+        if (activeTab) {
+            localStorage.setItem(activeTabStorageKey, activeTab);
+        }
+    }, [activeTab, activeTabStorageKey]);
 
     const workbookPermissions = useWorkbookPermissions(workbook, userProfile);
     const generalPermissions = usePermissions(userProfile);

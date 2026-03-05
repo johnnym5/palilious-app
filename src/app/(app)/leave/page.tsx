@@ -5,7 +5,7 @@ import type { UserProfile } from "@/lib/types";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus } from "lucide-react";
 import { LeaveBalanceCard } from "@/components/leave/LeaveBalanceCard";
@@ -26,6 +26,22 @@ export default function LeavePage() {
   const permissions = usePermissions(userProfile);
 
   const isLoading = isProfileLoading;
+
+  const storageKey = 'leave-view-tab';
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+        const savedTab = localStorage.getItem(storageKey);
+        if (savedTab) return savedTab;
+    }
+    return 'my-leave';
+  });
+
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, activeTab);
+      }
+  }, [activeTab]);
+
 
   if (isLoading) {
     return (
@@ -59,7 +75,7 @@ export default function LeavePage() {
        </div>
       
       {permissions.canManageStaff ? (
-        <Tabs defaultValue="my-leave">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
             <TabsTrigger value="my-leave">My Leave</TabsTrigger>
             {permissions.canApproveHR && <TabsTrigger value="approvals">Team Requests</TabsTrigger>}

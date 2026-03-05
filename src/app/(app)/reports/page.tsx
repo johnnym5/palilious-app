@@ -12,6 +12,7 @@ import { MyDailyReports } from "@/components/reports/MyDailyReports";
 import { TeamDailyReports } from "@/components/reports/TeamDailyReports";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AttendanceHistory } from "@/components/attendance/AttendanceHistory";
+import { useState, useEffect } from "react";
 
 export default function ReportsPage() {
   const { user: authUser } = useUser();
@@ -22,6 +23,21 @@ export default function ReportsPage() {
   [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
+
+  const storageKey = 'reports-view-tab';
+  const [activeTab, setActiveTab] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const savedTab = localStorage.getItem(storageKey);
+          if (savedTab) return savedTab;
+      }
+      return 'analytics';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(storageKey, activeTab);
+    }
+  }, [activeTab]);
 
   if (isProfileLoading) {
     return <Skeleton className="h-screen w-full" />
@@ -37,7 +53,7 @@ export default function ReportsPage() {
       </div>
 
       {permissions.canManageStaff ? (
-        <Tabs defaultValue="analytics">
+        <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList className="grid grid-cols-2">
             <TabsTrigger value="analytics">Analytics</TabsTrigger>
             <TabsTrigger value="team-reports">Team Reports</TabsTrigger>

@@ -11,6 +11,7 @@ import { PendingApprovals } from "@/components/attendance/PendingApprovals";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeamAttendanceHistory } from "@/components/attendance/TeamAttendanceHistory";
+import { useState, useEffect } from "react";
 
 export default function AttendancePage() {
   const { user: authUser } = useUser();
@@ -25,6 +26,22 @@ export default function AttendancePage() {
   const permissions = usePermissions(userProfile);
 
   const isLoading = isProfileLoading || isConfigLoading;
+
+  const storageKey = 'attendance-view-tab';
+  const [activeTab, setActiveTab] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const savedTab = localStorage.getItem(storageKey);
+          if (savedTab) return savedTab;
+      }
+      return 'my-view';
+  });
+
+  useEffect(() => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, activeTab);
+      }
+  }, [activeTab]);
+
 
   if (isLoading) {
     return (
@@ -54,7 +71,7 @@ export default function AttendancePage() {
       </div>
       
       {permissions.canManageStaff && userProfile ? (
-         <Tabs defaultValue="my-view">
+         <Tabs value={activeTab} onValueChange={setActiveTab}>
             <TabsList>
                 <TabsTrigger value="my-view">My View</TabsTrigger>
                 <TabsTrigger value="team-history">Team History</TabsTrigger>

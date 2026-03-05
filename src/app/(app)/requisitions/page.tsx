@@ -85,13 +85,30 @@ export default function RequisitionsPage() {
 
   const isStaff = !permissions.canApproveHR && !permissions.canApproveFinance && !permissions.canApproveMD && !permissions.canManageStaff;
   const visibleTabs = getVisibleTabs(permissions, isStaff);
-  const [activeTab, setActiveTab] = useState(visibleTabs[0]);
+  
+  const storageKey = 'requisitions-active-tab';
+  const [activeTab, setActiveTab] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const savedTab = localStorage.getItem(storageKey);
+          if (savedTab && visibleTabs.includes(savedTab)) {
+              return savedTab;
+          }
+      }
+      return visibleTabs[0] || 'My Requests';
+  });
   
   useEffect(() => {
     if (!visibleTabs.includes(activeTab)) {
         setActiveTab(visibleTabs[0] || "My Requests");
     }
   }, [visibleTabs, activeTab]);
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(storageKey, activeTab);
+    }
+  }, [activeTab]);
+
 
   if (!isProfileLoading && !permissions.canAccessRequisitions) {
     return (

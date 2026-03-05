@@ -99,6 +99,21 @@ export function DataManagement() {
         useMemoFirebase(() => collection(firestore, 'organizations'), [firestore])
     );
     
+    const storageKey = 'superadmin-data-management-tab';
+    const [activeTab, setActiveTab] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const savedTab = localStorage.getItem(storageKey);
+            if (savedTab) return savedTab;
+        }
+        return 'backup';
+    });
+
+    useEffect(() => {
+      if (typeof window !== 'undefined') {
+        localStorage.setItem(storageKey, activeTab);
+      }
+    }, [activeTab]);
+
     useEffect(() => {
         if (!database) return;
         const backupsRef = ref(database, 'backups');
@@ -486,7 +501,7 @@ export function DataManagement() {
 
     return (
         <div className="space-y-8">
-            <Tabs defaultValue="backup" className="w-full">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
                 <TabsList className="grid w-full grid-cols-4">
                     <TabsTrigger value="backup">Backup & Export</TabsTrigger>
                     <TabsTrigger value="restore">Restore & Import</TabsTrigger>

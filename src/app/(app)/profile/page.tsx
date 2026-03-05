@@ -14,7 +14,7 @@ import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, For
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, Moon, Sun } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useToast } from '@/hooks/use-toast';
 import { updatePassword, reauthenticateWithCredential, EmailAuthProvider } from 'firebase/auth';
 import { usePermissions, Permissions } from '@/hooks/usePermissions';
@@ -277,6 +277,21 @@ export default function ProfilePage() {
 
   const avatarUrl = userProfile ? PlaceHolderImages.find(p => p.id === 'avatar1')?.imageUrl : '';
 
+  const storageKey = 'profile-view-tab';
+  const [activeTab, setActiveTab] = useState(() => {
+      if (typeof window !== 'undefined') {
+          const savedTab = localStorage.getItem(storageKey);
+          if (savedTab) return savedTab;
+      }
+      return 'profile';
+  });
+
+  useEffect(() => {
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(storageKey, activeTab);
+    }
+  }, [activeTab]);
+
   return (
     <div className="space-y-8">
       <div className="flex items-start gap-6">
@@ -303,7 +318,7 @@ export default function ProfilePage() {
         </div>
       </div>
       
-      <Tabs defaultValue="profile" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className='grid w-full grid-cols-3 max-w-lg'>
           <TabsTrigger value="profile">Profile</TabsTrigger>
           <TabsTrigger value="security">Security</TabsTrigger>
