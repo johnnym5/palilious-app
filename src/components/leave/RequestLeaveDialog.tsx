@@ -15,7 +15,7 @@ import { useFirestore, addDocumentNonBlocking } from "@/firebase";
 import { collection } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { LeaveRequest, LeaveType, UserProfile } from "@/lib/types";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { sanitizeInput, cn } from "@/lib/utils";
 import { format } from "date-fns";
 
@@ -35,13 +35,12 @@ type FormData = z.infer<typeof formSchema>;
 const LEAVE_TYPES: LeaveType[] = ["ANNUAL", "SICK", "UNPAID", "MATERNITY", "PATERNITY"];
 
 interface RequestLeaveDialogProps {
-  children: React.ReactNode;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   userProfile: UserProfile | null;
 }
 
-export function RequestLeaveDialog({ children, open, onOpenChange, userProfile }: RequestLeaveDialogProps) {
+export function RequestLeaveDialog({ open, onOpenChange, userProfile }: RequestLeaveDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -88,7 +87,6 @@ export function RequestLeaveDialog({ children, open, onOpenChange, userProfile }
 
   return (
     <Dialog open={open} onOpenChange={handleDialogClose}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Request Time Off</DialogTitle>

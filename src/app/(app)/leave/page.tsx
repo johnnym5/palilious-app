@@ -6,18 +6,14 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
 import { LeaveBalanceCard } from "@/components/leave/LeaveBalanceCard";
 import { MyLeaveHistory } from "@/components/leave/MyLeaveHistory";
-import { RequestLeaveDialog } from "@/components/leave/RequestLeaveDialog";
 import { PendingLeaveApprovals } from "@/components/leave/PendingLeaveApprovals";
 import { TeamLeaveCalendar } from "@/components/leave/TeamLeaveCalendar";
 
 export default function LeavePage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
-  const [isRequestOpen, setIsRequestOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null,
@@ -64,14 +60,6 @@ export default function LeavePage() {
             Request time off and manage your leave balance.
           </p>
          </div>
-          {userProfile && (
-            <RequestLeaveDialog open={isRequestOpen} onOpenChange={setIsRequestOpen} userProfile={userProfile}>
-              <Button onClick={() => setIsRequestOpen(true)}>
-                  <Plus className="mr-2" />
-                  Request Leave
-              </Button>
-            </RequestLeaveDialog>
-          )}
        </div>
       
       {permissions.canManageStaff ? (

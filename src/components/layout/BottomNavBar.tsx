@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, Bell, User, Plus } from "lucide-react";
+import { Home, ListTodo, Bell, User, Plus, FileText, CalendarPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useState } from "react";
@@ -12,6 +12,7 @@ import type { UserProfile } from '@/lib/types';
 import { AssignTaskDialog } from "../tasks/AssignTaskDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { NewRequisitionDialog } from "../requisitions/NewRequisitionDialog";
+import { RequestLeaveDialog } from '../leave/RequestLeaveDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -34,6 +35,7 @@ export function BottomNavBar() {
 
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
+  const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, 'users', authUser.uid) : null
@@ -79,11 +81,17 @@ export function BottomNavBar() {
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="center" className="mb-2">
                 <DropdownMenuItem onSelect={() => setIsAssignTaskOpen(true)}>
+                    <ListTodo className="mr-2 h-4 w-4" />
                     New Task
                 </DropdownMenuItem>
                 {permissions.canAccessRequisitions && <DropdownMenuItem onSelect={() => setIsNewRequestOpen(true)}>
+                    <FileText className="mr-2 h-4 w-4" />
                     New Requisition
                 </DropdownMenuItem>}
+                 <DropdownMenuItem onSelect={() => setIsRequestLeaveOpen(true)}>
+                    <CalendarPlus className="mr-2 h-4 w-4" />
+                    Request Leave
+                </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
        </div>
@@ -100,6 +108,13 @@ export function BottomNavBar() {
             <NewRequisitionDialog 
                 open={isNewRequestOpen} 
                 onOpenChange={setIsNewRequestOpen} 
+                userProfile={userProfile}
+            />
+       )}
+       {userProfile && (
+            <RequestLeaveDialog 
+                open={isRequestLeaveOpen} 
+                onOpenChange={setIsRequestLeaveOpen} 
                 userProfile={userProfile}
             />
        )}
