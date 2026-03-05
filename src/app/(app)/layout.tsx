@@ -33,26 +33,38 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [user, isUserLoading, router]);
 
   useEffect(() => {
-    // When the config loads or changes, apply the branding color
+    const root = document.documentElement;
+
+    // Define defaults based on the new neutral theme in globals.css
+    const defaultPrimaryLight = '222.2 47.4% 11.2%';
+    const defaultPrimaryDark = '210 40% 98%';
+    const defaultAccentLight = '210 40% 96.1%';
+    const defaultAccentDark = '217.2 32.6% 17.5%';
+
+    const currentTheme = theme === 'dark' ? 'dark' : 'light';
+
+    // Set Primary Color
     if (config?.branding_color) {
       const hslString = hexToHslString(config.branding_color);
       if (hslString) {
-        document.documentElement.style.setProperty('--primary', hslString);
+        root.style.setProperty('--primary', hslString);
       }
     } else {
-        // When no branding color is set, revert to the default theme color
-        // This requires knowing the default for light/dark themes
-        const defaultPrimaryLight = '232 59% 60%';
-        const defaultPrimaryDark = '232 59% 60%';
-        
-        const currentTheme = theme === 'dark' ? 'dark' : 'light';
-
-        if (currentTheme === 'dark') {
-             document.documentElement.style.setProperty('--primary', defaultPrimaryDark);
-        } else {
-             document.documentElement.style.setProperty('--primary', defaultPrimaryLight);
-        }
+      // Revert to default if no branding color is set
+      root.style.setProperty('--primary', currentTheme === 'dark' ? defaultPrimaryDark : defaultPrimaryLight);
     }
+
+    // Set Accent Color
+    if (config?.accent_color) {
+      const hslString = hexToHslString(config.accent_color);
+      if (hslString) {
+        root.style.setProperty('--accent', hslString);
+      }
+    } else {
+      // Revert to default if no accent color is set
+      root.style.setProperty('--accent', currentTheme === 'dark' ? defaultAccentDark : defaultAccentLight);
+    }
+
   }, [config, theme]);
 
   // Notification logic

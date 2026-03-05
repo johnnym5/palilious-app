@@ -26,6 +26,9 @@ const configFormSchema = z.object({
   branding_color: z.string().refine((val) => val === "" || hexColorRegex.test(val), {
     message: "Must be a valid hex color (e.g., #RRGGBB) or empty.",
   }).optional().nullable(),
+  accent_color: z.string().refine((val) => val === "" || hexColorRegex.test(val), {
+    message: "Must be a valid hex color (e.g., #RRGGBB) or empty.",
+  }).optional().nullable(),
   work_hours: z.object({
     start: z.string().optional(),
     end: z.string().optional(),
@@ -57,6 +60,7 @@ export function SystemConfigForm({ systemConfig }: SystemConfigFormProps) {
       allow_self_edit: systemConfig.allow_self_edit,
       currency_symbol: systemConfig.currency_symbol,
       branding_color: systemConfig.branding_color || "",
+      accent_color: systemConfig.accent_color || "",
       work_hours: {
         start: systemConfig.work_hours?.start || "",
         end: systemConfig.work_hours?.end || "",
@@ -75,6 +79,7 @@ export function SystemConfigForm({ systemConfig }: SystemConfigFormProps) {
     const updateData = {
       ...values,
       branding_color: values.branding_color || null,
+      accent_color: values.accent_color || null,
       office_coordinates: (values.office_coordinates?.lat != null && values.office_coordinates?.lng != null) 
           ? values.office_coordinates 
           : null,
@@ -159,24 +164,24 @@ export function SystemConfigForm({ systemConfig }: SystemConfigFormProps) {
         </div>
         <div className="space-y-4">
              <h3 className="text-md font-medium">Operational Settings</h3>
+             <FormField
+                control={form.control}
+                name="currency_symbol"
+                render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Currency Symbol</FormLabel>
+                        <FormControl><Input {...field} className="max-w-xs" /></FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )}
+              />
              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                    control={form.control}
-                    name="currency_symbol"
-                    render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>Currency Symbol</FormLabel>
-                            <FormControl><Input {...field} /></FormControl>
-                            <FormMessage />
-                        </FormItem>
-                    )}
-                />
                 <FormField
                     control={form.control}
                     name="branding_color"
                     render={({ field }) => (
                         <FormItem>
-                            <FormLabel>Branding Color</FormLabel>
+                            <FormLabel>Primary Color</FormLabel>
                             <div className="flex items-center gap-2">
                                 <Controller
                                     control={form.control}
@@ -190,7 +195,32 @@ export function SystemConfigForm({ systemConfig }: SystemConfigFormProps) {
                                         />
                                     )}
                                 />
-                                <FormControl><Input {...field} placeholder="#FFFFFF" /></FormControl>
+                                <FormControl><Input {...field} placeholder="#09090b" /></FormControl>
+                            </div>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
+                 <FormField
+                    control={form.control}
+                    name="accent_color"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Accent Color</FormLabel>
+                            <div className="flex items-center gap-2">
+                                <Controller
+                                    control={form.control}
+                                    name="accent_color"
+                                    render={({ field: controllerField }) => (
+                                        <Input 
+                                            type="color" 
+                                            className="w-12 h-10 p-1"
+                                            value={controllerField.value || "#000000"}
+                                            onChange={e => controllerField.onChange(e.target.value)}
+                                        />
+                                    )}
+                                />
+                                <FormControl><Input {...field} placeholder="#fafafa" /></FormControl>
                             </div>
                             <FormMessage />
                         </FormItem>

@@ -301,7 +301,8 @@
           }
         },
         "currency_symbol": { "type": "string" },
-        "branding_color": { "type": "string", "description": "A hex code for the primary brand color." }
+        "branding_color": { "type": "string", "description": "A hex code for the primary brand color." },
+        "accent_color": { "type": "string", "description": "A hex code for the accent brand color." }
       },
       "required": [
         "orgId",

@@ -34,6 +34,7 @@ export interface SystemConfig {
   };
   currency_symbol: string;
   branding_color?: string | null; // Hex code
+  accent_color?: string | null; // Hex code
 }
 
 export interface UserProfile {
