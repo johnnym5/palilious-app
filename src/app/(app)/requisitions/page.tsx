@@ -1,11 +1,10 @@
 'use client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Plus, ShieldAlert } from "lucide-react";
+import { ShieldAlert } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RequisitionTable } from "@/components/requisitions/RequisitionTable";
 import { useState, useEffect } from "react";
-import { NewRequisitionDialog } from "@/components/requisitions/NewRequisitionDialog";
 import { useUser, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc } from "firebase/firestore";
 import type { Requisition, UserProfile } from "@/lib/types";
@@ -47,7 +46,6 @@ const getVisibleTabs = (permissions: Permissions, isStaff: boolean) => {
 
 
 export default function RequisitionsPage() {
-  const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const { isSuperAdmin } = useSuperAdmin();
@@ -125,48 +123,33 @@ export default function RequisitionsPage() {
 
   return (
     <div className="space-y-6 min-h-[calc(100vh-10rem)]">
+       <div>
+            <h1 className="text-3xl font-bold font-headline tracking-tight">Requisitions</h1>
+            <p className="text-muted-foreground">Manage all financial requisitions.</p>
+        </div>
       {isProfileLoading ? (
         <Skeleton className="h-[calc(100vh-12rem)] w-full" />
       ) : (
         <>
-          <Card>
-            <CardHeader>
-                <CardTitle>Requisition Portal</CardTitle>
-                <CardDescription>Manage all financial requisitions.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                <Tabs value={activeTab} onValueChange={setActiveTab}>
-                    <ScrollArea className="w-full pb-2 whitespace-nowrap">
-                        <TabsList>
-                            {visibleTabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
-                        </TabsList>
-                        <ScrollBar orientation="horizontal" />
-                    </ScrollArea>
-                    {visibleTabs.map(tab => (
-                        <TabsContent key={tab} value={tab} className="mt-4">
-                            <RequisitionTable 
-                              filter={tab} 
-                              userProfile={userProfile} 
-                              isSuperAdmin={isSuperAdmin} 
-                              permissions={permissions} 
-                              onSelectRequest={setSelectedRequest}
-                            />
-                        </TabsContent>
-                    ))}
-                </Tabs>
-            </CardContent>
-          </Card>
-
-          <>
-            <Button 
-                className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
-                onClick={() => setIsNewRequestOpen(true)}
-                aria-label="New Requisition"
-            >
-              <Plus className="h-8 w-8" />
-            </Button>
-            <NewRequisitionDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen} userProfile={userProfile} />
-          </>
+            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                <ScrollArea className="w-full pb-2 whitespace-nowrap">
+                    <TabsList>
+                        {visibleTabs.map(tab => <TabsTrigger key={tab} value={tab}>{tab}</TabsTrigger>)}
+                    </TabsList>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+                {visibleTabs.map(tab => (
+                    <TabsContent key={tab} value={tab} className="mt-4">
+                        <RequisitionTable 
+                          filter={tab} 
+                          userProfile={userProfile} 
+                          isSuperAdmin={isSuperAdmin} 
+                          permissions={permissions} 
+                          onSelectRequest={setSelectedRequest}
+                        />
+                    </TabsContent>
+                ))}
+            </Tabs>
 
           {selectedRequest && userProfile && (
                 <RequisitionDetailDialog
