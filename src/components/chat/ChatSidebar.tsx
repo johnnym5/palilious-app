@@ -70,7 +70,7 @@ export function ChatSidebar({ currentUserProfile, onSelectConversation, selected
     }
 
     return (
-        <div className="w-[300px] border-r flex flex-col bg-background/50">
+        <div className="flex flex-col h-full bg-background/50">
             <div className="p-2 border-b">
                 <Input 
                     placeholder="Search or start new chat..."

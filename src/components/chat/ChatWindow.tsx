@@ -5,7 +5,7 @@ import type { UserProfile, Chat, ChatMessage, ChatType } from '@/lib/types';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
-import { Loader2, Send, MessagesSquare, Hash } from 'lucide-react';
+import { Loader2, Send, MessagesSquare, Hash, ArrowLeft } from 'lucide-react';
 import { useCollection, useFirestore, addDocumentNonBlocking, setDocumentNonBlocking, useMemoFirebase } from '@/firebase';
 import { collection, query, orderBy, doc } from 'firebase/firestore';
 import { formatDistanceToNow } from 'date-fns';
@@ -14,6 +14,7 @@ import { cn } from '@/lib/utils';
 interface ChatWindowProps {
     currentUserProfile: UserProfile | null;
     selectedChat: Chat | null;
+    onBack?: () => void;
 }
 
 // Function to create a consistent chat ID between two users
@@ -22,7 +23,7 @@ const getChatId = (uid1: string, uid2: string) => {
 };
 
 
-export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps) {
+export function ChatWindow({ currentUserProfile, selectedChat, onBack }: ChatWindowProps) {
     const firestore = useFirestore();
     const [newMessage, setNewMessage] = useState("");
     const [isSending, setIsSending] = useState(false);
@@ -131,6 +132,11 @@ export function ChatWindow({ currentUserProfile, selectedChat }: ChatWindowProps
         <div className="flex-1 flex flex-col">
             {/* Header */}
             <div className="p-4 border-b flex items-center gap-4">
+                {onBack && (
+                    <Button variant="ghost" size="icon" className="md:hidden -ml-2" onClick={onBack}>
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                )}
                  {isChannel ? (
                     <div className="h-10 w-10 rounded-full bg-muted flex items-center justify-center">
                         <Hash className="h-5 w-5 text-muted-foreground" />

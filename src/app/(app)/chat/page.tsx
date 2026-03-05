@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { usePermissions } from '@/hooks/usePermissions';
 import { CreateChannelDialog } from '@/components/chat/CreateChannelDialog';
+import { cn } from '@/lib/utils';
 
 export default function ChatPage() {
     const { user: authUser } = useUser();
@@ -128,15 +129,20 @@ export default function ChatPage() {
                  )}
              </div>
             <div className="flex-1 flex border bg-card/50 rounded-xl overflow-hidden">
-                <ChatSidebar 
-                    currentUserProfile={currentUserProfile} 
-                    onSelectConversation={handleSelectConversation}
-                    selectedChatId={selectedChat?.id}
-                />
-                <ChatWindow 
-                    currentUserProfile={currentUserProfile} 
-                    selectedChat={selectedChat}
-                />
+                <div className={cn("w-full md:w-[300px] flex-col border-r", selectedChat ? 'hidden md:flex' : 'flex')}>
+                    <ChatSidebar 
+                        currentUserProfile={currentUserProfile} 
+                        onSelectConversation={handleSelectConversation}
+                        selectedChatId={selectedChat?.id}
+                    />
+                </div>
+                <div className={cn("flex-1 flex-col", selectedChat ? 'flex' : 'hidden md:flex')}>
+                    <ChatWindow 
+                        currentUserProfile={currentUserProfile} 
+                        selectedChat={selectedChat}
+                        onBack={() => setSelectedChat(null)}
+                    />
+                </div>
             </div>
         </div>
     );
