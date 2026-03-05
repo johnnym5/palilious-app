@@ -38,8 +38,7 @@ env:
   PROJECT_ID: 'palilious'
   REGION: 'us-central1'
   SERVICE: 'palilious-app'
-  # IMPORTANT: You still need to update this with your Workload Identity Provider from Google Cloud.
-  WORKLOAD_IDENTITY_PROVIDER: 'projects/123456789/locations/global/workloadIdentityPools/my-pool/providers/my-provider'
+  WORKLOAD_IDENTITY_PROVIDER: 'projects/670593045621/locations/global/workloadIdentityPools/github-pool/providers/github-provider'
 
 jobs:
   deploy:
