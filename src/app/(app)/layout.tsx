@@ -1,6 +1,6 @@
 'use client';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { useRouter } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { doc } from 'firebase/firestore';
@@ -16,6 +16,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const firestore = useFirestore();
   const { theme } = useTheme();
+  const pathname = usePathname();
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -67,7 +68,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-screen w-full flex-col">
-      <MobileHeader userProfile={userProfile} />
+      {pathname === '/dashboard' && <MobileHeader userProfile={userProfile} />}
       <main className="flex-1 p-4 sm:p-6 pb-24">
           {children}
       </main>

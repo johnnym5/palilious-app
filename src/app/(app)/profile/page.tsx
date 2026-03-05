@@ -5,7 +5,6 @@ import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -290,28 +289,10 @@ export default function ProfilePage() {
   }, [activeTab]);
 
   return (
-    <div className="space-y-8">
-      <div className="flex items-start gap-6">
-        {isProfileLoading ? (
-            <Skeleton className="h-24 w-24 rounded-full" />
-        ) : (
-            <Avatar className="h-24 w-24 border-2 border-primary">
-                <AvatarFallback className="text-3xl">{userProfile?.fullName.split(" ").map(n => n[0]).join("")}</AvatarFallback>
-            </Avatar>
-        )}
-        <div className='pt-2'>
-            {isProfileLoading ? (
-                <>
-                    <Skeleton className="h-8 w-48 mb-2" />
-                    <Skeleton className="h-5 w-32" />
-                </>
-            ) : (
-                <>
-                    <h1 className="text-3xl font-bold font-headline tracking-tight">{userProfile?.fullName}</h1>
-                    <p className="text-lg text-muted-foreground">{userProfile?.position}</p>
-                </>
-            )}
-        </div>
+    <div className="space-y-6">
+       <div>
+        <h1 className="text-3xl font-bold font-headline tracking-tight">Profile & Settings</h1>
+        <p className="text-muted-foreground">Manage your profile, password, and preferences.</p>
       </div>
       
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
