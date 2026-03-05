@@ -1,6 +1,6 @@
 'use client';
 import { StatCard } from "@/components/dashboard/StatCard";
-import { CheckCircle, Briefcase } from "lucide-react";
+import { CheckCircle, MessageSquare } from "lucide-react";
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
@@ -22,9 +22,12 @@ export default function DashboardPage() {
     const reqsQuery = useMemoFirebase(() => {
         if (!userProfile) return null;
         const inboxStatuses: string[] = [];
-        if (userProfile.position === "HR Manager / Director" || userProfile.position === "Organization Administrator") inboxStatuses.push('PENDING_HR');
-        if (userProfile.position === "Chief Financial Officer (CFO) / Finance Manager" || userProfile.position === "Organization Administrator") inboxStatuses.push('PENDING_FINANCE', 'APPROVED');
-        if (userProfile.position === "CEO / Managing Director" || userProfile.position === "Organization Administrator") inboxStatuses.push('PENDING_MD');
+        if (userProfile.position.includes("HR")) inboxStatuses.push('PENDING_HR');
+        if (userProfile.position.includes("Finance")) inboxStatuses.push('PENDING_FINANCE', 'APPROVED');
+        if (userProfile.position.includes("Director")) inboxStatuses.push('PENDING_MD');
+        if (userProfile.position.includes("Administrator")) {
+            inboxStatuses.push('PENDING_HR', 'PENDING_FINANCE', 'APPROVED', 'PENDING_MD');
+        }
         
         if (inboxStatuses.length === 0) return null;
         
@@ -79,16 +82,16 @@ export default function DashboardPage() {
                             <StatCard 
                                 title="New Messages" 
                                 value={unreadMessagesCount} 
-                                icon={Briefcase} 
+                                icon={MessageSquare} 
                                 href="/chat"
-                                color="text-sky-500"
+                                color="bg-sky-500/20 text-sky-400"
                             />
                             <StatCard 
                                 title="Approvals" 
                                 value={pendingReqs?.length || 0} 
                                 icon={CheckCircle}
                                 href="/requisitions"
-                                color="text-emerald-500"
+                                color="bg-emerald-500/20 text-emerald-400"
                             />
                         </>
                     )}

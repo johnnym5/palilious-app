@@ -17,7 +17,6 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { sanitizeInput } from "@/lib/utils";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
 
 const formSchema = z.object({
   name: z.string().min(3, { message: "Channel name must be at least 3 characters." }),
@@ -125,7 +124,6 @@ export function CreateChannelDialog({ children, open, onOpenChange, currentUserP
                            <div className="p-2">
                             {areUsersLoading && <Loader2 className="animate-spin" />}
                             {!areUsersLoading && allUsers?.filter(u => u.id !== currentUserProfile.id).map((user) => {
-                                const avatarUrl = PlaceHolderImages[user.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl;
                                 return (
                                 <FormField
                                     key={user.id}
@@ -144,7 +142,6 @@ export function CreateChannelDialog({ children, open, onOpenChange, currentUserP
                                                 />
                                             </FormControl>
                                             <Avatar className="h-8 w-8">
-                                                <AvatarImage src={avatarUrl} alt={user.fullName} />
                                                 <AvatarFallback>{user.fullName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
                                             </Avatar>
                                             <FormLabel className="font-normal flex-1 cursor-pointer">

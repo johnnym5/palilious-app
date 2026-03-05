@@ -4,8 +4,8 @@ import { useForm, Controller } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import type { Workbook, UserProfile, WorkbookRole } from "@/lib/types";
+import { Checkbox } from "@/components/ui/checkbox";
+import type { Task, UserProfile, WorkbookRole } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Loader2, UserPlus, X, ShieldCheck } from "lucide-react";
 import { useFirestore, useCollection, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
@@ -15,6 +15,8 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { ScrollArea } from "../ui/scroll-area";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
 import { Separator } from "../ui/separator";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import type { Workbook } from "@/lib/types";
 
 interface ShareWorkbookDialogProps {
   workbook: Workbook;
