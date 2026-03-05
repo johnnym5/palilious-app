@@ -1,11 +1,11 @@
 "use client";
 
-import { useForm, Controller } from "react-hook-form";
+import { useForm } from "react-hook-form";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
-import type { Task, UserProfile } from "@/lib/types";
+import type { Task, UserProfile, WorkbookRole } from "@/lib/types";
 import { useState, useEffect } from "react";
 import { Loader2 } from "lucide-react";
 import { useFirestore, useCollection, updateDocumentNonBlocking, useMemoFirebase } from "@/firebase";
@@ -13,8 +13,7 @@ import { doc, collection, query, where } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "../ui/scroll-area";
-import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { PlaceHolderImages } from "@/lib/placeholder-images";
+import { Avatar, AvatarFallback } from "../ui/avatar";
 
 interface ShareTaskDialogProps {
   task: Task;
@@ -39,7 +38,6 @@ export function ShareTaskDialog({ task, open, onOpenChange, currentUserProfile }
   const { data: users, isLoading: areUsersLoading } = useCollection<UserProfile>(usersQuery);
 
   const form = useForm<z.infer<typeof FormSchema>>({
-    resolver: zodResolver(FormSchema),
     defaultValues: {
       sharedUsers: task.sharedWith || [],
     },
@@ -96,7 +94,6 @@ export function ShareTaskDialog({ task, open, onOpenChange, currentUserProfile }
                         </div>
                         <ScrollArea className="h-64">
                         {areUsersLoading ? <Loader2 className="animate-spin" /> : selectableUsers?.map((item) => {
-                            const avatarUrl = PlaceHolderImages[item.id.charCodeAt(0) % PlaceHolderImages.length].imageUrl;
                             return (
                             <FormField
                                 key={item.id}
@@ -123,7 +120,6 @@ export function ShareTaskDialog({ task, open, onOpenChange, currentUserProfile }
                                             />
                                         </FormControl>
                                          <Avatar className="h-8 w-8">
-                                            <AvatarImage src={avatarUrl} alt={item.fullName} />
                                             <AvatarFallback>{item.fullName.split(" ").map(n=>n[0]).join('')}</AvatarFallback>
                                         </Avatar>
                                         <FormLabel className="font-normal flex-1 cursor-pointer">
