@@ -112,7 +112,7 @@ export function UniversalSearch({ userProfile }: UniversalSearchProps) {
 
             usersSnap.forEach(doc => {
                 const data = doc.data() as UserProfile;
-                newResults.push({ type: 'User', id: data.id, title: data.fullName, description: `User - ${data.position}`, url: `/team` });
+                newResults.push({ type: 'User', id: data.id, title: data.fullName, description: `User - ${data.position}`, url: `/settings` });
             });
             tasksSnap.forEach(doc => {
                 const data = doc.data() as Task;
