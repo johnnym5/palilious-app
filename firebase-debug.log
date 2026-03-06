@@ -64,3 +64,22 @@
 [info]    Skipping validation of types
    Skipping linting
 
+[info]    Collecting page data ...
+
+[info] [Error [PageNotFoundError]: Cannot find module for page: /favicon.ico] {
+  code: 'ENOENT'
+}
+
+[info] [Error [PageNotFoundError]: Cannot find module for page: /_not-found] {
+  code: 'ENOENT'
+}
+
+[info] 
+
+[info] > Build error occurred
+
+[info] [Error: Failed to collect page data for /favicon.ico] { type: 'Error' }
+
+[debug] [2026-03-06T16:09:03.181Z] Error: ENOENT: no such file or directory, open '/home/user/studio/.next/export-marker.json'
+[error] 
+[error] Error: An unexpected error has occurred.
