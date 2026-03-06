@@ -29,6 +29,7 @@ import {
   Loader2,
   ShieldAlert,
   Paperclip,
+  ListTodo,
 } from 'lucide-react'
 import { Button } from '../ui/button'
 import { doc, arrayUnion, collection } from 'firebase/firestore'
@@ -50,6 +51,7 @@ import { useState, useEffect } from 'react'
 import { ActivityFeed } from '../shared/ActivityFeed'
 import { Badge } from '../ui/badge'
 import Link from 'next/link'
+import { AssignTaskDialog } from '../tasks/AssignTaskDialog'
 
 interface RequisitionDetailDialogProps {
   requisition: Requisition
@@ -87,6 +89,8 @@ export function RequisitionDetailDialog({
   const [rejectionReason, setRejectionReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUrgent, setIsUrgent] = useState(false);
+  const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
+
 
   useEffect(() => {
     if (requisition.status === 'PENDING_HR' && differenceInHours(new Date(), new Date(requisition.createdAt)) > 24) {
@@ -196,6 +200,7 @@ export function RequisitionDetailDialog({
     requisition.status === 'APPROVED' ? 'Mark as Paid' : 'Approve'
 
   return (
+    <>
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-4xl h-[90vh] w-full">
         <DialogHeader>
@@ -284,60 +289,85 @@ export function RequisitionDetailDialog({
           </div>
         </div>
 
-        {canTakeAction() && (
-          <DialogFooter className="gap-2">
-            {canReject() && (
-              <AlertDialog>
-                <AlertDialogTrigger asChild>
-                  <Button variant="destructive" disabled={isSubmitting}>
-                    <X className="mr-2 h-4 w-4" /> Reject
-                  </Button>
-                </AlertDialogTrigger>
-                <AlertDialogContent>
-                  <AlertDialogHeader>
-                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                    <AlertDialogDescription>
-                      Provide a reason for rejecting this requisition. This action
-                      cannot be undone.
-                    </AlertDialogDescription>
-                  </AlertDialogHeader>
-                  <Textarea
-                    placeholder="Type your reason here..."
-                    value={rejectionReason}
-                    onChange={e => setRejectionReason(e.target.value)}
-                  />
-                  <AlertDialogFooter>
-                    <AlertDialogCancel>Cancel</AlertDialogCancel>
-                    <AlertDialogAction
-                      onClick={() => handleAction('REJECT')}
-                      disabled={!rejectionReason || isSubmitting}
-                    >
-                      {isSubmitting && <Loader2 className="animate-spin" />}
-                      Confirm Rejection
-                    </AlertDialogAction>
-                  </AlertDialogFooter>
-                </AlertDialogContent>
-              </AlertDialog>
-            )}
+        <DialogFooter className="gap-2 sm:justify-between">
+            <div>
+              {(requisition.status === 'APPROVED' || requisition.status === 'PAID') && permissions.canManageStaff && (
+                <Button variant="outline" onClick={() => setIsAssignTaskOpen(true)}>
+                    <ListTodo className="mr-2 h-4 w-4" /> Create Task
+                </Button>
+              )}
+            </div>
+            <div className="flex gap-2">
+              {canTakeAction() && (
+                <>
+                  {canReject() && (
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="destructive" disabled={isSubmitting}>
+                          <X className="mr-2 h-4 w-4" /> Reject
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Provide a reason for rejecting this requisition. This action
+                            cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <Textarea
+                          placeholder="Type your reason here..."
+                          value={rejectionReason}
+                          onChange={e => setRejectionReason(e.target.value)}
+                        />
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => handleAction('REJECT')}
+                            disabled={!rejectionReason || isSubmitting}
+                          >
+                            {isSubmitting && <Loader2 className="animate-spin" />}
+                            Confirm Rejection
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
 
-            <Button
-              variant="default"
-              onClick={() =>
-                handleAction(
-                  requisition.status === 'APPROVED'
-                    ? 'MARK_AS_PAID'
-                    : 'APPROVE'
-                )
-              }
-              className="bg-emerald-600 hover:bg-emerald-700"
-              disabled={isSubmitting}
-            >
-              {isSubmitting && <Loader2 className="animate-spin" />}
-              <Check className="mr-2 h-4 w-4" /> {approvalActionText}
-            </Button>
-          </DialogFooter>
-        )}
+                  <Button
+                    variant="default"
+                    onClick={() =>
+                      handleAction(
+                        requisition.status === 'APPROVED'
+                          ? 'MARK_AS_PAID'
+                          : 'APPROVE'
+                      )
+                    }
+                    className="bg-emerald-600 hover:bg-emerald-700"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting && <Loader2 className="animate-spin" />}
+                    <Check className="mr-2 h-4 w-4" /> {approvalActionText}
+                  </Button>
+                </>
+              )}
+            </div>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
+     {isOpen && (
+        <AssignTaskDialog
+            open={isAssignTaskOpen}
+            onOpenChange={setIsAssignTaskOpen}
+            currentUserProfile={currentUserProfile}
+            permissions={permissions}
+            initialData={{
+                title: `Follow up on ${requisition.serialNo}: ${requisition.title}`,
+                description: `This task is to follow up on the approved/paid requisition: "${requisition.title}".\n\nAmount: ${currencySymbol}${requisition.amount.toFixed(2)}\n\nOriginal Description: ${requisition.description}`,
+                priority: 'LEVEL_2',
+            }}
+        />
+     )}
+    </>
   )
 }
