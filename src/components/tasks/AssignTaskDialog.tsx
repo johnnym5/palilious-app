@@ -15,7 +15,7 @@ import { useState, useEffect } from "react";
 import { useFirestore, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
-import type { Task, UserProfile, ActivityEntry, Permissions, Notification, Workbook, Sheet } from "@/lib/types";
+import type { Task, UserProfile, ActivityEntry, Permissions, Notification, Workbook, Sheet, TaskPriority } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn, sanitizeInput } from "@/lib/utils";
 import { format } from "date-fns";
@@ -36,11 +36,13 @@ interface AssignTaskDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   initialData?: {
-      title: string;
+      title?: string;
       description?: string;
       workbookId?: string;
       sheetId?: string;
-  };
+      priority?: TaskPriority;
+      dueDate?: Date;
+  } | null;
   currentUserProfile: UserProfile;
   permissions: Permissions;
 }
@@ -87,9 +89,9 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
         form.reset({
             title: initialData?.title || "",
             description: initialData?.description || "",
-            priority: "LEVEL_1",
+            priority: initialData?.priority || "LEVEL_1",
             assignedTo: undefined,
-            dueDate: undefined,
+            dueDate: initialData?.dueDate,
             workbookId: initialData?.workbookId,
             sheetId: initialData?.sheetId,
         });
