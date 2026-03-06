@@ -27,23 +27,27 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 
+type DialogManager = {
+  [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile']: (open: boolean) => void;
+};
+
 const mainNavItems = [
   { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
   { isSeparator: true },
-  { href: "/attendance", icon: CalendarCheck2, label: "Attendance" },
-  { href: "/leave", icon: CalendarPlus, label: "Leave" },
-  { href: "/chat", icon: MessagesSquare, label: "Chat" },
+  { dialog: "attendance", icon: CalendarCheck2, label: "Attendance" },
+  { dialog: "leave", icon: CalendarPlus, label: "Leave" },
+  { dialog: "chat", icon: MessagesSquare, label: "Chat", permission: 'canAccessChat' },
   { isSeparator: true },
-  { href: "/tasks", icon: ListTodo, label: "Tasks" },
-  { href: "/workbook", icon: BookOpenCheck, label: "Workbooks" },
-  { href: "/requisitions", icon: ReceiptText, label: "Requisitions" },
+  { dialog: "tasks", icon: ListTodo, label: "Tasks" },
+  { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
+  { dialog: "requisitions", icon: ReceiptText, label: "Requisitions", permission: 'canAccessRequisitions' },
   { isSeparator: true },
-  { href: "/reports", icon: BarChart, label: "Reports" },
-  { href: "/settings", icon: Settings, label: "Settings", permission: 'canManageStaff' },
+  { dialog: "reports", icon: BarChart, label: "Reports" },
+  { dialog: "settings", icon: Settings, label: "Settings", permission: 'canManageStaff' },
 ];
 
 
-export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions, onOpenTasks, onOpenAttendance, onOpenChat, onOpenLeave, onOpenReports }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void, onOpenTasks: () => void, onOpenAttendance: () => void, onOpenChat: () => void, onOpenLeave: () => void, onOpenReports: () => void }) {
+export default function AppSidebar({ isMobile = false, dialogManager }: { isMobile?: boolean, dialogManager: DialogManager }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
@@ -64,23 +68,6 @@ export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWor
   const handleLogout = () => {
     signOut(auth);
   };
-
-  const NavLink = ({ href, icon: Icon, label }: { href: string, icon: React.ElementType, label: string }) => {
-    const isActive = pathname.startsWith(href);
-    return (
-      <Link
-        href={href}
-        className={cn(
-          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-          isActive && "bg-secondary text-primary",
-          isMobile && "text-lg"
-        )}
-      >
-        <Icon className="h-4 w-4" />
-        {label}
-      </Link>
-    );
-  };
   
   const orgName = organization?.name ? organization.name.charAt(0).toUpperCase() + organization.name.slice(1) : "";
 
@@ -99,130 +86,41 @@ export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWor
             if ('isSeparator' in item) {
                 return <Separator key={`sep-${index}`} className="my-2" />;
             }
-            if (item.href === "/chat") {
-                if (!permissions.canAccessChat) return null;
+
+            if ('href' in item) {
                 return (
-                    <button
+                    <Link
                         key={item.href}
-                        onClick={onOpenChat}
+                        href={item.href}
                         className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
-                          isMobile && "text-lg"
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
+                        pathname.startsWith(item.href) && "bg-secondary text-primary",
+                        isMobile && "text-lg"
                         )}
                     >
                         <item.icon className="h-4 w-4" />
                         {item.label}
-                    </button>
-                )
+                    </Link>
+                );
             }
-            if (item.href === '/attendance') {
-                return (
-                    <button
-                        key={item.href}
-                        onClick={onOpenAttendance}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
-                          isMobile && "text-lg"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                    </button>
-                )
+            
+            if ('permission' in item && !permissions[item.permission as keyof typeof permissions]) {
+                return null;
             }
-            if (item.href === '/leave') {
-                return (
-                    <button
-                        key={item.href}
-                        onClick={onOpenLeave}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
-                          isMobile && "text-lg"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                    </button>
-                )
-            }
-             if (item.href === '/tasks') {
-                return (
-                    <button
-                        key={item.href}
-                        onClick={onOpenTasks}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
-                          isMobile && "text-lg"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                    </button>
-                )
-             }
-             if (item.href === '/workbook') {
-                return (
-                    <button
-                        key={item.href}
-                        onClick={onOpenWorkbooks}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
-                          isMobile && "text-lg"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                    </button>
-                )
-             }
-            if (item.href === '/requisitions') {
-                if (!permissions.canAccessRequisitions) return null;
-                return (
-                    <button
-                        key={item.href}
-                        onClick={onOpenRequisitions}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
-                          isMobile && "text-lg"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                    </button>
-                )
-             }
-            if (item.href === '/reports') {
-                return (
-                    <button
-                        key={item.href}
-                        onClick={onOpenReports}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
-                          isMobile && "text-lg"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                    </button>
-                )
-             }
-             if (item.href === '/settings') {
-                if (!permissions.canManageStaff) return null;
-                return (
-                    <button
-                        key={item.href}
-                        onClick={onOpenSettings}
-                        className={cn(
-                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
-                          isMobile && "text-lg"
-                        )}
-                    >
-                        <item.icon className="h-4 w-4" />
-                        {item.label}
-                    </button>
-                )
-             }
-            return <NavLink key={item.href} {...item} />
+
+            return (
+                <button
+                    key={item.dialog}
+                    onClick={() => dialogManager[item.dialog as keyof DialogManager](true)}
+                    className={cn(
+                        "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
+                        isMobile && "text-lg"
+                    )}
+                >
+                    <item.icon className="h-4 w-4" />
+                    {item.label}
+                </button>
+            )
           })}
         </nav>
 

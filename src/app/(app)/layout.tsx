@@ -20,6 +20,7 @@ import { ChatDialog } from '@/components/chat/ChatDialog';
 import { LeaveDialog } from '@/components/leave/LeaveDialog';
 import { ReportsDialog } from '@/components/reports/ReportsDialog';
 import { uiEmitter } from '@/lib/ui-emitter';
+import { ProfileDialog } from '@/components/profile/ProfileDialog';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -33,6 +34,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -84,26 +86,29 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
+  const dialogManager = {
+    settings: setIsSettingsOpen,
+    workbooks: setIsWorkbookOpen,
+    requisitions: setIsRequisitionsOpen,
+    tasks: setIsTasksOpen,
+    attendance: setIsAttendanceOpen,
+    chat: setIsChatOpen,
+    leave: setIsLeaveOpen,
+    reports: setIsReportsOpen,
+    profile: setIsProfileOpen,
+  }
+
   return (
     <>
       <div className="flex min-h-screen w-full bg-muted/40">
-          <AppSidebar 
-            onOpenSettings={() => setIsSettingsOpen(true)} 
-            onOpenWorkbooks={() => setIsWorkbookOpen(true)} 
-            onOpenRequisitions={() => setIsRequisitionsOpen(true)}
-            onOpenTasks={() => setIsTasksOpen(true)}
-            onOpenAttendance={() => setIsAttendanceOpen(true)}
-            onOpenChat={() => setIsChatOpen(true)}
-            onOpenLeave={() => setIsLeaveOpen(true)}
-            onOpenReports={() => setIsReportsOpen(true)}
-          />
+          <AppSidebar dialogManager={dialogManager} />
           <div className="flex flex-1 flex-col">
               <AppHeader />
               <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 bg-background">
                   {children}
               </main>
           </div>
-          <BottomNavBar />
+          <BottomNavBar dialogManager={dialogManager} />
       </div>
       <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       <WorkbookDialog open={isWorkbookOpen} onOpenChange={setIsWorkbookOpen} />
@@ -113,6 +118,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <ChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} />
       <LeaveDialog open={isLeaveOpen} onOpenChange={setIsLeaveOpen} />
       <ReportsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
+      <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} />
     </>
   );
 }

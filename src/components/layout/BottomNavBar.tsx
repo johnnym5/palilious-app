@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ListTodo, User, Plus, FileText, CalendarPlus, BookCopy, BookOpenCheck } from "lucide-react";
+import { Home, ListTodo, User, Plus, FileText, CalendarPlus, BookOpenCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useState } from "react";
@@ -14,30 +14,35 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { NewRequisitionDialog } from "../requisitions/NewRequisitionDialog";
 import { RequestLeaveDialog } from '../leave/RequestLeaveDialog';
 import { NewWorkbookDialog } from '../workbook/NewWorkbookDialog';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { ProfileDialog } from "../profile/ProfileDialog";
-import { TasksDialog } from '../tasks/TasksDialog';
-import { WorkbookDialog } from '../workbook/WorkbookDialog';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 
+type DialogManager = {
+  [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile']: (open: boolean) => void;
+};
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "Home" },
+  { dialog: "tasks", icon: ListTodo, label: "Tasks" },
+  { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
+  { dialog: "profile", icon: User, label: "Profile" },
 ];
 
-export function BottomNavBar() {
+export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }) {
   const pathname = usePathname();
   const { user: authUser } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
 
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
   const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isTasksOpen, setIsTasksOpen] = useState(false);
-  const [isWorkbookOpen, setIsWorkbookOpen] = useState(false);
-
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, 'users', authUser.uid) : null
@@ -45,93 +50,75 @@ export function BottomNavBar() {
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
 
-  const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
-    const isActive = pathname === href;
-    const content = (
-      <div className={cn(
-          "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
-          isActive ? "text-primary" : "text-muted-foreground hover:text-foreground"
-      )}>
-          <Icon className="h-6 w-6" />
-          <span className="text-xs font-medium">{label}</span>
-      </div>
-    );
-    
-    return <Link href={href}>{content}</Link>;
-  };
-
-  const ProfileButton = () => {
-    return (
-      <button
-        onClick={() => setIsProfileOpen(true)}
-        className={cn(
-          "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
-          "text-muted-foreground hover:text-foreground"
-        )}
-      >
-        <User className="h-6 w-6" />
-        <span className="text-xs font-medium">Profile</span>
-      </button>
-    );
-  }
-
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/80 backdrop-blur-lg md:hidden">
         <div className="flex h-20 items-center justify-around">
-          <NavItem {...navItems[0]} />
-          <button
-            onClick={() => setIsTasksOpen(true)}
-            className={cn(
-              "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
-              "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <ListTodo className="h-6 w-6" />
-            <span className="text-xs font-medium">Tasks</span>
-          </button>
-          <div className="w-16 h-16" /> {/* Spacer for FAB */}
-          
-          <button
-            onClick={() => setIsWorkbookOpen(true)}
-            className={cn(
-              "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
-              "text-muted-foreground hover:text-foreground"
-            )}
-          >
-            <BookOpenCheck className="h-6 w-6" />
-            <span className="text-xs font-medium">Workbooks</span>
-          </button>
-
-          <ProfileButton />
+          {navItems.map(item => {
+              if ('href' in item) {
+                return (
+                    <Link 
+                        href={item.href}
+                        key={item.label}
+                        className={cn(
+                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
+                        pathname === item.href ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                        )}
+                    >
+                        <item.icon className="h-6 w-6" />
+                        <span className="text-xs font-medium">{item.label}</span>
+                    </Link>
+                );
+              }
+              return (
+                  <button
+                    key={item.label}
+                    onClick={() => dialogManager[item.dialog as keyof DialogManager](true)}
+                    className={cn(
+                    "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
+                    "text-muted-foreground hover:text-foreground"
+                    )}
+                >
+                    <item.icon className="h-6 w-6" />
+                    <span className="text-xs font-medium">{item.label}</span>
+                </button>
+              )
+          })}
         </div>
       </div>
-       <div className="fixed bottom-8 left-1/2 z-50 -translate-x-1/2 md:hidden">
-         <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-                <Button className="h-16 w-16 rounded-full shadow-lg shadow-primary/40">
-                  <Plus className="h-8 w-8" />
-                </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent side="top" align="center" className="mb-2">
-                <DropdownMenuItem onSelect={() => setIsAssignTaskOpen(true)}>
-                    <ListTodo className="mr-2 h-4 w-4" />
-                    New Task
-                </DropdownMenuItem>
-                {permissions.canAccessRequisitions && <DropdownMenuItem onSelect={() => setIsNewRequestOpen(true)}>
-                    <FileText className="mr-2 h-4 w-4" />
-                    New Requisition
-                </DropdownMenuItem>}
-                 <DropdownMenuItem onSelect={() => setIsRequestLeaveOpen(true)}>
-                    <CalendarPlus className="mr-2 h-4 w-4" />
-                    Request Leave
-                </DropdownMenuItem>
-                 <DropdownMenuItem onSelect={() => setIsNewWorkbookOpen(true)}>
-                    <BookCopy className="mr-2 h-4 w-4" />
-                    New Workbook
-                </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
+       <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 md:hidden">
+            <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
+                <SheetTrigger asChild>
+                    <Button className="h-14 w-14 rounded-full shadow-lg shadow-primary/40">
+                      <Plus className="h-8 w-8" />
+                    </Button>
+                </SheetTrigger>
+                <SheetContent side="bottom" className="rounded-t-xl">
+                    <SheetHeader>
+                        <SheetTitle>Create New</SheetTitle>
+                    </SheetHeader>
+                    <div className="grid grid-cols-2 gap-4 py-4">
+                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { setIsAssignTaskOpen(true); setIsCreateSheetOpen(false); }}>
+                            <ListTodo className="h-6 w-6" />
+                            New Task
+                        </Button>
+                        {permissions.canAccessRequisitions && (
+                            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { setIsNewRequestOpen(true); setIsCreateSheetOpen(false); }}>
+                                <FileText className="h-6 w-6" />
+                                New Requisition
+                            </Button>
+                        )}
+                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { setIsRequestLeaveOpen(true); setIsCreateSheetOpen(false); }}>
+                            <CalendarPlus className="h-6 w-6" />
+                            Request Leave
+                        </Button>
+                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { setIsNewWorkbookOpen(true); setIsCreateSheetOpen(false); }}>
+                            <BookOpenCheck className="h-6 w-6" />
+                            New Workbook
+                        </Button>
+                    </div>
+                </SheetContent>
+            </Sheet>
        </div>
 
        {userProfile && (
@@ -163,9 +150,6 @@ export function BottomNavBar() {
                 userProfile={userProfile}
             />
        )}
-       <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} />
-       <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
-       <WorkbookDialog open={isWorkbookOpen} onOpenChange={setIsWorkbookOpen} />
     </>
   );
 }
