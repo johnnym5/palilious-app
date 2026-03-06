@@ -20,7 +20,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { AddColumnDialog } from './AddColumnDialog';
 import { ConfigureColumnDialog } from './ConfigureColumnDialog';
@@ -30,11 +29,10 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
-import { Calendar } from '../ui/calendar';
-import { format } from 'date-fns';
 import { AddRowDialog } from './AddRowDialog';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { EditRowDialog } from './EditRowDialog';
+
 
 interface SheetDataTableProps {
   sheet: Sheet;
@@ -55,11 +53,12 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     const { toast } = useToast();
     const [data, setData] = useState<Record<string, any>[]>([]);
     const [headers, setHeaders] = useState<string[]>([]);
-    const [editingCell, setEditingCell] = useState<{ rowIndex: number; header: string } | null>(null);
     const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
     const [isAddRowOpen, setIsAddRowOpen] = useState(false);
     const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
+    const [rowToDelete, setRowToDelete] = useState<number | null>(null);
     const [columnToConfigure, setColumnToConfigure] = useState<string | null>(null);
+    const [rowToEdit, setRowToEdit] = useState<{ rowIndex: number; data: Record<string, any> } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
 
 
@@ -83,12 +82,6 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     }, [data, headers, searchTerm]);
 
 
-    const handleCellUpdate = (rowIndex: number, header: string, value: any) => {
-        const newData = [...data];
-        newData[rowIndex][header] = value;
-        setData(newData);
-    };
-
     const saveChanges = (payload: { data?: Record<string, any>[]; headers?: string[], columnConfig?: any }, toastMessage: string) => {
         if (!firestore || Object.keys(payload).length === 0 || !permissions.canEdit) return;
         const sheetRef = doc(firestore, `workbooks/${sheet.workbookId}/sheets`, sheet.id);
@@ -96,27 +89,19 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         toast({ title: 'Saved', description: toastMessage });
     };
 
-    const handleBlurSave = () => {
-        setEditingCell(null); // Exit editing mode
-        saveChanges({ data }, 'Your changes have been saved.');
+    const handleSaveEdit = (rowIndex: number, updatedRowData: Record<string, any>) => {
+        const newData = [...data];
+        newData[rowIndex] = updatedRowData;
+        setData(newData);
+        saveChanges({ data: newData }, "Row updated successfully.");
     };
 
-    const handleEnterSave = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            setEditingCell(null);
-            saveChanges({ data }, 'Your changes have been saved.');
-        } else if (e.key === 'Escape') {
-            setEditingCell(null);
-            setData(sheet.data ? JSON.parse(JSON.stringify(sheet.data)) : []); // Revert changes
-        }
-    }
-
-    const handleDeleteRow = (originalRowIndex: number) => {
-        if (!permissions.canEdit) return;
-        const updatedData = data.filter((_, index) => index !== originalRowIndex);
+    const handleDeleteRow = () => {
+        if (rowToDelete === null || !permissions.canEdit) return;
+        const updatedData = data.filter((_, index) => index !== rowToDelete);
         setData(updatedData);
         saveChanges({ data: updatedData }, 'The row has been deleted.');
+        setRowToDelete(null);
     }
     
     const handleDeleteColumn = () => {
@@ -169,168 +154,97 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
 
     return (
         <div className="h-[calc(100vh-24rem)] flex flex-col border rounded-lg">
-            <ScrollArea className="flex-grow relative">
-                <Table>
-                    <TableHeader className="sticky top-0 bg-background/95 backdrop-blur z-10">
-                        <TableRow>
-                            {headers.map(header => {
-                                const Icon = TYPE_ICONS[sheet.columnConfig?.[header]?.type || 'text'];
-                                return (
-                                <TableHead key={header}>
-                                    <div className="flex items-center justify-between group">
-                                        <div className="flex items-center gap-2">
-                                            <Icon className="h-4 w-4 text-muted-foreground" />
-                                            <span>{header}</span>
-                                        </div>
+            <div className="flex-shrink-0 border-b p-2 flex flex-col sm:flex-row items-center gap-2">
+                 <ScrollArea className="w-full sm:w-auto">
+                    <div className="flex items-center gap-2 pb-2 sm:pb-0">
+                    {headers.map(header => {
+                        const Icon = TYPE_ICONS[sheet.columnConfig?.[header]?.type || 'text'];
+                        return (
+                        <div key={header} className="group flex items-center gap-1 rounded-full border bg-secondary/50 px-3 py-1 text-sm whitespace-nowrap">
+                            <Icon className="h-4 w-4 text-muted-foreground" />
+                            <span>{header}</span>
+                            {permissions.canEdit && (
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-5 w-5 -mr-2 opacity-50 group-hover:opacity-100">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent>
+                                        <DropdownMenuItem onSelect={() => setColumnToConfigure(header)}>
+                                            <Settings className="mr-2 h-4 w-4"/>
+                                            Configure
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem 
+                                            className="text-destructive focus:text-destructive"
+                                            onSelect={() => setColumnToDelete(header)}>
+                                            <Trash2 className="mr-2 h-4 w-4" />
+                                            Delete
+                                        </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            )}
+                        </div>
+                    )})}
+                    </div>
+                    <ScrollBar orientation="horizontal" />
+                </ScrollArea>
+                <div className="relative w-full sm:w-auto sm:ml-auto">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
+                        type="search"
+                        placeholder="Search sheet..."
+                        className="pl-9 h-9 w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                </div>
+            </div>
+            
+            <ScrollArea className="flex-grow bg-muted/20">
+                {filteredData.length === 0 ? (
+                    <div className="text-center py-24 text-sm text-muted-foreground">
+                        {searchTerm ? "No rows match your search." : "No rows yet. Click 'Add Row' to start."}
+                    </div>
+                ) : (
+                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        {filteredData.map((row) => {
+                            const originalRowIndex = row.__originalIndex;
+                            return (
+                                <Card key={originalRowIndex} className="group flex flex-col">
+                                    <CardHeader className="flex-row items-start justify-between pb-2">
+                                        <CardTitle className="text-base line-clamp-2 pr-2">{row[headers[0]] || 'Untitled Row'}</CardTitle>
                                         {permissions.canEdit && (
                                             <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-6 w-6 opacity-0 group-hover:opacity-100">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent>
-                                                    <DropdownMenuItem onSelect={() => setColumnToConfigure(header)}>
-                                                        <Settings className="mr-2 h-4 w-4"/>
-                                                        Configure Column
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem 
-                                                        className="text-destructive focus:text-destructive"
-                                                        onSelect={() => setColumnToDelete(header)}>
-                                                        <Trash2 className="mr-2 h-4 w-4" />
-                                                        Delete Column
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 group-hover:opacity-100 shrink-0">
+                                                <MoreVertical className="h-4 w-4" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end">
+                                                <DropdownMenuItem onSelect={() => setRowToEdit({ rowIndex: originalRowIndex, data: row })}>Edit Row</DropdownMenuItem>
+                                                <DropdownMenuItem onSelect={() => setRowToDelete(originalRowIndex)} className="text-destructive focus:text-destructive">Delete Row</DropdownMenuItem>
+                                            </DropdownMenuContent>
                                             </DropdownMenu>
                                         )}
-                                    </div>
-                                </TableHead>
-                            )})}
-                            <TableHead className="w-[50px] sticky right-0 bg-background/95 backdrop-blur">
-                                <span className="sr-only">Actions</span>
-                            </TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {filteredData.length === 0 ? (
-                             <TableRow>
-                                <TableCell colSpan={headers.length + 1} className="h-24 text-center">
-                                    {searchTerm ? "No rows match your search." : "No rows yet. Click 'Add Row' to start."}
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            filteredData.map((row) => {
-                                const rowIndex = row.__originalIndex;
-                                return (
-                                <TableRow key={rowIndex}>
-                                    {headers.map(header => {
-                                        const columnConfig = sheet.columnConfig?.[header];
-                                        return (
-                                        <TableCell 
-                                            key={`${rowIndex}-${header}`}
-                                            onDoubleClick={() => permissions.canEdit && setEditingCell({ rowIndex, header })}
-                                            className={permissions.canEdit ? 'cursor-cell' : ''}
-                                        >
-                                            {editingCell?.rowIndex === rowIndex && editingCell?.header === header ? (
-                                                <>
-                                                    {columnConfig?.type === 'select' && columnConfig.selectOptions ? (
-                                                        <Select
-                                                            value={row[header] || ''}
-                                                            onValueChange={(value) => {
-                                                                handleCellUpdate(rowIndex, header, value);
-                                                                const newData = [...data];
-                                                                newData[rowIndex][header] = value;
-                                                                saveChanges({ data: newData }, 'Cell updated.');
-                                                                setEditingCell(null);
-                                                            }}
-                                                        >
-                                                            <SelectTrigger className="h-8 -mx-2 -my-1">
-                                                                <SelectValue />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                                {columnConfig.selectOptions.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    ) : columnConfig?.type === 'date' ? (
-                                                         <Popover open={true} onOpenChange={() => setEditingCell(null)}>
-                                                            <PopoverTrigger asChild>
-                                                                <Button variant="outline" className="h-8 -mx-2 -my-1 w-full justify-start text-left font-normal">
-                                                                    <CalendarIcon className="mr-2 h-4 w-4" />
-                                                                    {row[header] ? format(new Date(row[header]), 'PPP') : <span>Pick a date</span>}
-                                                                </Button>
-                                                            </PopoverTrigger>
-                                                            <PopoverContent className="w-auto p-0">
-                                                                <Calendar
-                                                                    mode="single"
-                                                                    selected={row[header] ? new Date(row[header]) : undefined}
-                                                                    onSelect={(date) => {
-                                                                        const isoDate = date?.toISOString();
-                                                                        handleCellUpdate(rowIndex, header, isoDate);
-                                                                        const newData = [...data];
-                                                                        newData[rowIndex][header] = isoDate;
-                                                                        saveChanges({ data: newData }, 'Cell updated.');
-                                                                        setEditingCell(null);
-                                                                    }}
-                                                                    initialFocus
-                                                                />
-                                                            </PopoverContent>
-                                                        </Popover>
-                                                    ) : (
-                                                        <Input
-                                                            autoFocus
-                                                            value={row[header] || ''}
-                                                            onChange={(e) => handleCellUpdate(rowIndex, header, e.target.value)}
-                                                            onBlur={handleBlurSave}
-                                                            onKeyDown={handleEnterSave}
-                                                            className="h-8"
-                                                            type={columnConfig?.type === 'number' ? 'number' : 'text'}
-                                                        />
-                                                    )}
-                                                </>
-                                            ) : (
-                                                <span className="block min-h-[2rem] py-2 break-words">
-                                                    {columnConfig?.type === 'date' && row[header]
-                                                        ? format(new Date(row[header]), 'PPP')
-                                                        : row[header]}
-                                                </span>
-                                            )}
-                                        </TableCell>
-                                    )})}
-                                    <TableCell className="sticky right-0 bg-background/95 backdrop-blur">
-                                        {permissions.canEdit && (
-                                            <AlertDialog>
-                                                <AlertDialogTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                                                        <Trash2 className="h-4 w-4" />
-                                                    </Button>
-                                                </AlertDialogTrigger>
-                                                <AlertDialogContent>
-                                                    <AlertDialogHeader>
-                                                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                                                        <AlertDialogDescription>
-                                                            This action will permanently delete this row.
-                                                        </AlertDialogDescription>
-                                                    </AlertDialogHeader>
-                                                    <AlertDialogFooter>
-                                                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                                                        <AlertDialogAction onClick={() => handleDeleteRow(rowIndex)} className="bg-destructive hover:bg-destructive/90">
-                                                            Delete Row
-                                                        </AlertDialogAction>
-                                                    </AlertDialogFooter>
-                                                </AlertDialogContent>
-                                            </AlertDialog>
-                                        )}
-                                    </TableCell>
-                                </TableRow>
-                            )})
-                        )}
-                    </TableBody>
-                </Table>
-                <ScrollBar orientation="horizontal" />
+                                    </CardHeader>
+                                    <CardContent className="space-y-2 text-sm flex-grow">
+                                        {headers.slice(1, 5).map(header => ( // Show first 5 fields
+                                        <div key={header}>
+                                            <p className="font-semibold text-xs text-muted-foreground">{header}</p>
+                                            <p className="text-foreground line-clamp-2">{row[header]}</p>
+                                        </div>
+                                        ))}
+                                        {headers.length > 5 && <p className="text-xs text-muted-foreground pt-2">...and {headers.length - 5} more fields.</p>}
+                                    </CardContent>
+                                </Card>
+                            )
+                        })}
+                    </div>
+                )}
             </ScrollArea>
-             <div className="flex-shrink-0 border-t p-2 flex flex-col sm:flex-row items-center gap-2">
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                    {permissions.canEdit && (
+             <div className="flex-shrink-0 border-t p-2 flex items-center gap-2">
+                 {permissions.canEdit && (
                         <>
                             <AddRowDialog open={isAddRowOpen} onOpenChange={setIsAddRowOpen} sheet={sheet}>
                                 <Button variant="outline" size="sm">
@@ -350,18 +264,34 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                         <FileDown className="mr-2 h-4 w-4" />
                         Export as Excel
                     </Button>
-                </div>
-                <div className="relative w-full sm:w-auto sm:ml-auto">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                    <Input
-                        type="search"
-                        placeholder="Search sheet..."
-                        className="pl-9 h-9 w-full sm:w-64"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                </div>
             </div>
+
+            {rowToEdit && (
+                <EditRowDialog
+                    open={!!rowToEdit}
+                    onOpenChange={(isOpen) => !isOpen && setRowToEdit(null)}
+                    sheet={sheet}
+                    rowData={rowToEdit.data}
+                    onSave={(updatedData) => handleSaveEdit(rowToEdit.rowIndex, updatedData)}
+                />
+            )}
+            
+            {rowToDelete !== null && (
+                 <AlertDialog open={rowToDelete !== null} onOpenChange={(isOpen) => !isOpen && setRowToDelete(null)}>
+                    <AlertDialogContent>
+                        <AlertDialogHeader>
+                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogDescription>This action will permanently delete this row.</AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                            <AlertDialogCancel>Cancel</AlertDialogCancel>
+                            <AlertDialogAction onClick={handleDeleteRow} className="bg-destructive hover:bg-destructive/90">
+                                Delete Row
+                            </AlertDialogAction>
+                        </AlertDialogFooter>
+                    </AlertDialogContent>
+                </AlertDialog>
+            )}
 
              {columnToConfigure && (
                 <ConfigureColumnDialog
