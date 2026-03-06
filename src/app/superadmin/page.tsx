@@ -31,13 +31,16 @@ export default function SuperAdminPage() {
     const [isStatsLoading, setIsStatsLoading] = useState(true);
     const [showFeedback, setShowFeedback] = useState(false);
 
-    const orgsQuery = useMemoFirebase(() => collection(firestore, 'organizations'), [firestore]);
+    const orgsQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return collection(firestore, 'organizations');
+    }, [firestore]);
     const { data: organizations, isLoading: areOrgsLoading } = useCollection<Organization>(orgsQuery);
     
-    const newFeedbackQuery = useMemoFirebase(() => 
-        query(collection(firestore, 'feedback'), where('status', '==', 'NEW')), 
-        [firestore]
-    );
+    const newFeedbackQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
+        return query(collection(firestore, 'feedback'), where('status', '==', 'NEW'));
+    }, [firestore]);
     const { data: newFeedback } = useCollection<Feedback>(newFeedbackQuery);
 
     useEffect(() => {
@@ -51,7 +54,7 @@ export default function SuperAdminPage() {
 
     useEffect(() => {
         const fetchStats = async () => {
-            if (!organizations || organizations.length === 0) {
+            if (!firestore || !organizations || organizations.length === 0) {
                 setIsStatsLoading(false);
                 return;
             };
