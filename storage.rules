@@ -1,0 +1,18 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    // Files are stored at /requisitions/{orgId}/{fileName}
+    match /requisitions/{orgId}/{fileName} {
+      // Helper function to check if the user belongs to the organization
+      // by reading their profile from Firestore.
+      function isUserInOrg() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.orgId == orgId;
+      }
+      
+      // Allow read/write access only if the user is authenticated and a member
+      // of the organization specified in the file path.
+      allow read, write: if request.auth != null && isUserInOrg();
+    }
+  }
+}
