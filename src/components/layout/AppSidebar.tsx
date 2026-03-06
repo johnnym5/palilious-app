@@ -43,7 +43,7 @@ const mainNavItems = [
 ];
 
 
-export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions, onOpenTasks, onOpenAttendance }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void, onOpenTasks: () => void, onOpenAttendance: () => void }) {
+export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions, onOpenTasks, onOpenAttendance, onOpenChat }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void, onOpenTasks: () => void, onOpenAttendance: () => void, onOpenChat: () => void }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
@@ -99,8 +99,21 @@ export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWor
             if ('isSeparator' in item) {
                 return <Separator key={`sep-${index}`} className="my-2" />;
             }
-            if (item.href === "/chat" && !permissions.canAccessChat) {
-                return null;
+            if (item.href === "/chat") {
+                if (!permissions.canAccessChat) return null;
+                return (
+                    <button
+                        key={item.href}
+                        onClick={onOpenChat}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
+                          isMobile && "text-lg"
+                        )}
+                    >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                    </button>
+                )
             }
             if (item.href === '/attendance') {
                 return (

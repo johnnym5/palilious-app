@@ -16,6 +16,7 @@ import { WorkbookDialog } from '@/components/workbook/WorkbookDialog';
 import { RequisitionsDialog } from '@/components/requisitions/RequisitionsDialog';
 import { TasksDialog } from '@/components/tasks/TasksDialog';
 import { AttendanceDialog } from '@/components/attendance/AttendanceDialog';
+import { ChatDialog } from '@/components/chat/ChatDialog';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -26,6 +27,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isRequisitionsOpen, setIsRequisitionsOpen] = useState(false);
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -78,6 +80,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onOpenRequisitions={() => setIsRequisitionsOpen(true)}
             onOpenTasks={() => setIsTasksOpen(true)}
             onOpenAttendance={() => setIsAttendanceOpen(true)}
+            onOpenChat={() => setIsChatOpen(true)}
           />
           <div className="flex flex-1 flex-col">
               <AppHeader />
@@ -92,6 +95,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <RequisitionsDialog open={isRequisitionsOpen} onOpenChange={setIsRequisitionsOpen} />
       <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
       <AttendanceDialog open={isAttendanceOpen} onOpenChange={setIsAttendanceOpen} />
+      <ChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} />
     </>
   );
 }
