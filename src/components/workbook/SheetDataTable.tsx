@@ -336,28 +336,30 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                     </TableBody>
                 </Table>
             </ScrollArea>
-             <div className="flex-shrink-0 border-t p-2 flex items-center flex-wrap gap-2">
-                {permissions.canEdit && (
-                    <>
-                         <Button variant="outline" size="sm" onClick={handleAddRow}>
-                            <Plus className="mr-2 h-4 w-4" />
-                            Add Row
-                        </Button>
-                        <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
-                             <Button variant="outline" size="sm">
-                                 <Plus className="mr-2 h-4 w-4" />
-                                 Add Column
-                             </Button>
-                        </AddColumnDialog>
-                    </>
-                )}
-                <Button variant="outline" size="sm" onClick={handleExport}>
-                    <FileDown className="mr-2 h-4 w-4" />
-                    Export as Excel
-                </Button>
-                <div className="relative ml-auto">
-                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                     <Input
+             <div className="flex-shrink-0 border-t p-2 flex flex-col sm:flex-row items-center gap-2">
+                <div className="flex items-center gap-2 w-full sm:w-auto">
+                    {permissions.canEdit && (
+                        <>
+                            <Button variant="outline" size="sm" onClick={handleAddRow}>
+                                <Plus className="mr-2 h-4 w-4" />
+                                Add Row
+                            </Button>
+                            <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
+                                <Button variant="outline" size="sm">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Column
+                                </Button>
+                            </AddColumnDialog>
+                        </>
+                    )}
+                    <Button variant="outline" size="sm" onClick={handleExport}>
+                        <FileDown className="mr-2 h-4 w-4" />
+                        Export as Excel
+                    </Button>
+                </div>
+                <div className="relative w-full sm:w-auto sm:ml-auto">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input
                         type="search"
                         placeholder="Search sheet..."
                         className="pl-9 h-9 w-full sm:w-64"

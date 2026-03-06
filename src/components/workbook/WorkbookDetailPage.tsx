@@ -214,21 +214,6 @@ export default function WorkbookDetailPage() {
                     </Card>
                 )}
             </div>
-            
-            {activeTab && workbookPermissions.canEdit && userProfile && (
-                <Button
-                    className="fixed bottom-6 right-24 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40"
-                    onClick={() => {
-                        const currentSheet = sheets?.find(s => s.id === activeTab);
-                        if (currentSheet) {
-                            setSheetToMakeTask(currentSheet);
-                        }
-                    }}
-                    aria-label="Create Task from Sheet"
-                >
-                    <ListTodo className="h-8 w-8" />
-                </Button>
-            )}
 
             {sheetToRename && (
                 <RenameSheetDialog
