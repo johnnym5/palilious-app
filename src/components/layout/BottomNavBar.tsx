@@ -20,11 +20,11 @@ import { ScrollArea } from '../ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from "../ui/skeleton";
 import { ProfileDialog } from "../profile/ProfileDialog";
+import { TasksDialog } from '../tasks/TasksDialog';
 
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "Home" },
-  { href: "/tasks", icon: ListTodo, label: "Tasks" },
 ];
 
 export function BottomNavBar() {
@@ -39,6 +39,7 @@ export function BottomNavBar() {
   const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isTasksOpen, setIsTasksOpen] = useState(false);
 
 
   const userProfileRef = useMemoFirebase(() => 
@@ -120,7 +121,16 @@ export function BottomNavBar() {
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/80 backdrop-blur-lg md:hidden">
         <div className="flex h-20 items-center justify-around">
           <NavItem {...navItems[0]} />
-          <NavItem {...navItems[1]} />
+          <button
+            onClick={() => setIsTasksOpen(true)}
+            className={cn(
+              "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
+              "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <ListTodo className="h-6 w-6" />
+            <span className="text-xs font-medium">Tasks</span>
+          </button>
           <div className="w-16 h-16" /> {/* Spacer for FAB */}
           
           <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
@@ -236,6 +246,7 @@ export function BottomNavBar() {
             />
        )}
        <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} />
+       <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
     </>
   );
 }

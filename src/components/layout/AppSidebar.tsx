@@ -43,7 +43,7 @@ const mainNavItems = [
 ];
 
 
-export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void }) {
+export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions, onOpenTasks }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void, onOpenTasks: () => void }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
@@ -102,6 +102,21 @@ export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWor
             if (item.href === "/chat" && !permissions.canAccessChat) {
                 return null;
             }
+             if (item.href === '/tasks') {
+                return (
+                    <button
+                        key={item.href}
+                        onClick={onOpenTasks}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
+                          isMobile && "text-lg"
+                        )}
+                    >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                    </button>
+                )
+             }
              if (item.href === '/workbook') {
                 return (
                     <button

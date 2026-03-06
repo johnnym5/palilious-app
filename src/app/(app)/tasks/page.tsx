@@ -1,98 +1,93 @@
 'use client';
-import { useState, useEffect } from 'react';
-import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState } from 'react';
+import { Loader2 } from 'lucide-react';
 import { doc } from 'firebase/firestore';
-import type { Task, UserProfile } from '@/lib/types';
-import { usePermissions } from '@/hooks/usePermissions';
-import { Skeleton } from '@/components/ui/skeleton';
-import { useSearchParams, useRouter, usePathname } from 'next/navigation';
-import { TaskDetailDialog } from '@/components/tasks/TaskDetailDialog';
-import { TaskBoard } from '@/components/tasks/TaskBoard';
-import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
-import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
+import type { UserProfile } from '@/lib/types';
+import { useSystemConfig } from '@/hooks/useSystemConfig';
+import { hexToHslString } from '@/lib/utils';
+import { useTheme } from 'next-themes';
+import { BottomNavBar } from '@/components/layout/BottomNavBar';
+import AppSidebar from '@/components/layout/AppSidebar';
+import AppHeader from '@/components/layout/AppHeader';
+import { SettingsDialog } from '@/components/settings/SettingsDialog';
+import { WorkbookDialog } from '@/components/workbook/WorkbookDialog';
+import { RequisitionsDialog } from '@/components/requisitions/RequisitionsDialog';
+import { TasksDialog } from '@/components/tasks/TasksDialog';
 
-export default function TasksPage() {
-  const { user: authUser } = useUser();
+export default function AppLayout({ children }: { children: React.ReactNode }) {
+  const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-  
-  const [selectedTask, setSelectedTask] = useState<Task | null>(null);
-  const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
+  const { theme } = useTheme();
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isWorkbookOpen, setIsWorkbookOpen] = useState(false);
+  const [isRequisitionsOpen, setIsRequisitionsOpen] = useState(false);
+  const [isTasksOpen, setIsTasksOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, 'users', authUser.uid) : null, 
-  [firestore, authUser]);
+    user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
-
-  const permissions = usePermissions(userProfile);
-
-  const taskIdFromUrl = searchParams.get('taskId');
-  const taskFromUrlRef = useMemoFirebase(() => 
-    taskIdFromUrl ? doc(firestore, 'tasks', taskIdFromUrl) : null,
-  [firestore, taskIdFromUrl]);
-  const { data: taskFromUrl } = useDoc<Task>(taskFromUrlRef);
-
-  useEffect(() => {
-    if (taskFromUrl) {
-      setSelectedTask(taskFromUrl);
-    }
-  }, [taskFromUrl]);
-
-  const handleDialogClose = (isOpen: boolean) => {
-    if (!isOpen) {
-      setSelectedTask(null);
-      router.replace(pathname, {scroll: false}); 
-    }
-  };
+  const { config, isLoading: isConfigLoading } = useSystemConfig(userProfile?.orgId);
   
-  const isLoading = isProfileLoading;
+  useEffect(() => {
+    const root = document.documentElement;
+    const defaultPrimary = '217.2 91.2% 59.8%';
+    const defaultAccent = '217.2 32.6% 17.5%';
+    
+    // Set Primary Color
+    if (config?.branding_color) {
+      const hslString = hexToHslString(config.branding_color);
+      if (hslString) {
+        root.style.setProperty('--primary', hslString);
+      }
+    } else {
+      root.style.setProperty('--primary', defaultPrimary);
+    }
+
+    // Set Accent Color
+    if (config?.accent_color) {
+      const hslString = hexToHslString(config.accent_color);
+      if (hslString) {
+        root.style.setProperty('--accent', hslString);
+      }
+    } else {
+      root.style.setProperty('--accent', defaultAccent);
+    }
+
+  }, [config, theme]);
+
+
+  if (isUserLoading || !user || isProfileLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="animate-spin text-primary w-12 h-12" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 h-full flex flex-col">
-       <div className="flex items-center justify-between">
-         <div>
-          <h1 className="text-3xl font-bold font-headline tracking-tight">Task Manager</h1>
-          <p className="text-muted-foreground">
-            {permissions.canManageStaff ? "Monitor tasks across your team." : "Your personal task board."}
-          </p>
-         </div>
-         {userProfile && (
-            <AssignTaskDialog
-                open={isAssignTaskOpen}
-                onOpenChange={setIsAssignTaskOpen}
-                currentUserProfile={userProfile}
-                permissions={permissions}
-            >
-                <Button onClick={() => setIsAssignTaskOpen(true)}>
-                    <PlusCircle className="mr-2"/>
-                    New Task
-                </Button>
-            </AssignTaskDialog>
-         )}
-       </div>
-
-      {isLoading ? (
-        <Skeleton className="h-[60vh] w-full" />
-      ) : userProfile && (
-        <TaskBoard 
-            userProfile={userProfile}
-            permissions={permissions}
-            onTaskSelect={setSelectedTask}
-        />
-      )}
-
-      {selectedTask && userProfile && (
-        <TaskDetailDialog
-          task={selectedTask}
-          isOpen={!!selectedTask}
-          onOpenChange={handleDialogClose}
-          currentUserProfile={userProfile}
-          permissions={permissions}
-        />
-      )}
-    </div>
+    <>
+      <div className="flex min-h-screen w-full bg-muted/40">
+          <AppSidebar 
+            onOpenSettings={() => setIsSettingsOpen(true)} 
+            onOpenWorkbooks={() => setIsWorkbookOpen(true)} 
+            onOpenRequisitions={() => setIsRequisitionsOpen(true)}
+            onOpenTasks={() => setIsTasksOpen(true)}
+          />
+          <div className="flex flex-1 flex-col">
+              <AppHeader />
+              <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 bg-background">
+                  {children}
+              </main>
+          </div>
+          <BottomNavBar />
+      </div>
+      <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
+      <WorkbookDialog open={isWorkbookOpen} onOpenChange={setIsWorkbookOpen} />
+      <RequisitionsDialog open={isRequisitionsOpen} onOpenChange={setIsRequisitionsOpen} />
+      <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
+    </>
   );
 }
