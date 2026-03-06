@@ -1,3 +1,4 @@
+
 'use client';
 import { ClockControl } from "@/components/attendance/ClockControl";
 import { StatusFeed } from "@/components/attendance/StatusFeed";
@@ -50,21 +51,30 @@ export default function AttendancePage() {
                 <Skeleton className="h-8 w-1/2" />
                 <Skeleton className="h-5 w-3/4" />
             </div>
-            <div className="space-y-8">
-                <Skeleton className="h-40 w-full" />
-                <Skeleton className="h-80 w-full" />
-                <Skeleton className="h-96 w-full" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-1 space-y-8">
+                    <Skeleton className="h-48 w-full" />
+                    <Skeleton className="h-96 w-full" />
+                </div>
+                <div className="lg:col-span-2 space-y-8">
+                    <Skeleton className="h-64 w-full" />
+                    <Skeleton className="h-80 w-full" />
+                </div>
             </div>
         </div>
     )
   }
   
   const MyViewContent = () => (
-    <div className="space-y-8">
-      <ClockControl userProfile={userProfile} permissions={permissions} systemConfig={systemConfig} />
-      {userProfile && permissions.canApproveHR && <PendingApprovals userProfile={userProfile} />}
-      <AttendanceHistory userProfile={userProfile} />
-      <StatusFeed userProfile={userProfile} permissions={permissions} />
+    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <div className="lg:col-span-1 space-y-8">
+        <ClockControl userProfile={userProfile} permissions={permissions} systemConfig={systemConfig} />
+        <StatusFeed userProfile={userProfile} permissions={permissions} />
+      </div>
+      <div className="lg:col-span-2 space-y-8">
+        {userProfile && permissions.canApproveHR && <PendingApprovals userProfile={userProfile} />}
+        <AttendanceHistory userProfile={userProfile} />
+      </div>
     </div>
   );
 
