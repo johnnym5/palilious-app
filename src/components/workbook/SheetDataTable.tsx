@@ -5,7 +5,6 @@ import type { Sheet } from '@/lib/types';
 import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
@@ -30,8 +29,13 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { AddRowDialog } from './AddRowDialog';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { EditRowDialog } from './EditRowDialog';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 
 
 interface SheetDataTableProps {
@@ -118,7 +122,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         });
 
         setHeaders(newHeaders);
-        setData(newData);
+setData(newData);
         saveChanges({ data: newData, headers: newHeaders, columnConfig: newColumnConfig }, `Column "${columnToDelete}" has been deleted.`);
         setColumnToDelete(null);
     }
@@ -207,40 +211,45 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                         {searchTerm ? "No rows match your search." : "No rows yet. Click 'Add Row' to start."}
                     </div>
                 ) : (
-                    <div className="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                    <Accordion type="single" collapsible className="w-full">
                         {filteredData.map((row) => {
                             const originalRowIndex = row.__originalIndex;
                             return (
-                                <Card key={originalRowIndex} className="group flex flex-col">
-                                    <CardHeader className="flex-row items-start justify-between pb-2">
-                                        <CardTitle className="text-base line-clamp-2 pr-2">{row[headers[0]] || 'Untitled Row'}</CardTitle>
+                                <AccordionItem value={`item-${originalRowIndex}`} key={originalRowIndex} className="border-b">
+                                    <div className="flex items-center group">
+                                        <AccordionTrigger className="flex-1 text-left p-4 hover:no-underline">
+                                            <p className="font-semibold text-foreground line-clamp-1">{row[headers[0]] || 'Untitled Row'}</p>
+                                        </AccordionTrigger>
                                         {permissions.canEdit && (
-                                            <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-6 w-6 opacity-50 group-hover:opacity-100 shrink-0">
-                                                <MoreVertical className="h-4 w-4" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="end">
-                                                <DropdownMenuItem onSelect={() => setRowToEdit({ rowIndex: originalRowIndex, data: row })}>Edit Row</DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => setRowToDelete(originalRowIndex)} className="text-destructive focus:text-destructive">Delete Row</DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                            </DropdownMenu>
+                                            <div className="pr-4">
+                                                <DropdownMenu>
+                                                    <DropdownMenuTrigger asChild>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-50 group-hover:opacity-100">
+                                                            <MoreVertical className="h-4 w-4" />
+                                                        </Button>
+                                                    </DropdownMenuTrigger>
+                                                    <DropdownMenuContent align="end">
+                                                        <DropdownMenuItem onSelect={() => setRowToEdit({ rowIndex: originalRowIndex, data: row })}>Edit Row</DropdownMenuItem>
+                                                        <DropdownMenuItem onSelect={() => setRowToDelete(originalRowIndex)} className="text-destructive focus:text-destructive">Delete Row</DropdownMenuItem>
+                                                    </DropdownMenuContent>
+                                                </DropdownMenu>
+                                            </div>
                                         )}
-                                    </CardHeader>
-                                    <CardContent className="space-y-2 text-sm flex-grow">
-                                        {headers.slice(1, 5).map(header => ( // Show first 5 fields
-                                        <div key={header}>
-                                            <p className="font-semibold text-xs text-muted-foreground">{header}</p>
-                                            <p className="text-foreground line-clamp-2">{row[header]}</p>
+                                    </div>
+                                    <AccordionContent>
+                                        <div className="px-4 pb-4 space-y-3">
+                                            {headers.map(header => (
+                                                <div key={header} className="grid grid-cols-3 gap-4 text-sm">
+                                                    <p className="font-semibold text-muted-foreground truncate">{header}</p>
+                                                    <p className="text-foreground col-span-2 break-words">{String(row[header] ?? '')}</p>
+                                                </div>
+                                            ))}
                                         </div>
-                                        ))}
-                                        {headers.length > 5 && <p className="text-xs text-muted-foreground pt-2">...and {headers.length - 5} more fields.</p>}
-                                    </CardContent>
-                                </Card>
+                                    </AccordionContent>
+                                </AccordionItem>
                             )
                         })}
-                    </div>
+                    </Accordion>
                 )}
             </ScrollArea>
              <div className="flex-shrink-0 border-t p-2 flex items-center gap-2">
