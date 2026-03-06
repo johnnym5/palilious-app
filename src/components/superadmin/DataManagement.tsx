@@ -337,7 +337,7 @@ export function DataManagement() {
             } else { // online
                 if (!selectedOnlineBackup || collectionsToRestore.length === 0) throw new Error("No backup or collections selected for restore.");
                 const backupRef = ref(database, `backups/${selectedOnlineBackup}`);
-                const snapshot = await get(backupRef);
+                const snapshot = await get(snapshot);
                 if (!snapshot.exists()) throw new Error("Online backup not found.");
                 data = snapshot.val();
             }
@@ -502,7 +502,7 @@ export function DataManagement() {
     return (
         <div className="space-y-8">
             <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-4">
+                <TabsList className="h-auto flex-wrap justify-start">
                     <TabsTrigger value="backup">Backup & Export</TabsTrigger>
                     <TabsTrigger value="restore">Restore & Import</TabsTrigger>
                     <TabsTrigger value="explorer">Database Explorer</TabsTrigger>

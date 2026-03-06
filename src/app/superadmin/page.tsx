@@ -92,28 +92,29 @@ export default function SuperAdminPage() {
 
     return (
         <div className="min-h-screen bg-background">
-            <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-6 backdrop-blur-lg">
+            <header className="sticky top-0 z-30 flex h-16 items-center gap-4 border-b bg-background/80 px-4 md:px-6 backdrop-blur-lg">
                 <Logo />
-                <div className="flex-1">
+                <div className="flex-1 hidden md:block">
                     <h1 className="text-lg font-semibold font-headline">Super Admin Console</h1>
                 </div>
+                <div className="flex-1 md:hidden" />
                 <div className="flex items-center gap-2">
-                    <Button variant="ghost" onClick={() => setShowFeedback(true)} className="relative">
-                        <Bell className="mr-2"/>
-                        Feedback
+                    <Button variant="ghost" onClick={() => setShowFeedback(true)} className="relative px-2 md:px-4">
+                        <Bell className="h-5 w-5 md:mr-2"/>
+                        <span className="hidden md:inline">Feedback</span>
                         {newFeedback && newFeedback.length > 0 && (
-                            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
+                            <span className="absolute -top-1 right-0 md:right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs font-bold text-destructive-foreground">
                                 {newFeedback.length}
                             </span>
                         )}
                     </Button>
-                    <Button variant="ghost" onClick={() => signOut(auth)}>
-                        <LogOut className="mr-2"/>
-                        Logout
+                    <Button variant="ghost" onClick={() => signOut(auth)} className="px-2 md:px-4">
+                        <LogOut className="h-5 w-5 md:mr-2"/>
+                        <span className="hidden md:inline">Logout</span>
                     </Button>
                 </div>
             </header>
-            <main className="p-6 space-y-8">
+            <main className="p-4 md:p-6 space-y-8">
                 <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                     {isLoading && Array.from({length: 4}).map((_, i) => (
                         <Card key={i}>
@@ -123,7 +124,7 @@ export default function SuperAdminPage() {
                     ))}
 
                     {!isLoading && organizations?.map(org => (
-                        <Link key={org.id} href={`/team?orgId=${org.id}`} className="block transition-all hover:-translate-y-1 hover:shadow-primary/20">
+                        <Link key={org.id} href={`/settings?orgId=${org.id}`} className="block transition-all hover:-translate-y-1 hover:shadow-primary/20">
                             <Card className="h-full bg-card/50 hover:bg-card">
                                 <CardHeader>
                                     <CardTitle className="flex items-center gap-2">

@@ -6,7 +6,7 @@ import { collection, getDocs, doc, getDoc, writeBatch, setDoc, query } from 'fir
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
-import { Database, FileJson, FileText, ChevronRight, Loader2, Save, Trash2, PlusCircle } from 'lucide-react';
+import { Database, FileJson, FileText, ChevronRight, Loader2, Save, Trash2, PlusCircle, ChevronLeft } from 'lucide-react';
 import { Textarea } from '@/components/ui/textarea';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -57,6 +57,7 @@ export function DatabaseExplorer() {
     const [isDeleting, setIsDeleting] = useState(false);
     const [isAddDocOpen, setIsAddDocOpen] = useState(false);
     const [newDocId, setNewDocId] = useState('');
+    const [mobileView, setMobileView] = useState<'collections' | 'documents' | 'editor'>('collections');
 
     useEffect(() => {
         const sortedCollections = Object.keys(collectionSchemaMap)
@@ -89,6 +90,7 @@ export function DatabaseExplorer() {
             setViewedSchema(collectionSchemaMap[selectedCollection] || null);
         } else {
             setViewedSchema(null);
+            setMobileView('collections');
         }
     }, [selectedCollection, fetchDocuments]);
 
@@ -175,6 +177,7 @@ export function DatabaseExplorer() {
             setNewDocId('');
             await fetchDocuments(selectedCollection);
             await handleSelectDocument(newDocRef.id);
+            setMobileView('editor');
 
         } catch (e: any) {
              toast({ variant: 'destructive', title: 'Creation Failed', description: e.message });
@@ -300,7 +303,7 @@ export function DatabaseExplorer() {
 
     return (
         <div className="grid grid-cols-1 md:grid-cols-3 border rounded-lg h-[70vh] overflow-hidden">
-            <div className="flex flex-col border-r">
+            <div className={cn("flex flex-col border-r", mobileView !== 'collections' && "hidden md:flex")}>
                  <div className="p-3 border-b font-semibold text-sm flex items-center justify-between">
                      <div className="flex items-center gap-2">
                         <Database className="h-4 w-4 text-muted-foreground" /> Collections
@@ -314,7 +317,7 @@ export function DatabaseExplorer() {
                     {collections.map(c => (
                         <div
                             key={c.id}
-                            onClick={() => setSelectedCollection(c.id)}
+                            onClick={() => {setSelectedCollection(c.id); setMobileView('documents');}}
                             className={cn(
                                 "flex items-center justify-between p-3 text-sm cursor-pointer hover:bg-accent border-b",
                                 selectedCollection === c.id && "bg-accent"
@@ -339,9 +342,12 @@ export function DatabaseExplorer() {
                 </ScrollArea>
             </div>
 
-            <div className="flex flex-col border-r">
+            <div className={cn("flex flex-col border-r", mobileView !== 'documents' && 'hidden md:flex')}>
                 <div className="p-3 border-b font-semibold text-sm flex items-center gap-2 justify-between">
                     <div className="flex items-center gap-2">
+                         <Button variant="ghost" size="icon" className="md:hidden -ml-2" onClick={() => setMobileView('collections')}>
+                            <ChevronLeft />
+                        </Button>
                         <FileText className="h-4 w-4 text-muted-foreground" /> Documents ({documents.length})
                     </div>
                      <div className="flex items-center gap-2">
@@ -358,7 +364,7 @@ export function DatabaseExplorer() {
                         documents.map(d => (
                              <div
                                 key={d.id}
-                                onClick={() => handleSelectDocument(d.id)}
+                                onClick={() => {handleSelectDocument(d.id); setMobileView('editor')}}
                                 className={cn(
                                     "p-3 text-sm cursor-pointer hover:bg-accent border-b flex items-center gap-3",
                                     editedDocument?.id === d.id && "bg-accent"
@@ -430,8 +436,11 @@ export function DatabaseExplorer() {
                 </div>
             </div>
 
-            <div className="flex flex-col">
+            <div className={cn("flex flex-col", mobileView !== 'editor' && "hidden md:flex")}>
                  <div className="p-3 border-b font-semibold text-sm flex items-center gap-2">
+                    <Button variant="ghost" size="icon" className="md:hidden -ml-2" onClick={() => setMobileView('documents')}>
+                        <ChevronLeft />
+                    </Button>
                     <FileJson className="h-4 w-4 text-muted-foreground" /> Data Editor
                 </div>
                 <ScrollArea className="flex-1 bg-muted/30">
