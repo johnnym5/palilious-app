@@ -1,24 +1,27 @@
 'use client';
+
 import { useState, useMemo } from 'react';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { UserProfile, Workbook } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search } from 'lucide-react';
+import { ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search, PlusCircle } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
-import { useRouter, useSearchParams } from 'next/navigation';
 import { EditWorkbookDialog } from '@/components/workbook/EditWorkbookDialog';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
-import Link from 'next/link';
 import { ShareWorkbookDialog } from '@/components/workbook/ShareWorkbookDialog';
 import WorkbookDetailPage from '@/components/workbook/WorkbookDetailPage';
 import { Input } from '@/components/ui/input';
+import { NewWorkbookDialog } from './NewWorkbookDialog';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
-function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
+
+function WorkbookList({ userProfile, onSelectWorkbook }: { userProfile: UserProfile, onSelectWorkbook: (id: string) => void }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [workbookToEdit, setWorkbookToEdit] = useState<Workbook | null>(null);
@@ -128,9 +131,7 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
                                 </p>
                             </CardContent>
                             <CardFooter>
-                                <Button asChild variant="outline" className="w-full">
-                                    <Link href={`/workbook?workbookId=${workbook.id}`}>View Workbook</Link>
-                                </Button>
+                                <Button variant="outline" className="w-full" onClick={() => onSelectWorkbook(workbook.id)}>View Workbook</Button>
                             </CardFooter>
                         </Card>
                     ))}
@@ -173,14 +174,11 @@ function WorkbookList({ userProfile }: { userProfile: UserProfile }) {
     )
 }
 
-
-export default function WorkbookPage() {
+function WorkbookDialogContent() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
-  const router = useRouter();
-  const searchParams = useSearchParams();
-
-  const workbookId = searchParams.get('workbookId');
+  const [viewingWorkbookId, setViewingWorkbookId] = useState<string | null>(null);
+  const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, 'users', authUser.uid) : null
@@ -188,7 +186,7 @@ export default function WorkbookPage() {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
   if (isProfileLoading) {
-    return <Skeleton className="h-[calc(100vh-12rem)] w-full" />
+    return <div className="p-6"><Skeleton className="h-full w-full" /></div>
   }
 
   if (!userProfile) {
@@ -197,17 +195,16 @@ export default function WorkbookPage() {
               <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
               <h1 className="text-2xl font-bold font-headline">Access Denied</h1>
               <p className="text-muted-foreground mt-2">Could not identify user profile.</p>
-              <Button onClick={() => router.push('/dashboard')} className="mt-6">Return to Dashboard</Button>
             </div>
       )
   }
   
-  if (workbookId) {
-      return <WorkbookDetailPage />;
+  if (viewingWorkbookId) {
+      return <WorkbookDetailPage workbookId={viewingWorkbookId} onBack={() => setViewingWorkbookId(null)} />;
   }
 
   return (
-    <div className="space-y-6 min-h-[calc(100vh-10rem)]">
+    <div className="space-y-6 p-6 min-h-full">
        <div className="flex items-center justify-between">
          <div>
           <h1 className="text-3xl font-bold font-headline tracking-tight">Workbooks</h1>
@@ -215,10 +212,31 @@ export default function WorkbookPage() {
             Create, manage, and distribute work from master documents.
           </p>
          </div>
+         <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile}>
+            <Button onClick={() => setIsNewWorkbookOpen(true)}>
+                <PlusCircle className="mr-2"/>
+                New Workbook
+            </Button>
+        </NewWorkbookDialog>
        </div>
-
-       <WorkbookList userProfile={userProfile} />
-       
+       <WorkbookList userProfile={userProfile} onSelectWorkbook={setViewingWorkbookId} />
     </div>
+  );
+}
+
+interface WorkbookDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+export function WorkbookDialog({ open, onOpenChange }: WorkbookDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-7xl h-[90vh]">
+        <ScrollArea className="h-full">
+            <WorkbookDialogContent />
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }

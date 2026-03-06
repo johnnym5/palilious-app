@@ -1,13 +1,13 @@
 'use client';
 
-import { useSearchParams, useRouter } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query } from 'firebase/firestore';
 import type { Workbook, Sheet, UserProfile, WorkbookRole } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, Plus, MoreVertical, Trash2, Edit, ListTodo } from 'lucide-react';
+import { ShieldAlert, Plus, MoreVertical, Trash2, Edit, ListTodo, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SheetDataTable } from '@/components/workbook/SheetDataTable';
 import { useState, useMemo, useEffect } from 'react';
@@ -48,14 +48,15 @@ const useWorkbookPermissions = (workbook: Workbook | null, userProfile: UserProf
     }, [workbook, userProfile]);
 };
 
+interface WorkbookDetailPageProps {
+    workbookId: string;
+    onBack: () => void;
+}
 
-export default function WorkbookDetailPage() {
-    const searchParams = useSearchParams();
-    const router = useRouter();
+
+export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetailPageProps) {
     const firestore = useFirestore();
     const { user: authUser } = useUser();
-
-    const workbookId = searchParams.get('workbookId');
 
     const [activeTab, setActiveTab] = useState<string | undefined>();
     const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
@@ -116,14 +117,14 @@ export default function WorkbookDetailPage() {
               <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
               <h1 className="text-2xl font-bold font-headline">Access Denied</h1>
               <p className="text-muted-foreground mt-2">You do not have permission to view this workbook.</p>
-              <Button onClick={() => router.push('/workbook')} className="mt-6">Return to Workbooks</Button>
+              <Button onClick={onBack} className="mt-6">Return to Workbooks</Button>
             </div>
       )
     }
     
     if (isLoading) {
         return (
-            <div className="space-y-4">
+            <div className="space-y-4 p-6">
                 <Skeleton className="h-8 w-1/2" />
                 <Skeleton className="h-6 w-3/4" />
                 <Card>
@@ -135,15 +136,20 @@ export default function WorkbookDetailPage() {
     }
 
     if (!workbook) {
-        return <p>Workbook not found.</p>;
+        return <p className="p-6">Workbook not found.</p>;
     }
 
     return (
         <>
-            <div className="space-y-4">
-                <div>
-                    <h1 className="text-3xl font-bold font-headline tracking-tight">{workbook.title}</h1>
-                    <p className="text-muted-foreground">{workbook.description || 'No description provided.'}</p>
+            <div className="space-y-4 p-6">
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" onClick={onBack} className="-ml-2">
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div>
+                        <h1 className="text-3xl font-bold font-headline tracking-tight">{workbook.title}</h1>
+                        <p className="text-muted-foreground">{workbook.description || 'No description provided.'}</p>
+                    </div>
                 </div>
 
                 {sheets && sheets.length > 0 && workbookId ? (
