@@ -11,16 +11,13 @@ import { useTheme } from 'next-themes';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import AppSidebar from '@/components/layout/AppSidebar';
 import AppHeader from '@/components/layout/AppHeader';
-import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { WorkbookDialog } from '@/components/workbook/WorkbookDialog';
 import { RequisitionsDialog } from '@/components/requisitions/RequisitionsDialog';
 import { TasksDialog } from '@/components/tasks/TasksDialog';
 import { AttendanceDialog } from '@/components/attendance/AttendanceDialog';
-import { ChatDialog } from '@/components/chat/ChatDialog';
 import { LeaveDialog } from '@/components/leave/LeaveDialog';
 import { ReportsDialog } from '@/components/reports/ReportsDialog';
 import { uiEmitter } from '@/lib/ui-emitter';
-import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
@@ -34,15 +31,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
   const { theme } = useTheme();
-  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isWorkbookOpen, setIsWorkbookOpen] = useState(false);
   const [isRequisitionsOpen, setIsRequisitionsOpen] = useState(false);
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
-  const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
   const [isNewRequisitionOpen, setIsNewRequisitionOpen] = useState(false);
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
@@ -100,19 +94,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   const dialogManager = {
-    settings: setIsSettingsOpen,
     workbooks: setIsWorkbookOpen,
     requisitions: setIsRequisitionsOpen,
     tasks: setIsTasksOpen,
     attendance: setIsAttendanceOpen,
-    chat: setIsChatOpen,
     leave: setIsLeaveOpen,
     reports: setIsReportsOpen,
-    profile: setIsProfileOpen,
     assignTask: setIsAssignTaskOpen,
     newRequisition: setIsNewRequisitionOpen,
     requestLeave: setIsRequestLeaveOpen,
     newWorkbook: setIsNewWorkbookOpen,
+    profile: () => {}, // Placeholder
+    settings: () => {}, // Placeholder
+    chat: () => {}, // Placeholder
   }
 
   return (
@@ -160,15 +154,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Feature Dialogs */}
-      <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       <WorkbookDialog open={isWorkbookOpen} onOpenChange={setIsWorkbookOpen} />
       <RequisitionsDialog open={isRequisitionsOpen} onOpenChange={setIsRequisitionsOpen} />
       <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
       <AttendanceDialog open={isAttendanceOpen} onOpenChange={setIsAttendanceOpen} />
-      <ChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} />
       <LeaveDialog open={isLeaveOpen} onOpenChange={setIsLeaveOpen} />
       <ReportsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
-      <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} />
 
       {/* Creation Dialogs */}
       {userProfile && (

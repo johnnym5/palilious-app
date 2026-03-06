@@ -7,9 +7,7 @@ import {
   CalendarCheck2,
   ReceiptText,
   ListTodo,
-  MessagesSquare,
   LogOut,
-  Settings,
   BarChart,
   CalendarPlus,
   BookOpenCheck,
@@ -28,7 +26,7 @@ import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 
 type DialogManager = {
-  [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave']: (open: boolean) => void;
+  [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave' | 'chat' | 'settings' | 'profile']: (open: boolean) => void;
 };
 
 const mainNavItems = [
@@ -36,14 +34,12 @@ const mainNavItems = [
   { isSeparator: true },
   { dialog: "attendance", icon: CalendarCheck2, label: "Attendance" },
   { dialog: "leave", icon: CalendarPlus, label: "Leave" },
-  { dialog: "chat", icon: MessagesSquare, label: "Chat", permission: 'canAccessChat' },
   { isSeparator: true },
   { dialog: "tasks", icon: ListTodo, label: "Tasks" },
   { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
   { dialog: "requisitions", icon: ReceiptText, label: "Requisitions", permission: 'canAccessRequisitions' },
   { isSeparator: true },
   { dialog: "reports", icon: BarChart, label: "Reports" },
-  { dialog: "settings", icon: Settings, label: "Settings", permission: 'canManageStaff' },
 ];
 
 

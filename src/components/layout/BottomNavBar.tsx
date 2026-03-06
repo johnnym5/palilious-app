@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ListTodo, User, Plus, FileText, CalendarPlus, BookOpenCheck } from "lucide-react";
+import { Home, ListTodo, Plus, FileText, CalendarPlus, BookOpenCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useState } from "react";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sheet";
 
 type DialogManager = {
-  [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave']: (open: boolean) => void;
+  [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave']: (open: boolean) => void;
 };
 
 const navItemsLeft = [
@@ -29,7 +29,7 @@ const navItemsLeft = [
 
 const navItemsRight = [
   { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
-  { dialog: "profile", icon: User, label: "Profile" },
+  { dialog: "reports", icon: Home, label: "Reports" },
 ];
 
 const NavItem = ({ item, pathname, dialogManager }: { item: any, pathname: string, dialogManager: DialogManager }) => {

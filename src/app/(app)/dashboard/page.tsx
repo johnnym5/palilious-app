@@ -1,14 +1,13 @@
 'use client';
 import { StatCard } from "@/components/dashboard/StatCard";
-import { CheckCircle, MessageSquare, Megaphone } from "lucide-react";
+import { CheckCircle, Megaphone } from "lucide-react";
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc, collection, query, where, orderBy, limit } from "firebase/firestore";
-import type { UserProfile, Chat, Requisition, Announcement, SystemConfig } from "@/lib/types";
+import type { UserProfile, Requisition, Announcement, SystemConfig } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo, useState, useEffect } from "react";
 import { PerformanceCard } from "@/components/dashboard/PerformanceCard";
-import { RecentConversations } from "@/components/dashboard/RecentConversations";
 import { Announcements } from "@/components/dashboard/Announcements";
 import { usePermissions, type Permissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
@@ -109,22 +108,6 @@ export default function DashboardPage() {
         );
     }, [firestore, userProfile, permissions]);
     const { data: pendingReqs, isLoading: reqsLoading } = useCollection<Requisition>(reqsQuery);
-
-
-    // Fetch unread messages
-    const chatsQuery = useMemoFirebase(() => 
-        authUser ? query(
-            collection(firestore, 'chats'),
-            where('participants', 'array-contains', authUser.uid)
-        ) : null,
-    [firestore, authUser]);
-    const { data: chats, isLoading: chatsLoading } = useCollection<Chat>(chatsQuery);
-
-    const unreadMessagesCount = useMemo(() => {
-        // This is a simplified count. A real implementation would need to track read statuses per user.
-        if (!chats || !authUser) return 0;
-        return chats.filter(chat => chat.lastMessage && chat.lastMessage.senderId !== authUser.uid).length;
-    }, [chats, authUser]);
     
      useEffect(() => {
         if (!api) {
@@ -143,7 +126,7 @@ export default function DashboardPage() {
       }, [api])
 
 
-    const isLoading = isProfileLoading || reqsLoading || chatsLoading || isConfigLoading;
+    const isLoading = isProfileLoading || reqsLoading || isConfigLoading;
 
     return (
         <div className="flex flex-col gap-8">
@@ -168,8 +151,6 @@ export default function DashboardPage() {
             <QuickActions />
 
             <ActiveTasks />
-            
-            <RecentConversations />
 
             <div className="space-y-4">
                  <div className="flex items-center justify-between">
@@ -187,21 +168,13 @@ export default function DashboardPage() {
                         </NewAnnouncementDialog>
                     )}
                  </div>
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                      {isLoading ? (
                         <>
-                            <Skeleton className="h-24" />
                             <Skeleton className="h-24" />
                         </>
                     ) : (
                         <>
-                            <StatCard 
-                                title="New Messages" 
-                                value={unreadMessagesCount} 
-                                icon={MessageSquare} 
-                                href="/chat"
-                                color="bg-sky-500/20 text-sky-400"
-                            />
                             <StatCard 
                                 title="Pending Approvals" 
                                 value={pendingReqs?.length || 0} 

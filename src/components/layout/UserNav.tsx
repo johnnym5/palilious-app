@@ -9,15 +9,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUser, useAuth } from "@/firebase";
-import { LogOut, User as UserIcon } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { signOut } from "firebase/auth";
-import { useState } from 'react';
-import { ProfileDialog } from '../profile/ProfileDialog';
 
 export function UserNav() {
   const { user } = useUser();
   const auth = useAuth();
-  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
   if (!user) {
     return null;
@@ -49,18 +46,12 @@ export function UserNav() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onSelect={() => setIsProfileOpen(true)} className="cursor-pointer">
-            <UserIcon className="mr-2 h-4 w-4" />
-            <span>Profile</span>
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
-      <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} />
     </>
   );
 }
