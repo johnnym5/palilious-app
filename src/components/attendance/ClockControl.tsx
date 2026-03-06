@@ -39,17 +39,20 @@ import { Skeleton } from '../ui/skeleton';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
 import { getDistanceInMeters } from '@/lib/utils';
+import { cn } from '@/lib/utils';
 
 interface ClockControlProps {
   userProfile: UserProfile | null;
   permissions: Permissions;
   systemConfig: SystemConfig | null;
+  className?: string;
 }
 
 export function ClockControl({
   userProfile,
   permissions,
   systemConfig,
+  className,
 }: ClockControlProps) {
   const firestore = useFirestore();
   const { toast } = useToast();
@@ -301,7 +304,7 @@ export function ClockControl({
 
   if (isLoading) {
     return (
-      <Card>
+      <Card className={cn(className)}>
         <CardContent className="p-6 flex justify-center">
           <Loader2 className="animate-spin" />
         </CardContent>
@@ -311,7 +314,7 @@ export function ClockControl({
 
   if (!permissions.canClockIn) {
     return (
-      <Card>
+      <Card className={cn(className)}>
         <CardHeader>
           <CardTitle>Time Clock</CardTitle>
         </CardHeader>
@@ -325,7 +328,7 @@ export function ClockControl({
   }
 
   return (
-    <Card>
+    <Card className={cn(className)}>
       <CardHeader className="text-center">
         <CardTitle>Time Clock</CardTitle>
         <CardDescription>
