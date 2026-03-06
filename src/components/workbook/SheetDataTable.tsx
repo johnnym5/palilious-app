@@ -140,6 +140,21 @@ setData(newData);
         toast({ title: 'Exporting...', description: `The sheet "${sheet.name}" is being downloaded.` });
     };
 
+    const getRowTitle = (row: Record<string, any>, headers: string[]): string => {
+        const nameHeaders = ['name', 'full name', 'title', 'subject'];
+        const lowerCaseHeaders = headers.map(h => h.toLowerCase());
+
+        for (const nameHeader of nameHeaders) {
+            const index = lowerCaseHeaders.indexOf(nameHeader);
+            if (index !== -1 && row[headers[index]]) {
+                return row[headers[index]];
+            }
+        }
+        // Fallback to the first column's value if it exists, otherwise a generic title
+        return row[headers[0]] || 'Untitled Row';
+    };
+
+
     if (!headers || headers.length === 0) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 space-y-4">
@@ -214,11 +229,12 @@ setData(newData);
                     <Accordion type="single" collapsible className="w-full">
                         {filteredData.map((row) => {
                             const originalRowIndex = row.__originalIndex;
+                            const rowTitle = getRowTitle(row, headers);
                             return (
                                 <AccordionItem value={`item-${originalRowIndex}`} key={originalRowIndex} className="border-b">
                                     <div className="flex items-center group">
                                         <AccordionTrigger className="flex-1 text-left p-4 hover:no-underline">
-                                            <p className="font-semibold text-foreground line-clamp-1">{row[headers[0]] || 'Untitled Row'}</p>
+                                            <p className="font-semibold text-foreground line-clamp-1">{rowTitle}</p>
                                         </AccordionTrigger>
                                         {permissions.canEdit && (
                                             <div className="pr-4">
