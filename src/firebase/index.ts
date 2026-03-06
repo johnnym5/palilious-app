@@ -7,8 +7,20 @@ import { getFirestore, enableIndexedDbPersistence } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import { getDatabase } from 'firebase/database';
 
+const isFirebaseConfigAvailable = !!(firebaseConfig.apiKey && firebaseConfig.projectId);
+
 // IMPORTANT: DO NOT MODIFY THIS FUNCTION
 export function initializeFirebase() {
+  if (!isFirebaseConfigAvailable) {
+    return {
+      firebaseApp: null,
+      auth: null,
+      firestore: null,
+      storage: null,
+      database: null,
+    };
+  }
+  
   if (!getApps().length) {
     // Always initialize with the config object.
     const firebaseApp = initializeApp(firebaseConfig);
