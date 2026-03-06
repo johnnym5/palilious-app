@@ -21,6 +21,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+
 
 function SheetList({ workbookId, onSelectSheet }: { workbookId: string, onSelectSheet: (workbookId: string, sheetId: string) => void }) {
     const firestore = useFirestore();
@@ -28,20 +30,25 @@ function SheetList({ workbookId, onSelectSheet }: { workbookId: string, onSelect
     const { data: sheets, isLoading } = useCollection<Sheet>(sheetsQuery);
 
     if (isLoading) {
-        return <Skeleton className="h-10 w-full" />;
+        return <div className="px-4 py-2"><Skeleton className="h-10 w-full rounded-full" /></div>;
     }
 
     if (!sheets || sheets.length === 0) {
-        return <p className="text-xs text-muted-foreground text-center py-4">No sheets in this workbook.</p>;
+        return <p className="px-4 text-xs text-muted-foreground text-center py-4">No sheets in this workbook.</p>;
     }
 
     return (
-        <div className="space-y-1 py-2">
-            {sheets.map(sheet => (
-                <Button key={sheet.id} variant="ghost" className="w-full justify-start h-auto py-1 px-2 text-sm" onClick={() => onSelectSheet(workbookId, sheet.id)}>
-                    - {sheet.name}
-                </Button>
-            ))}
+        <div className="py-2 px-4">
+            <Select onValueChange={(sheetId) => onSelectSheet(workbookId, sheetId)}>
+                <SelectTrigger className="w-full rounded-full">
+                    <SelectValue placeholder="View Sheets..." />
+                </SelectTrigger>
+                <SelectContent>
+                    {sheets.map(sheet => (
+                        <SelectItem key={sheet.id} value={sheet.id}>{sheet.name}</SelectItem>
+                    ))}
+                </SelectContent>
+            </Select>
         </div>
     );
 }
@@ -150,16 +157,14 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
                                 </DropdownMenu>
                             )}
                             </CardHeader>
-                             <CardContent className="flex-grow flex flex-col pt-2">
-                                <p className="text-xs text-muted-foreground px-4 pb-2">
-                                    Created by {workbook.creatorName} on {format(new Date(workbook.createdAt), 'PP')}
-                                </p>
-                                <Separator className="mb-2" />
-                                <ScrollArea className="flex-grow">
-                                    <div className="px-4">
-                                        <SheetList workbookId={workbook.id} onSelectSheet={onSelectSheet} />
-                                    </div>
-                                </ScrollArea>
+                             <CardContent className="flex-grow flex flex-col justify-end pt-2">
+                                <div>
+                                    <p className="text-xs text-muted-foreground px-4 pb-2">
+                                        Created by {workbook.creatorName} on {format(new Date(workbook.createdAt), 'PP')}
+                                    </p>
+                                    <Separator />
+                                    <SheetList workbookId={workbook.id} onSelectSheet={onSelectSheet} />
+                                </div>
                             </CardContent>
                         </Card>
                     ))}
