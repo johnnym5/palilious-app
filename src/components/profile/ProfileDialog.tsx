@@ -21,6 +21,8 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { useTheme } from "next-themes";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+
 
 const profileFormSchema = z.object({
   fullName: z.string().min(1, 'Full name is required'),
@@ -262,7 +264,12 @@ function PreferencesForm({ userProfile }: { userProfile: UserProfile }) {
     )
 }
 
-export default function ProfilePage() {
+interface ProfileDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export function ProfileDialog({ open, onOpenChange }: ProfileDialogProps) {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   
@@ -289,61 +296,38 @@ export default function ProfilePage() {
   }, [activeTab]);
 
   return (
-    <div className="space-y-6">
-       <div>
-        <h1 className="text-3xl font-bold font-headline tracking-tight">Profile & Settings</h1>
-        <p className="text-muted-foreground">Manage your profile, password, and preferences.</p>
-      </div>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className='grid w-full grid-cols-3 max-w-lg'>
-          <TabsTrigger value="profile">Profile</TabsTrigger>
-          <TabsTrigger value="security">Security</TabsTrigger>
-          <TabsTrigger value="preferences">Preferences</TabsTrigger>
-        </TabsList>
-        <TabsContent value="profile">
-          <Card>
-            <CardHeader>
-              <CardTitle>Public Profile</CardTitle>
-              <CardDescription>This information may be visible to others in your organization.</CardDescription>
-            </CardHeader>
-            <CardContent>
-                {isProfileLoading ? <Skeleton className="h-64 w-full" /> : userProfile && <ProfileUpdateForm userProfile={userProfile} permissions={permissions} />}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="security">
-           <Card>
-            <CardHeader>
-              <CardTitle>Password</CardTitle>
-              <CardDescription>Change your password here. After saving, you might be logged out.</CardDescription>
-            </CardHeader>
-            <CardContent>
-               <PasswordChangeForm />
-            </CardContent>
-          </Card>
-        </TabsContent>
-         <TabsContent value="preferences">
-           <Card>
-            <CardHeader>
-              <CardTitle>My Preferences</CardTitle>
-              <CardDescription>Customize your Palilious experience.</CardDescription>
-            </CardHeader>
-            <CardContent>
-               {isProfileLoading ? (
-                    <div className="space-y-8">
-                         <Skeleton className="h-24 w-full" />
-                         <Skeleton className="h-12 w-full" />
-                    </div>
-                ): userProfile ? (
-                    <PreferencesForm userProfile={userProfile} />
-                ) : (
-                    <p className="text-muted-foreground">Could not load user settings.</p>
-                )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>Profile & Settings</DialogTitle>
+          <DialogDescription>Manage your profile, password, and preferences.</DialogDescription>
+        </DialogHeader>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full pt-4">
+            <TabsList className='grid w-full grid-cols-3 max-w-lg mx-auto'>
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="security">Security</TabsTrigger>
+            <TabsTrigger value="preferences">Preferences</TabsTrigger>
+            </TabsList>
+            <TabsContent value="profile" className="mt-4">
+                {isProfileLoading ? <Skeleton className="h-96 w-full" /> : userProfile && <ProfileUpdateForm userProfile={userProfile} permissions={permissions} />}
+            </TabsContent>
+            <TabsContent value="security" className="mt-4">
+                <PasswordChangeForm />
+            </TabsContent>
+            <TabsContent value="preferences" className="mt-4">
+                {isProfileLoading ? (
+                        <div className="space-y-8">
+                            <Skeleton className="h-24 w-full" />
+                            <Skeleton className="h-12 w-full" />
+                        </div>
+                    ): userProfile ? (
+                        <PreferencesForm userProfile={userProfile} />
+                    ) : (
+                        <p className="text-muted-foreground">Could not load user settings.</p>
+                    )}
+            </TabsContent>
+        </Tabs>
+      </DialogContent>
+    </Dialog>
   );
 }

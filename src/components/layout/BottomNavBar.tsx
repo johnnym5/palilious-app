@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
@@ -19,12 +19,12 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { ScrollArea } from '../ui/scroll-area';
 import { formatDistanceToNow } from 'date-fns';
 import { Skeleton } from "../ui/skeleton";
+import { ProfileDialog } from "../profile/ProfileDialog";
 
 
 const navItems = [
   { href: "/dashboard", icon: Home, label: "Home" },
   { href: "/tasks", icon: ListTodo, label: "Tasks" },
-  { href: "/profile", icon: User, label: "Profile" },
 ];
 
 export function BottomNavBar() {
@@ -38,6 +38,7 @@ export function BottomNavBar() {
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
   const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
 
 
   const userProfileRef = useMemoFirebase(() => 
@@ -99,6 +100,21 @@ export function BottomNavBar() {
     return <Link href={href}>{content}</Link>;
   };
 
+  const ProfileButton = () => {
+    return (
+      <button
+        onClick={() => setIsProfileOpen(true)}
+        className={cn(
+          "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
+          "text-muted-foreground hover:text-foreground"
+        )}
+      >
+        <User className="h-6 w-6" />
+        <span className="text-xs font-medium">Profile</span>
+      </button>
+    );
+  }
+
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/80 backdrop-blur-lg md:hidden">
@@ -159,7 +175,7 @@ export function BottomNavBar() {
             </PopoverContent>
           </Popover>
 
-          <NavItem {...navItems[2]} />
+          <ProfileButton />
         </div>
       </div>
        <div className="fixed bottom-8 left-1/2 z-50 -translate-x-1/2 md:hidden">
@@ -219,6 +235,7 @@ export function BottomNavBar() {
                 userProfile={userProfile}
             />
        )}
+       <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} />
     </>
   );
 }
