@@ -1,6 +1,6 @@
 {
   "hosting": {
-    "site": "palilius",
+    "site": "palilious",
     "public": "out",
     "ignore": [
       "firebase.json",
