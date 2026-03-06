@@ -1,4 +1,3 @@
-
 'use client';
 import { ClockControl } from "@/components/attendance/ClockControl";
 import { StatusFeed } from "@/components/attendance/StatusFeed";
@@ -14,7 +13,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { TeamAttendanceHistory } from "@/components/attendance/TeamAttendanceHistory";
 import { useState, useEffect } from "react";
 
-export default function AttendancePage() {
+export function AttendancePageContent() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
