@@ -14,7 +14,6 @@ import AppHeader from '@/components/layout/AppHeader';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
-  const router = useRouter();
   const firestore = useFirestore();
   const { theme } = useTheme();
 
@@ -24,12 +23,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const { config, isLoading: isConfigLoading } = useSystemConfig(userProfile?.orgId);
   
-  useEffect(() => {
-    if (!isUserLoading && !user) {
-      router.replace('/login');
-    }
-  }, [user, isUserLoading, router]);
-
   useEffect(() => {
     const root = document.documentElement;
     const defaultPrimary = '217.2 91.2% 59.8%';

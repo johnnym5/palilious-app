@@ -14,10 +14,9 @@ import {
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth, useUser, setDocumentNonBlocking, addDocumentNonBlocking, useFirestore } from "@/firebase";
+import { useAuth, setDocumentNonBlocking, addDocumentNonBlocking, useFirestore } from "@/firebase";
 import { createUserWithEmailAndPassword, updateProfile } from "firebase/auth";
 import { collection, doc } from "firebase/firestore";
 import type { Organization, UserProfile, SystemConfig, UserPosition } from "@/lib/types";
@@ -36,8 +35,6 @@ type FormData = z.infer<typeof formSchema>;
 export function RegisterForm() {
   const auth = useAuth();
   const firestore = useFirestore();
-  const { user, isUserLoading } = useUser();
-  const router = useRouter();
   const { toast } = useToast();
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -51,12 +48,6 @@ export function RegisterForm() {
       password: "",
     },
   });
-
-  useEffect(() => {
-    if (!isUserLoading && user) {
-      router.push('/dashboard');
-    }
-  }, [user, isUserLoading, router]);
 
   async function onSubmit(values: FormData) {
     setIsSubmitting(true);
@@ -131,7 +122,7 @@ export function RegisterForm() {
     }
   }
 
-  const isLoading = isSubmitting || isUserLoading;
+  const isLoading = isSubmitting;
 
   return (
     <Form {...form}>

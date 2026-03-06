@@ -13,7 +13,6 @@ import { Announcements } from "@/components/dashboard/Announcements";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { NewAnnouncementDialog } from "@/components/dashboard/NewAnnouncementDialog";
-import { MobileHeader } from "@/components/layout/MobileHeader";
 
 export default function DashboardPage() {
     const { user: authUser } = useUser();
@@ -66,7 +65,6 @@ export default function DashboardPage() {
 
     return (
         <div className="flex flex-col gap-8">
-             <MobileHeader userProfile={userProfile} />
              {isLoading ? (
                 <Skeleton className="h-40 w-full" />
              ) : (
