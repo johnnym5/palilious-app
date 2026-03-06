@@ -2,25 +2,22 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ListTodo, Bell, User, Plus, FileText, CalendarPlus, BookCopy, CheckCheck } from "lucide-react";
+import { Home, ListTodo, User, Plus, FileText, CalendarPlus, BookCopy, BookOpenCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useState } from "react";
-import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, updateDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, where, orderBy, writeBatch } from 'firebase/firestore';
-import type { UserProfile, Notification } from '@/lib/types';
+import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import type { UserProfile } from '@/lib/types';
 import { AssignTaskDialog } from "../tasks/AssignTaskDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { NewRequisitionDialog } from "../requisitions/NewRequisitionDialog";
 import { RequestLeaveDialog } from '../leave/RequestLeaveDialog';
 import { NewWorkbookDialog } from '../workbook/NewWorkbookDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { ScrollArea } from '../ui/scroll-area';
-import { formatDistanceToNow } from 'date-fns';
-import { Skeleton } from "../ui/skeleton";
 import { ProfileDialog } from "../profile/ProfileDialog";
 import { TasksDialog } from '../tasks/TasksDialog';
+import { WorkbookDialog } from '../workbook/WorkbookDialog';
 
 
 const navItems = [
@@ -37,9 +34,9 @@ export function BottomNavBar() {
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
   const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
-  const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isTasksOpen, setIsTasksOpen] = useState(false);
+  const [isWorkbookOpen, setIsWorkbookOpen] = useState(false);
 
 
   const userProfileRef = useMemoFirebase(() => 
@@ -47,44 +44,6 @@ export function BottomNavBar() {
   , [firestore, authUser]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
-
-  // --- Start of logic from Notifications.tsx ---
-  const notificationsQuery = useMemoFirebase(() => {
-    if (!authUser) return null;
-    return query(
-        collection(firestore, 'notifications'),
-        where('userId', '==', authUser.uid),
-        orderBy('createdAt', 'desc')
-    );
-  }, [firestore, authUser]);
-
-  const { data: notifications, isLoading: areNotificationsLoading } = useCollection<Notification>(notificationsQuery);
-
-  const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
-
-  const handleNotificationClick = (notification: Notification) => {
-    if (!notification.isRead) {
-        const notifRef = doc(firestore, 'notifications', notification.id);
-        updateDocumentNonBlocking(notifRef, { isRead: true });
-    }
-    router.push(notification.href);
-    setIsNotificationsOpen(false);
-  };
-
-  const handleMarkAllAsRead = () => {
-    if (!firestore || !notifications || unreadCount === 0) return;
-    
-    const batch = writeBatch(firestore);
-    notifications.forEach(n => {
-        if (!n.isRead) {
-            const notifRef = doc(firestore, 'notifications', n.id);
-            batch.update(notifRef, { isRead: true });
-        }
-    });
-    batch.commit();
-  };
-  // --- End of logic from Notifications.tsx ---
-
 
   const NavItem = ({ href, icon: Icon, label }: { href: string; icon: React.ElementType; label: string }) => {
     const isActive = pathname === href;
@@ -133,57 +92,16 @@ export function BottomNavBar() {
           </button>
           <div className="w-16 h-16" /> {/* Spacer for FAB */}
           
-          <Popover open={isNotificationsOpen} onOpenChange={setIsNotificationsOpen}>
-            <PopoverTrigger asChild>
-              <div className="relative flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16 cursor-pointer text-muted-foreground hover:text-foreground">
-                <Bell className="h-6 w-6" />
-                <span className="text-xs font-medium">Alerts</span>
-                {unreadCount > 0 && (
-                    <span className="absolute top-1 right-3.5 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-[10px] font-bold text-destructive-foreground">
-                        {unreadCount}
-                    </span>
-                )}
-              </div>
-            </PopoverTrigger>
-            <PopoverContent className="w-80 p-0 mb-4" align="center" side="top">
-                <div className="flex items-center justify-between p-4 border-b">
-                    <h3 className="font-semibold">Notifications</h3>
-                    <Button variant="ghost" size="sm" onClick={handleMarkAllAsRead} disabled={unreadCount === 0}>
-                        <CheckCheck className="mr-2 h-4 w-4" />
-                        Mark all as read
-                    </Button>
-                </div>
-                <ScrollArea className="h-96">
-                    <div className="p-2">
-                        {areNotificationsLoading && <div className="p-4"><Skeleton className="h-20 w-full" /></div>}
-                        {!areNotificationsLoading && (!notifications || notifications.length === 0) && (
-                            <p className="text-center text-sm text-muted-foreground py-16">No notifications yet.</p>
-                        )}
-                        {!areNotificationsLoading && notifications?.map(notif => (
-                            <div 
-                                key={notif.id}
-                                onClick={() => handleNotificationClick(notif)}
-                                className={cn(
-                                    "p-3 rounded-lg hover:bg-secondary cursor-pointer",
-                                    !notif.isRead && "bg-secondary/50"
-                                )}
-                            >
-                                <div className="flex items-start gap-3">
-                                    {!notif.isRead && <div className="mt-1.5 h-2 w-2 rounded-full bg-primary" />}
-                                    <div className={cn("flex-1", notif.isRead ? "" : "pl-1")}>
-                                        <p className="font-semibold text-sm">{notif.title}</p>
-                                        <p className="text-sm text-muted-foreground">{notif.description}</p>
-                                        <p className="text-xs text-muted-foreground/80 mt-1">
-                                            {formatDistanceToNow(new Date(notif.createdAt), { addSuffix: true })}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                </ScrollArea>
-            </PopoverContent>
-          </Popover>
+          <button
+            onClick={() => setIsWorkbookOpen(true)}
+            className={cn(
+              "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
+              "text-muted-foreground hover:text-foreground"
+            )}
+          >
+            <BookOpenCheck className="h-6 w-6" />
+            <span className="text-xs font-medium">Workbooks</span>
+          </button>
 
           <ProfileButton />
         </div>
@@ -247,6 +165,7 @@ export function BottomNavBar() {
        )}
        <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} />
        <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
+       <WorkbookDialog open={isWorkbookOpen} onOpenChange={setIsWorkbookOpen} />
     </>
   );
 }
