@@ -20,7 +20,6 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
 import { AddColumnDialog } from './AddColumnDialog';
 import { ConfigureColumnDialog } from './ConfigureColumnDialog';
@@ -34,6 +33,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { Calendar } from '../ui/calendar';
 import { format } from 'date-fns';
+import { AddRowDialog } from './AddRowDialog';
 
 interface SheetDataTableProps {
   sheet: Sheet;
@@ -56,6 +56,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     const [headers, setHeaders] = useState<string[]>([]);
     const [editingCell, setEditingCell] = useState<{ rowIndex: number; header: string } | null>(null);
     const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
+    const [isAddRowOpen, setIsAddRowOpen] = useState(false);
     const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
     const [columnToConfigure, setColumnToConfigure] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
@@ -109,17 +110,6 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
             setData(sheet.data ? JSON.parse(JSON.stringify(sheet.data)) : []); // Revert changes
         }
     }
-
-    const handleAddRow = () => {
-        if (!permissions.canEdit) return;
-        const newRow = headers.reduce((acc, header) => {
-            acc[header] = '';
-            return acc;
-        }, {} as Record<string, any>);
-        const updatedData = [...data, newRow];
-        setData(updatedData);
-        saveChanges({ data: updatedData }, 'A new row has been added.');
-    };
 
     const handleDeleteRow = (originalRowIndex: number) => {
         if (!permissions.canEdit) return;
@@ -341,10 +331,12 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                 <div className="flex items-center gap-2 w-full sm:w-auto">
                     {permissions.canEdit && (
                         <>
-                            <Button variant="outline" size="sm" onClick={handleAddRow}>
-                                <Plus className="mr-2 h-4 w-4" />
-                                Add Row
-                            </Button>
+                            <AddRowDialog open={isAddRowOpen} onOpenChange={setIsAddRowOpen} sheet={sheet}>
+                                <Button variant="outline" size="sm">
+                                    <Plus className="mr-2 h-4 w-4" />
+                                    Add Row
+                                </Button>
+                            </AddRowDialog>
                             <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
                                 <Button variant="outline" size="sm">
                                     <Plus className="mr-2 h-4 w-4" />
