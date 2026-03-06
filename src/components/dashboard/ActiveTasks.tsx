@@ -1,11 +1,11 @@
 'use client';
-import { useUser, useFirestore, useCollection, useMemoFirebase } from "@/firebase";
-import { collection, query, where, orderBy, limit } from "firebase/firestore";
-import type { Task, TaskStatus } from "@/lib/types";
+import { useUser, useFirestore, useCollection, useMemoFirebase, useDoc } from "@/firebase";
+import { collection, query, where, orderBy, limit, doc } from "firebase/firestore";
+import type { Task } from "@/lib/types";
 import { Skeleton } from "../ui/skeleton";
 import Link from "next/link";
 import { Button } from "../ui/button";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { TaskCard } from "../tasks/TaskCard";
 import { TaskDetailDialog } from "../tasks/TaskDetailDialog";
 import { usePermissions } from "@/hooks/usePermissions";
