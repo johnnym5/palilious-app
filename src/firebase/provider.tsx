@@ -127,56 +127,58 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
  * Hook to access core Firebase services and user authentication state.
  * Throws error if core services are not available or used outside provider.
  */
-export const useFirebase = (): FirebaseServicesAndUser => {
+export const useFirebase = (): FirebaseContextState => {
   const context = useContext(FirebaseContext);
 
   if (context === undefined) {
     throw new Error('useFirebase must be used within a FirebaseProvider.');
   }
 
-  if (!context.areServicesAvailable || !context.firebaseApp || !context.firestore || !context.auth || !context.storage || !context.database) {
-    throw new Error('Firebase core services not available. Check FirebaseProvider props.');
-  }
-
-  return {
-    firebaseApp: context.firebaseApp,
-    firestore: context.firestore,
-    auth: context.auth,
-    storage: context.storage,
-    database: context.database,
-    user: context.user,
-    isUserLoading: context.isUserLoading,
-    userError: context.userError,
-  };
+  return context;
 };
 
 /** Hook to access Firebase Auth instance. */
 export const useAuth = (): Auth => {
   const { auth } = useFirebase();
+  if (!auth) {
+    throw new Error('Firebase Auth is not available. Check your Firebase configuration.');
+  }
   return auth;
 };
 
 /** Hook to access Firestore instance. */
 export const useFirestore = (): Firestore => {
   const { firestore } = useFirebase();
+  if (!firestore) {
+    throw new Error('Firestore is not available. Check your Firebase configuration.');
+  }
   return firestore;
 };
 
 /** Hook to access Firebase App instance. */
 export const useFirebaseApp = (): FirebaseApp => {
   const { firebaseApp } = useFirebase();
+    if (!firebaseApp) {
+    throw new Error('Firebase App is not available. Check your Firebase configuration.');
+  }
   return firebaseApp;
 };
 
 /** Hook to access Firebase Storage instance. */
 export const useStorage = (): Storage => {
   const { storage } = useFirebase();
+    if (!storage) {
+    throw new Error('Firebase Storage is not available. Check your Firebase configuration.');
+  }
   return storage;
 };
 
 /** Hook to access Realtime Database instance. */
 export const useDatabase = (): Database => {
     const { database } = useFirebase();
+    if (!database) {
+        throw new Error('Firebase Realtime Database is not available. Check your Firebase configuration.');
+    }
     return database;
 }
 
