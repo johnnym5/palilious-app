@@ -2,6 +2,9 @@
 
 type AppEvents = {
   'open-reports-dialog': void;
+  'open-profile-dialog': void;
+  'open-settings-dialog': void;
+  'open-chat-dialog': void;
 };
 
 type Callback<T> = (data: T) => void;

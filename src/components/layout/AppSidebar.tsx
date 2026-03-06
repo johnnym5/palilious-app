@@ -11,6 +11,8 @@ import {
   BarChart,
   CalendarPlus,
   BookOpenCheck,
+  MessageSquare,
+  Settings,
 } from "lucide-react";
 
 import { cn } from "@/lib/utils";
@@ -24,6 +26,7 @@ import { Skeleton } from "../ui/skeleton";
 import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
+import { uiEmitter } from "@/lib/ui-emitter";
 
 type DialogManager = {
   [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave' | 'chat' | 'settings' | 'profile']: (open: boolean) => void;
@@ -40,10 +43,13 @@ const mainNavItems = [
   { dialog: "requisitions", icon: ReceiptText, label: "Requisitions", permission: 'canAccessRequisitions' },
   { isSeparator: true },
   { dialog: "reports", icon: BarChart, label: "Reports" },
+  { isSeparator: true },
+  { dialog: "chat", icon: MessageSquare, label: "Chat", permission: "canAccessChat"},
+  { dialog: "settings", icon: Settings, label: "Settings", permission: "canManageStaff"},
 ];
 
 
-export default function AppSidebar({ isMobile = false, dialogManager }: { isMobile?: boolean, dialogManager: DialogManager }) {
+export default function AppSidebar({ isMobile = false }: { isMobile?: boolean }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
@@ -63,6 +69,21 @@ export default function AppSidebar({ isMobile = false, dialogManager }: { isMobi
 
   const handleLogout = () => {
     signOut(auth);
+  };
+
+  const handleDialogClick = (dialog: string) => {
+    switch(dialog) {
+      case 'chat':
+        uiEmitter.emit('open-chat-dialog');
+        break;
+      case 'settings':
+        uiEmitter.emit('open-settings-dialog');
+        break;
+      case 'reports':
+        uiEmitter.emit('open-reports-dialog');
+        break;
+      // You can add other dialogs here if needed
+    }
   };
   
   const orgName = organization?.name ? organization.name.charAt(0).toUpperCase() + organization.name.slice(1) : "";
@@ -107,7 +128,7 @@ export default function AppSidebar({ isMobile = false, dialogManager }: { isMobi
             return (
                 <button
                     key={item.dialog}
-                    onClick={() => dialogManager[item.dialog as keyof DialogManager](true)}
+                    onClick={() => handleDialogClick(item.dialog)}
                     className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
                         isMobile && "text-lg"

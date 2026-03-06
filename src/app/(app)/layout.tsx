@@ -25,6 +25,9 @@ import { NewRequisitionDialog } from '@/components/requisitions/NewRequisitionDi
 import { RequestLeaveDialog } from '@/components/leave/RequestLeaveDialog';
 import { NewWorkbookDialog } from '@/components/workbook/NewWorkbookDialog';
 import { usePermissions } from '@/hooks/usePermissions';
+import { ProfileDialog } from '@/components/profile/ProfileDialog';
+import { SettingsDialog } from '@/components/settings/SettingsDialog';
+import { ChatDialog } from '@/components/chat/ChatDialog';
 
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -41,6 +44,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isNewRequisitionOpen, setIsNewRequisitionOpen] = useState(false);
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
   const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -54,7 +60,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const defaultPrimary = '217.2 91.2% 59.8%';
     const defaultAccent = '217.2 32.6% 17.5%';
     
-    // Set Primary Color
     if (config?.branding_color) {
       const hslString = hexToHslString(config.branding_color);
       if (hslString) {
@@ -64,7 +69,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       root.style.setProperty('--primary', defaultPrimary);
     }
 
-    // Set Accent Color
     if (config?.accent_color) {
       const hslString = hexToHslString(config.accent_color);
       if (hslString) {
@@ -78,9 +82,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const openReports = () => setIsReportsOpen(true);
+    const openProfile = () => setIsProfileOpen(true);
+    const openSettings = () => setIsSettingsOpen(true);
+    const openChat = () => setIsChatOpen(true);
+
     uiEmitter.on('open-reports-dialog', openReports);
+    uiEmitter.on('open-profile-dialog', openProfile);
+    uiEmitter.on('open-settings-dialog', openSettings);
+    uiEmitter.on('open-chat-dialog', openChat);
+    
     return () => {
       uiEmitter.off('open-reports-dialog', openReports);
+      uiEmitter.off('open-profile-dialog', openProfile);
+      uiEmitter.off('open-settings-dialog', openSettings);
+      uiEmitter.off('open-chat-dialog', openChat);
     };
   }, []);
 
@@ -93,33 +108,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const dialogManager = {
-    workbooks: setIsWorkbookOpen,
-    requisitions: setIsRequisitionsOpen,
-    tasks: setIsTasksOpen,
-    attendance: setIsAttendanceOpen,
-    leave: setIsLeaveOpen,
-    reports: setIsReportsOpen,
-    assignTask: setIsAssignTaskOpen,
-    newRequisition: setIsNewRequisitionOpen,
-    requestLeave: setIsRequestLeaveOpen,
-    newWorkbook: setIsNewWorkbookOpen,
-    profile: () => {}, // Placeholder
-    settings: () => {}, // Placeholder
-    chat: () => {}, // Placeholder
-  }
-
   return (
     <>
       <div className="flex min-h-screen w-full bg-muted/40">
-          <AppSidebar dialogManager={dialogManager} />
+          <AppSidebar />
           <div className="flex flex-1 flex-col">
               <AppHeader />
               <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 bg-background">
                   {children}
               </main>
           </div>
-          <BottomNavBar dialogManager={dialogManager} />
+          <BottomNavBar />
       </div>
 
        {/* Desktop FAB */}
@@ -160,6 +159,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AttendanceDialog open={isAttendanceOpen} onOpenChange={setIsAttendanceOpen} />
       <LeaveDialog open={isLeaveOpen} onOpenChange={setIsLeaveOpen} />
       <ReportsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
+      {userProfile && <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} userProfile={userProfile} />}
+      {userProfile && <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} userProfile={userProfile} />}
+      {userProfile && <ChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} currentUserProfile={userProfile} />}
 
       {/* Creation Dialogs */}
       {userProfile && (

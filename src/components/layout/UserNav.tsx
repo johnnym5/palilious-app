@@ -1,4 +1,4 @@
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -9,8 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUser, useAuth } from "@/firebase";
-import { LogOut } from "lucide-react";
+import { LogOut, User as UserIcon, Settings } from "lucide-react";
 import { signOut } from "firebase/auth";
+import { uiEmitter } from "@/lib/ui-emitter";
 
 export function UserNav() {
   const { user } = useUser();
@@ -45,6 +46,15 @@ export function UserNav() {
               </p>
             </div>
           </DropdownMenuLabel>
+          <DropdownMenuSeparator />
+           <DropdownMenuItem onSelect={() => uiEmitter.emit('open-profile-dialog')}>
+            <UserIcon className="mr-2 h-4 w-4" />
+            <span>My Profile</span>
+          </DropdownMenuItem>
+          <DropdownMenuItem onSelect={() => uiEmitter.emit('open-settings-dialog')}>
+            <Settings className="mr-2 h-4 w-4" />
+            <span>Settings</span>
+          </DropdownMenuItem>
           <DropdownMenuSeparator />
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
