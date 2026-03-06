@@ -13,7 +13,6 @@ import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { UniversalSearch } from './UniversalSearch';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Notifications } from './Notifications';
 
 
 export default function AppHeader() {
@@ -65,7 +64,6 @@ export default function AppHeader() {
               <Skeleton className="h-4 w-40" />
             )}
         </div>
-        <Notifications />
         <UserNav />
       </div>
     </header>
