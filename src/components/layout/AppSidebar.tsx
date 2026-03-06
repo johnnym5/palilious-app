@@ -43,7 +43,7 @@ const mainNavItems = [
 ];
 
 
-export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions, onOpenTasks, onOpenAttendance, onOpenChat }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void, onOpenTasks: () => void, onOpenAttendance: () => void, onOpenChat: () => void }) {
+export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions, onOpenTasks, onOpenAttendance, onOpenChat, onOpenLeave }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void, onOpenTasks: () => void, onOpenAttendance: () => void, onOpenChat: () => void, onOpenLeave: () => void }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
@@ -120,6 +120,21 @@ export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWor
                     <button
                         key={item.href}
                         onClick={onOpenAttendance}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
+                          isMobile && "text-lg"
+                        )}
+                    >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                    </button>
+                )
+            }
+            if (item.href === '/leave') {
+                return (
+                    <button
+                        key={item.href}
+                        onClick={onOpenLeave}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
                           isMobile && "text-lg"

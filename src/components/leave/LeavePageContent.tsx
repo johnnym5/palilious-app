@@ -14,7 +14,7 @@ import { Button } from "@/components/ui/button";
 import { PlusCircle } from "lucide-react";
 import { RequestLeaveDialog } from "@/components/leave/RequestLeaveDialog";
 
-export default function LeavePage() {
+export function LeavePageContent() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
