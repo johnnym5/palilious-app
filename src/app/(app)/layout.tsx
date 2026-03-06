@@ -13,6 +13,7 @@ import AppSidebar from '@/components/layout/AppSidebar';
 import AppHeader from '@/components/layout/AppHeader';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { WorkbookDialog } from '@/components/workbook/WorkbookDialog';
+import { RequisitionsDialog } from '@/components/requisitions/RequisitionsDialog';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -20,6 +21,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { theme } = useTheme();
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isWorkbookOpen, setIsWorkbookOpen] = useState(false);
+  const [isRequisitionsOpen, setIsRequisitionsOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -66,7 +68,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
       <div className="flex min-h-screen w-full bg-muted/40">
-          <AppSidebar onOpenSettings={() => setIsSettingsOpen(true)} onOpenWorkbooks={() => setIsWorkbookOpen(true)} />
+          <AppSidebar 
+            onOpenSettings={() => setIsSettingsOpen(true)} 
+            onOpenWorkbooks={() => setIsWorkbookOpen(true)} 
+            onOpenRequisitions={() => setIsRequisitionsOpen(true)}
+          />
           <div className="flex flex-1 flex-col">
               <AppHeader />
               <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 bg-background">
@@ -77,6 +83,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
       <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       <WorkbookDialog open={isWorkbookOpen} onOpenChange={setIsWorkbookOpen} />
+      <RequisitionsDialog open={isRequisitionsOpen} onOpenChange={setIsRequisitionsOpen} />
     </>
   );
 }

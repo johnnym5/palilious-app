@@ -46,7 +46,7 @@ const getVisibleTabs = (permissions: Permissions, isStaff: boolean) => {
 };
 
 
-export default function RequisitionsPage() {
+export function RequisitionsPageContent() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const { isSuperAdmin } = useSuperAdmin();
@@ -124,7 +124,7 @@ export default function RequisitionsPage() {
   const currencySymbol = systemConfig?.currency_symbol || '$';
 
   return (
-    <div className="space-y-6 min-h-[calc(100vh-10rem)]">
+    <div className="space-y-6">
        <div className="flex items-center justify-between">
             <div>
                 <h1 className="text-3xl font-bold font-headline tracking-tight">Requisitions</h1>

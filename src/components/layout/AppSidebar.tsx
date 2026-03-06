@@ -43,7 +43,7 @@ const mainNavItems = [
 ];
 
 
-export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void }) {
+export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
@@ -99,9 +99,6 @@ export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWor
             if ('isSeparator' in item) {
                 return <Separator key={`sep-${index}`} className="my-2" />;
             }
-            if (item.href === "/requisitions" && !permissions.canAccessRequisitions) {
-                return null;
-            }
             if (item.href === "/chat" && !permissions.canAccessChat) {
                 return null;
             }
@@ -110,6 +107,22 @@ export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWor
                     <button
                         key={item.href}
                         onClick={onOpenWorkbooks}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
+                          isMobile && "text-lg"
+                        )}
+                    >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                    </button>
+                )
+             }
+            if (item.href === '/requisitions') {
+                if (!permissions.canAccessRequisitions) return null;
+                return (
+                    <button
+                        key={item.href}
+                        onClick={onOpenRequisitions}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
                           isMobile && "text-lg"
