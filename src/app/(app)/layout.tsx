@@ -2,7 +2,7 @@
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, ListTodo, FileText, CalendarPlus, BookOpenCheck, Plus } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
@@ -21,6 +21,14 @@ import { LeaveDialog } from '@/components/leave/LeaveDialog';
 import { ReportsDialog } from '@/components/reports/ReportsDialog';
 import { uiEmitter } from '@/lib/ui-emitter';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
+import { NewRequisitionDialog } from '@/components/requisitions/NewRequisitionDialog';
+import { RequestLeaveDialog } from '@/components/leave/RequestLeaveDialog';
+import { NewWorkbookDialog } from '@/components/workbook/NewWorkbookDialog';
+import { usePermissions } from '@/hooks/usePermissions';
+
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -35,11 +43,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
   const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
+  const [isNewRequisitionOpen, setIsNewRequisitionOpen] = useState(false);
+  const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
+  const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  const permissions = usePermissions(userProfile);
   const { config, isLoading: isConfigLoading } = useSystemConfig(userProfile?.orgId);
   
   useEffect(() => {
@@ -96,6 +109,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     leave: setIsLeaveOpen,
     reports: setIsReportsOpen,
     profile: setIsProfileOpen,
+    assignTask: setIsAssignTaskOpen,
+    newRequisition: setIsNewRequisitionOpen,
+    requestLeave: setIsRequestLeaveOpen,
+    newWorkbook: setIsNewWorkbookOpen,
   }
 
   return (
@@ -110,6 +127,39 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <BottomNavBar dialogManager={dialogManager} />
       </div>
+
+       {/* Desktop FAB */}
+      <div className="hidden md:block">
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-lg z-40">
+                    <Plus className="h-8 w-8" />
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent className="w-56 mb-2" align="end">
+                <DropdownMenuItem onSelect={() => setIsAssignTaskOpen(true)}>
+                    <ListTodo className="mr-2 h-4 w-4" />
+                    <span>New Task</span>
+                </DropdownMenuItem>
+                {permissions.canAccessRequisitions && (
+                    <DropdownMenuItem onSelect={() => setIsNewRequisitionOpen(true)}>
+                        <FileText className="mr-2 h-4 w-4" />
+                        <span>New Requisition</span>
+                    </DropdownMenuItem>
+                )}
+                 <DropdownMenuItem onSelect={() => setIsRequestLeaveOpen(true)}>
+                    <CalendarPlus className="mr-2 h-4 w-4" />
+                    <span>Request Leave</span>
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => setIsNewWorkbookOpen(true)}>
+                    <BookOpenCheck className="mr-2 h-4 w-4" />
+                    <span>New Workbook</span>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+
+      {/* Main Feature Dialogs */}
       <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} />
       <WorkbookDialog open={isWorkbookOpen} onOpenChange={setIsWorkbookOpen} />
       <RequisitionsDialog open={isRequisitionsOpen} onOpenChange={setIsRequisitionsOpen} />
@@ -119,6 +169,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <LeaveDialog open={isLeaveOpen} onOpenChange={setIsLeaveOpen} />
       <ReportsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
       <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} />
+
+      {/* Creation Dialogs */}
+      {userProfile && (
+        <>
+            <AssignTaskDialog open={isAssignTaskOpen} onOpenChange={setIsAssignTaskOpen} currentUserProfile={userProfile} permissions={permissions} initialData={null} />
+            <NewRequisitionDialog open={isNewRequisitionOpen} onOpenChange={setIsNewRequisitionOpen} userProfile={userProfile} />
+            <RequestLeaveDialog open={isRequestLeaveOpen} onOpenChange={setIsRequestLeaveOpen} userProfile={userProfile} />
+            <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile} />
+        </>
+      )}
     </>
   );
 }

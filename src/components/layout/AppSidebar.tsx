@@ -28,7 +28,7 @@ import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 
 type DialogManager = {
-  [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile']: (open: boolean) => void;
+  [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave']: (open: boolean) => void;
 };
 
 const mainNavItems = [

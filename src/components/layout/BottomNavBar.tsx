@@ -9,11 +9,7 @@ import { useState } from "react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
-import { AssignTaskDialog } from "../tasks/AssignTaskDialog";
 import { usePermissions } from "@/hooks/usePermissions";
-import { NewRequisitionDialog } from "../requisitions/NewRequisitionDialog";
-import { RequestLeaveDialog } from '../leave/RequestLeaveDialog';
-import { NewWorkbookDialog } from '../workbook/NewWorkbookDialog';
 import {
   Sheet,
   SheetContent,
@@ -23,7 +19,7 @@ import {
 } from "@/components/ui/sheet";
 
 type DialogManager = {
-  [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile']: (open: boolean) => void;
+  [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave']: (open: boolean) => void;
 };
 
 const navItemsLeft = [
@@ -73,10 +69,6 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
-  const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
-  const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
-  const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
-  const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
@@ -107,21 +99,21 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
                         <SheetTitle>Create New</SheetTitle>
                     </SheetHeader>
                     <div className="grid grid-cols-2 gap-4 py-4">
-                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { setIsAssignTaskOpen(true); setIsCreateSheetOpen(false); }}>
+                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.assignTask(true); setIsCreateSheetOpen(false); }}>
                             <ListTodo className="h-6 w-6" />
                             New Task
                         </Button>
                         {permissions.canAccessRequisitions && (
-                            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { setIsNewRequestOpen(true); setIsCreateSheetOpen(false); }}>
+                            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.newRequisition(true); setIsCreateSheetOpen(false); }}>
                                 <FileText className="h-6 w-6" />
                                 New Requisition
                             </Button>
                         )}
-                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { setIsRequestLeaveOpen(true); setIsCreateSheetOpen(false); }}>
+                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.requestLeave(true); setIsCreateSheetOpen(false); }}>
                             <CalendarPlus className="h-6 w-6" />
                             Request Leave
                         </Button>
-                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { setIsNewWorkbookOpen(true); setIsCreateSheetOpen(false); }}>
+                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.newWorkbook(true); setIsCreateSheetOpen(false); }}>
                             <BookOpenCheck className="h-6 w-6" />
                             New Workbook
                         </Button>
@@ -137,36 +129,6 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
           </div>
         </div>
       </div>
-      
-       {userProfile && (
-            <AssignTaskDialog 
-                open={isAssignTaskOpen} 
-                onOpenChange={setIsAssignTaskOpen} 
-                currentUserProfile={userProfile} 
-                permissions={permissions}
-            />
-       )}
-       {userProfile && (
-            <NewRequisitionDialog 
-                open={isNewRequestOpen} 
-                onOpenChange={setIsNewRequestOpen} 
-                userProfile={userProfile}
-            />
-       )}
-       {userProfile && (
-            <RequestLeaveDialog 
-                open={isRequestLeaveOpen} 
-                onOpenChange={setIsRequestLeaveOpen} 
-                userProfile={userProfile}
-            />
-       )}
-       {userProfile && (
-            <NewWorkbookDialog 
-                open={isNewWorkbookOpen} 
-                onOpenChange={setIsNewWorkbookOpen} 
-                userProfile={userProfile}
-            />
-       )}
     </>
   );
 }
