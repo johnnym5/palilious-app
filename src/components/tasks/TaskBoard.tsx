@@ -6,6 +6,7 @@ import type { Permissions } from '@/hooks/usePermissions';
 import { TaskCard } from './TaskCard';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { useMemo } from 'react';
+import { ScrollArea } from '../ui/scroll-area';
 
 interface TaskBoardProps {
     userProfile: UserProfile;
@@ -71,30 +72,32 @@ export function TaskBoard({ userProfile, permissions, onTaskSelect }: TaskBoardP
     return (
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 items-start">
             {statusColumns.map(status => (
-                <div key={status} className="bg-secondary/30 rounded-xl">
+                <div key={status} className="bg-secondary/30 rounded-xl h-full flex flex-col">
                     <div className="p-4 border-b border-border">
                         <h3 className="font-semibold text-foreground">
                            {status.replace('_', ' ')}
                            <span className="ml-2 text-sm font-normal text-muted-foreground">({groupedTasks[status].length})</span>
                         </h3>
                     </div>
-                    <div className="p-4 space-y-4 h-full min-h-[50vh]">
-                        {isLoading && <p className="text-sm text-muted-foreground">Loading tasks...</p>}
-                        {!isLoading && groupedTasks[status].length === 0 && (
-                            <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
-                                <p className="text-sm">No tasks in this stage.</p>
-                            </div>
-                        )}
-                        {!isLoading && groupedTasks[status].map(task => (
-                            <TaskCard 
-                                key={task.id} 
-                                task={task} 
-                                userProfile={userProfile} 
-                                permissions={permissions}
-                                onSelect={() => onTaskSelect(task)}
-                            />
-                        ))}
-                    </div>
+                    <ScrollArea className="flex-1">
+                        <div className="p-4 space-y-4">
+                            {isLoading && <p className="text-sm text-muted-foreground">Loading tasks...</p>}
+                            {!isLoading && groupedTasks[status].length === 0 && (
+                                <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8">
+                                    <p className="text-sm">No tasks in this stage.</p>
+                                </div>
+                            )}
+                            {!isLoading && groupedTasks[status].map(task => (
+                                <TaskCard 
+                                    key={task.id} 
+                                    task={task} 
+                                    userProfile={userProfile} 
+                                    permissions={permissions}
+                                    onSelect={() => onTaskSelect(task)}
+                                />
+                            ))}
+                        </div>
+                    </ScrollArea>
                 </div>
             ))}
         </div>
