@@ -323,7 +323,7 @@ export default function SettingsPage() {
           <Skeleton className="h-5 w-3/4" />
         </div>
         <Skeleton className="h-48 w-full" />
-        <div className="grid gap-6 lg:grid-cols-2 items-start">
+        <div className="space-y-6">
           <Skeleton className="h-56 w-full" />
           <Skeleton className="h-96 w-full" />
         </div>
@@ -344,7 +344,7 @@ export default function SettingsPage() {
         {userProfile && <DepartmentManager userProfile={userProfile} />}
 
         {permissions.canManageCompany && (
-          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 items-start">
+          <div className="space-y-6">
               <Card>
                   <CardHeader>
                   <CardTitle>Organization Profile</CardTitle>
