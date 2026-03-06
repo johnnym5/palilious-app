@@ -11,24 +11,24 @@ function createEventEmitter<T extends Record<string, any>>() {
 
   return {
     on<K extends keyof T>(eventName: K, callback: Callback<T[K]>) {
-      if (!this.events[eventName]) {
-        this.events[eventName] = [];
+      if (!events[eventName]) {
+        events[eventName] = [];
       }
-      this.events[eventName]?.push(callback);
+      events[eventName]?.push(callback);
     },
 
     off<K extends keyof T>(eventName: K, callback: Callback<T[K]>) {
-      if (!this.events[eventName]) {
+      if (!events[eventName]) {
         return;
       }
-      this.events[eventName] = this.events[eventName]?.filter(cb => cb !== callback);
+      events[eventName] = events[eventName]?.filter(cb => cb !== callback);
     },
 
     emit<K extends keyof T>(eventName: K, data?: T[K]) {
-      if (!this.events[eventName]) {
+      if (!events[eventName]) {
         return;
       }
-      this.events[eventName]?.forEach(callback => callback(data as T[K]));
+      events[eventName]?.forEach(callback => callback(data as T[K]));
     },
   };
 }
