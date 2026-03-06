@@ -101,7 +101,7 @@ export function BottomNavBar() {
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/80 backdrop-blur-lg">
+      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/80 backdrop-blur-lg md:hidden">
         <div className="flex h-20 items-center justify-around">
           <NavItem {...navItems[0]} />
           <NavItem {...navItems[1]} />
@@ -162,7 +162,7 @@ export function BottomNavBar() {
           <NavItem {...navItems[2]} />
         </div>
       </div>
-       <div className="fixed bottom-8 left-1/2 z-50 -translate-x-1/2">
+       <div className="fixed bottom-8 left-1/2 z-50 -translate-x-1/2 md:hidden">
          <DropdownMenu>
             <DropdownMenuTrigger asChild>
                 <Button className="h-16 w-16 rounded-full shadow-lg shadow-primary/40">

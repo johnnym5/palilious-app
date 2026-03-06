@@ -1,7 +1,7 @@
 'use client';
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
-import { usePathname, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
@@ -9,14 +9,14 @@ import { useSystemConfig } from '@/hooks/useSystemConfig';
 import { hexToHslString } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
-import { MobileHeader } from '@/components/layout/MobileHeader';
+import AppSidebar from '@/components/layout/AppSidebar';
+import AppHeader from '@/components/layout/AppHeader';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const router = useRouter();
   const firestore = useFirestore();
   const { theme } = useTheme();
-  const pathname = usePathname();
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -67,12 +67,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   return (
-    <div className="flex min-h-screen w-full flex-col">
-      {pathname === '/dashboard' && <MobileHeader userProfile={userProfile} />}
-      <main className="flex-1 p-4 sm:p-6 pb-24">
-          {children}
-      </main>
-      <BottomNavBar />
+    <div className="flex min-h-screen w-full bg-muted/40">
+        <AppSidebar />
+        <div className="flex flex-1 flex-col">
+            <AppHeader />
+            <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 bg-background">
+                {children}
+            </main>
+        </div>
+        <BottomNavBar />
     </div>
   );
 }

@@ -13,7 +13,7 @@ export function MobileHeader({ userProfile }: MobileHeaderProps) {
     if (!userProfile) return null;
 
     return (
-        <header className="flex items-center justify-between p-4 sm:p-6">
+        <header className="flex items-center justify-between p-4 sm:p-6 md:hidden">
             <div className="flex items-center gap-4">
                 <Avatar className="h-12 w-12 border-2 border-primary">
                     <div className="relative">
