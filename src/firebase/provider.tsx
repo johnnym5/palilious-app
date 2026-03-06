@@ -138,48 +138,33 @@ export const useFirebase = (): FirebaseContextState => {
 };
 
 /** Hook to access Firebase Auth instance. */
-export const useAuth = (): Auth => {
-  const { auth } = useFirebase();
-  if (!auth) {
-    throw new Error('Firebase Auth is not available. Check your Firebase configuration.');
-  }
-  return auth;
+export const useAuth = (): Auth | null => {
+  const context = useContext(FirebaseContext);
+  return context?.auth ?? null;
 };
 
 /** Hook to access Firestore instance. */
-export const useFirestore = (): Firestore => {
-  const { firestore } = useFirebase();
-  if (!firestore) {
-    throw new Error('Firestore is not available. Check your Firebase configuration.');
-  }
-  return firestore;
+export const useFirestore = (): Firestore | null => {
+  const context = useContext(FirebaseContext);
+  return context?.firestore ?? null;
 };
 
 /** Hook to access Firebase App instance. */
-export const useFirebaseApp = (): FirebaseApp => {
-  const { firebaseApp } = useFirebase();
-    if (!firebaseApp) {
-    throw new Error('Firebase App is not available. Check your Firebase configuration.');
-  }
-  return firebaseApp;
+export const useFirebaseApp = (): FirebaseApp | null => {
+  const context = useContext(FirebaseContext);
+  return context?.firebaseApp ?? null;
 };
 
 /** Hook to access Firebase Storage instance. */
-export const useStorage = (): Storage => {
-  const { storage } = useFirebase();
-    if (!storage) {
-    throw new Error('Firebase Storage is not available. Check your Firebase configuration.');
-  }
-  return storage;
+export const useStorage = (): Storage | null => {
+  const context = useContext(FirebaseContext);
+  return context?.storage ?? null;
 };
 
 /** Hook to access Realtime Database instance. */
-export const useDatabase = (): Database => {
-    const { database } = useFirebase();
-    if (!database) {
-        throw new Error('Firebase Realtime Database is not available. Check your Firebase configuration.');
-    }
-    return database;
+export const useDatabase = (): Database | null => {
+    const context = useContext(FirebaseContext);
+    return context?.database ?? null;
 }
 
 
@@ -200,6 +185,10 @@ export function useMemoFirebase<T>(factory: () => T, deps: DependencyList): T | 
  * @returns {UserHookResult} Object with user, isUserLoading, userError.
  */
 export const useUser = (): UserHookResult => { // Renamed from useAuthUser
-  const { user, isUserLoading, userError } = useFirebase(); // Leverages the main hook
-  return { user, isUserLoading, userError };
+  const context = useContext(FirebaseContext);
+  return {
+    user: context?.user ?? null,
+    isUserLoading: context?.isUserLoading ?? true,
+    userError: context?.userError ?? null,
+  };
 };
