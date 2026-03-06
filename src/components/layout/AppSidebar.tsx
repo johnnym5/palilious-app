@@ -43,7 +43,7 @@ const mainNavItems = [
 ];
 
 
-export default function AppSidebar({ isMobile = false }) {
+export default function AppSidebar({ isMobile = false, onOpenSettings }: { isMobile?: boolean, onOpenSettings: () => void }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
@@ -105,9 +105,22 @@ export default function AppSidebar({ isMobile = false }) {
             if (item.href === "/chat" && !permissions.canAccessChat) {
                 return null;
             }
-             if ('permission' in item && !permissions[item.permission as keyof typeof permissions]) {
-                return null;
-            }
+             if (item.href === '/settings') {
+                if (!permissions.canManageStaff) return null;
+                return (
+                    <button
+                        key={item.href}
+                        onClick={onOpenSettings}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
+                          isMobile && "text-lg"
+                        )}
+                    >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                    </button>
+                )
+             }
             return <NavLink key={item.href} {...item} />
           })}
         </nav>

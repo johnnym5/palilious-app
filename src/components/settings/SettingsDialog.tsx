@@ -37,7 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const orgFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
@@ -277,7 +277,7 @@ function StaffDirectory() {
   )
 }
 
-export default function SettingsPage() {
+function SettingsPageContent() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const router = useRouter();
@@ -317,7 +317,7 @@ export default function SettingsPage() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
+      <div className="space-y-6 p-6">
         <div className="space-y-2">
           <Skeleton className="h-8 w-1/2" />
           <Skeleton className="h-5 w-3/4" />
@@ -333,7 +333,7 @@ export default function SettingsPage() {
 
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-1">
        <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">Organization Settings</h1>
             <p className="text-muted-foreground">Manage your organization's details, staff, and system-wide settings.</p>
@@ -370,5 +370,23 @@ export default function SettingsPage() {
           </div>
         )}
     </div>
+  );
+}
+
+
+interface SettingsDialogProps {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+}
+
+export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-7xl h-[90vh]">
+        <ScrollArea className="h-full">
+            <SettingsPageContent />
+        </ScrollArea>
+      </DialogContent>
+    </Dialog>
   );
 }
