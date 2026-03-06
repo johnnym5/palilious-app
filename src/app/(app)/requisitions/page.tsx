@@ -1,7 +1,7 @@
 'use client';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ShieldAlert } from "lucide-react";
+import { ShieldAlert, PlusCircle } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { RequisitionTable } from "@/components/requisitions/RequisitionTable";
 import { useState, useEffect } from "react";
@@ -15,6 +15,7 @@ import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { RequisitionDetailDialog } from "@/components/requisitions/RequisitionDetailDialog";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { NewRequisitionDialog } from "@/components/requisitions/NewRequisitionDialog";
 
 
 const getVisibleTabs = (permissions: Permissions, isStaff: boolean) => {
@@ -53,6 +54,7 @@ export default function RequisitionsPage() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const [selectedRequest, setSelectedRequest] = useState<Requisition | null>(null);
+  const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null
@@ -123,9 +125,17 @@ export default function RequisitionsPage() {
 
   return (
     <div className="space-y-6 min-h-[calc(100vh-10rem)]">
-       <div>
-            <h1 className="text-3xl font-bold font-headline tracking-tight">Requisitions</h1>
-            <p className="text-muted-foreground">Manage all financial requisitions.</p>
+       <div className="flex items-center justify-between">
+            <div>
+                <h1 className="text-3xl font-bold font-headline tracking-tight">Requisitions</h1>
+                <p className="text-muted-foreground">Manage all financial requisitions.</p>
+            </div>
+            <NewRequisitionDialog open={isNewRequestOpen} onOpenChange={setIsNewRequestOpen} userProfile={userProfile}>
+                <Button onClick={() => setIsNewRequestOpen(true)}>
+                    <PlusCircle className="mr-2"/>
+                    New Requisition
+                </Button>
+            </NewRequisitionDialog>
         </div>
       {isProfileLoading ? (
         <Skeleton className="h-[calc(100vh-12rem)] w-full" />
