@@ -50,11 +50,12 @@ const useWorkbookPermissions = (workbook: Workbook | null, userProfile: UserProf
 
 interface WorkbookDetailPageProps {
     workbookId: string;
+    initialSheetId?: string | null;
     onBack: () => void;
 }
 
 
-export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetailPageProps) {
+export default function WorkbookDetailPage({ workbookId, initialSheetId, onBack }: WorkbookDetailPageProps) {
     const firestore = useFirestore();
     const { user: authUser } = useUser();
 
@@ -81,6 +82,10 @@ export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetai
 
     useEffect(() => {
         if (sheets && sheets.length > 0) {
+            if (initialSheetId && sheets.some(s => s.id === initialSheetId)) {
+                setActiveTab(initialSheetId);
+                return;
+            }
             const savedTabId = localStorage.getItem(activeTabStorageKey);
             const isValidSavedTab = sheets.some(s => s.id === savedTabId);
             
@@ -90,7 +95,7 @@ export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetai
                 setActiveTab(sheets[0].id);
             }
         }
-    }, [sheets, workbookId, activeTabStorageKey]);
+    }, [sheets, workbookId, activeTabStorageKey, initialSheetId]);
 
     useEffect(() => {
         if (activeTab) {

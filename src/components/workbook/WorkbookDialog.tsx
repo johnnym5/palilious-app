@@ -2,8 +2,8 @@
 
 import { useState, useMemo } from 'react';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, deleteDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, where } from 'firebase/firestore';
-import type { UserProfile, Workbook } from '@/lib/types';
+import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import type { UserProfile, Workbook, Sheet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
 import { ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search, PlusCircle } from 'lucide-react';
@@ -20,9 +20,33 @@ import { NewWorkbookDialog } from './NewWorkbookDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
+import { Separator } from '@/components/ui/separator';
 
+function SheetList({ workbookId, onSelectSheet }: { workbookId: string, onSelectSheet: (workbookId: string, sheetId: string) => void }) {
+    const firestore = useFirestore();
+    const sheetsQuery = useMemoFirebase(() => query(collection(firestore, `workbooks/${workbookId}/sheets`), orderBy('name')), [firestore, workbookId]);
+    const { data: sheets, isLoading } = useCollection<Sheet>(sheetsQuery);
 
-function WorkbookList({ userProfile, onSelectWorkbook }: { userProfile: UserProfile, onSelectWorkbook: (id: string) => void }) {
+    if (isLoading) {
+        return <Skeleton className="h-10 w-full" />;
+    }
+
+    if (!sheets || sheets.length === 0) {
+        return <p className="text-xs text-muted-foreground text-center py-4">No sheets in this workbook.</p>;
+    }
+
+    return (
+        <div className="space-y-1 py-2">
+            {sheets.map(sheet => (
+                <Button key={sheet.id} variant="ghost" className="w-full justify-start h-auto py-1 px-2 text-sm" onClick={() => onSelectSheet(workbookId, sheet.id)}>
+                    - {sheet.name}
+                </Button>
+            ))}
+        </div>
+    );
+}
+
+function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile, onSelectSheet: (workbookId: string, sheetId: string) => void }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [workbookToEdit, setWorkbookToEdit] = useState<Workbook | null>(null);
@@ -126,14 +150,17 @@ function WorkbookList({ userProfile, onSelectWorkbook }: { userProfile: UserProf
                                 </DropdownMenu>
                             )}
                             </CardHeader>
-                            <CardContent className="flex-grow">
-                                <p className="text-xs text-muted-foreground">
+                             <CardContent className="flex-grow flex flex-col pt-2">
+                                <p className="text-xs text-muted-foreground px-4 pb-2">
                                     Created by {workbook.creatorName} on {format(new Date(workbook.createdAt), 'PP')}
                                 </p>
+                                <Separator className="mb-2" />
+                                <ScrollArea className="flex-grow">
+                                    <div className="px-4">
+                                        <SheetList workbookId={workbook.id} onSelectSheet={onSelectSheet} />
+                                    </div>
+                                </ScrollArea>
                             </CardContent>
-                            <CardFooter>
-                                <Button variant="outline" className="w-full" onClick={() => onSelectWorkbook(workbook.id)}>View Workbook</Button>
-                            </CardFooter>
                         </Card>
                     ))}
                 </div>
@@ -179,12 +206,18 @@ function WorkbookDialogContent() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const [viewingWorkbookId, setViewingWorkbookId] = useState<string | null>(null);
+  const [initialSheetId, setInitialSheetId] = useState<string | null>(null);
   const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, 'users', authUser.uid) : null
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
+  
+  const handleSelectSheet = (workbookId: string, sheetId: string) => {
+    setViewingWorkbookId(workbookId);
+    setInitialSheetId(sheetId);
+  }
 
   if (isProfileLoading) {
     return <div className="p-6"><Skeleton className="h-full w-full" /></div>
@@ -201,7 +234,14 @@ function WorkbookDialogContent() {
   }
   
   if (viewingWorkbookId) {
-      return <WorkbookDetailPage workbookId={viewingWorkbookId} onBack={() => setViewingWorkbookId(null)} />;
+      return <WorkbookDetailPage 
+                workbookId={viewingWorkbookId} 
+                initialSheetId={initialSheetId}
+                onBack={() => {
+                    setViewingWorkbookId(null)
+                    setInitialSheetId(null);
+                }} 
+            />;
   }
 
   return (
@@ -220,7 +260,7 @@ function WorkbookDialogContent() {
             </Button>
         </NewWorkbookDialog>
        </div>
-       <WorkbookList userProfile={userProfile} onSelectWorkbook={setViewingWorkbookId} />
+       <WorkbookList userProfile={userProfile} onSelectSheet={handleSelectSheet} />
     </div>
   );
 }
