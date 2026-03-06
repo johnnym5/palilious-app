@@ -149,8 +149,8 @@ function StaffDirectory() {
           <CardDescription>Browse and manage team members.</CardDescription>
         </div>
         {permissions.canManageStaff && (
-          <AddUserDialog open={isAddUserOpen} onOpenChange={setAddUserOpen}>
-            <Button onClick={() => setAddUserOpen(true)}>
+          <AddUserDialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
+            <Button onClick={() => setIsAddUserOpen(true)}>
               <PlusCircle className="mr-2" />
               Add New Staff
             </Button>
