@@ -1,8 +1,9 @@
 'use client';
 
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { RequisitionsPageContent } from './RequisitionsPageContent';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 
 interface RequisitionsDialogProps {
@@ -14,8 +15,14 @@ export function RequisitionsDialog({ open, onOpenChange }: RequisitionsDialogPro
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[90vh]">
-        <ScrollArea className="h-full">
+      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
+        <VisuallyHidden>
+          <DialogHeader>
+            <DialogTitle>Requisitions</DialogTitle>
+            <DialogDescription>Manage all financial requisitions.</DialogDescription>
+          </DialogHeader>
+        </VisuallyHidden>
+        <ScrollArea className="flex-1">
             <div className="p-6">
                 <RequisitionsPageContent />
             </div>

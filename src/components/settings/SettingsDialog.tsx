@@ -38,6 +38,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 const orgFormSchema = z.object({
   name: z.string().min(1, 'Organization name is required'),
@@ -93,7 +94,7 @@ function StaffDirectory() {
   const firestore = useFirestore();
   const searchParams = useSearchParams();
   const { toast } = useToast();
-  const [isAddUserOpen, setAddUserOpen] = useState(false);
+  const [isAddUserOpen, setIsAddUserOpen] = useState(false);
   const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
   const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
   const { isSuperAdmin } = useSuperAdmin();
@@ -333,7 +334,7 @@ function SettingsPageContent() {
 
 
   return (
-    <div className="space-y-6 p-1">
+    <div className="space-y-6 p-6">
        <div>
             <h1 className="text-3xl font-bold font-headline tracking-tight">Organization Settings</h1>
             <p className="text-muted-foreground">Manage your organization's details, staff, and system-wide settings.</p>
@@ -382,8 +383,14 @@ interface SettingsDialogProps {
 export function SettingsDialog({ open, onOpenChange }: SettingsDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[90vh]">
-        <ScrollArea className="h-full">
+      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
+        <VisuallyHidden>
+            <DialogHeader>
+                <DialogTitle>Settings</DialogTitle>
+                <DialogDescription>Manage your organization's details, staff, and system-wide settings.</DialogDescription>
+            </DialogHeader>
+        </VisuallyHidden>
+        <ScrollArea className="flex-1">
             <SettingsPageContent />
         </ScrollArea>
       </DialogContent>

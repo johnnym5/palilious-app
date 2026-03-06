@@ -17,8 +17,9 @@ import { ShareWorkbookDialog } from '@/components/workbook/ShareWorkbookDialog';
 import WorkbookDetailPage from '@/components/workbook/WorkbookDetailPage';
 import { Input } from '@/components/ui/input';
 import { NewWorkbookDialog } from './NewWorkbookDialog';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 
 
 function WorkbookList({ userProfile, onSelectWorkbook }: { userProfile: UserProfile, onSelectWorkbook: (id: string) => void }) {
@@ -232,8 +233,16 @@ interface WorkbookDialogProps {
 export function WorkbookDialog({ open, onOpenChange }: WorkbookDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-7xl h-[90vh]">
-        <ScrollArea className="h-full">
+      <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
+        <VisuallyHidden>
+          <DialogHeader>
+            <DialogTitle>Workbooks</DialogTitle>
+            <DialogDescription>
+              Create, manage, and distribute work from master documents.
+            </DialogDescription>
+          </DialogHeader>
+        </VisuallyHidden>
+        <ScrollArea className="flex-1">
             <WorkbookDialogContent />
         </ScrollArea>
       </DialogContent>
