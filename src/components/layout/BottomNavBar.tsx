@@ -53,7 +53,7 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
   return (
     <>
       <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/80 backdrop-blur-lg md:hidden">
-        <div className="flex h-20 items-center justify-around">
+        <div className="flex h-16 items-center">
           {navItems.map(item => {
               if ('href' in item) {
                 return (
@@ -61,7 +61,7 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
                         href={item.href}
                         key={item.label}
                         className={cn(
-                        "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
+                        "flex flex-1 flex-col items-center gap-1 p-2 rounded-lg transition-colors",
                         pathname === item.href ? "text-primary" : "text-muted-foreground hover:text-foreground"
                         )}
                     >
@@ -75,7 +75,7 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
                     key={item.label}
                     onClick={() => dialogManager[item.dialog as keyof DialogManager](true)}
                     className={cn(
-                    "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors w-16",
+                    "flex flex-1 flex-col items-center gap-1 p-2 rounded-lg transition-colors",
                     "text-muted-foreground hover:text-foreground"
                     )}
                 >
