@@ -66,8 +66,29 @@ export function NewWorkbookDialog({ open, onOpenChange, userProfile }: NewWorkbo
                 const sheets: ParsedSheet[] = [];
                 workbook.SheetNames.forEach(sheetName => {
                     const ws = workbook.Sheets[sheetName];
-                    const data = XLSX.utils.sheet_to_json<Record<string, any>>(ws);
-                    const headers = data.length > 0 ? Object.keys(data[0]) : [];
+                    
+                    // Convert sheet to array of arrays, skipping any blank rows at the top.
+                    const aoa: any[][] = XLSX.utils.sheet_to_aoa(ws, { blankrows: false });
+
+                    if (aoa.length === 0) {
+                        sheets.push({ name: sheetName, data: [], headers: [] });
+                        return; // Continue to next sheet
+                    }
+                    
+                    // The first row is now guaranteed to be our header.
+                    const headers: string[] = aoa[0].map(h => String(h).trim());
+                    const dataRows = aoa.slice(1);
+
+                    // Manually convert the rest of the rows to an array of objects.
+                    const data = dataRows.map(row => {
+                        const rowObject: Record<string, any> = {};
+                        headers.forEach((header, index) => {
+                            // Ensure we don't try to access an index that doesn't exist in the row
+                            rowObject[header] = row.length > index ? row[index] : undefined;
+                        });
+                        return rowObject;
+                    });
+
                     sheets.push({ name: sheetName, data, headers });
                 });
                 setParsedSheets(sheets);
