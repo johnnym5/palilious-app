@@ -55,7 +55,7 @@ const createTaskFlow = ai.defineFlow(
     inputSchema: CreateTaskInputSchema,
     outputSchema: CreateTaskOutputSchema,
   },
-  async (input) => {
+  async (input: CreateTaskInput) => {
     const { output } = await createTaskPrompt({
         ...input,
         currentDateTime: new Date().toISOString()
