@@ -1,3 +1,4 @@
+
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
@@ -271,7 +272,12 @@ export function DataManagement() {
             reader.onload = (event) => {
                 try {
                     const content = event.target?.result;
-                    if (typeof content !== 'string') throw new Error("File read error");
+                    if (typeof content !== 'string' || !content.trim()) {
+                        toast({ variant: 'destructive', title: 'Parse Error', description: 'File is empty or could not be read.' });
+                        setFileToImport(null);
+                        setIsParsing(false);
+                        return;
+                    }
                     const data = JSON.parse(content);
                     const preview: Record<string, number> = {};
                     const collectionsFromFile: string[] = [];
@@ -337,7 +343,7 @@ export function DataManagement() {
             } else { // online
                 if (!selectedOnlineBackup || collectionsToRestore.length === 0) throw new Error("No backup or collections selected for restore.");
                 const backupRef = ref(database, `backups/${selectedOnlineBackup}`);
-                const snapshot = await get(snapshot);
+                const snapshot = await get(backupRef);
                 if (!snapshot.exists()) throw new Error("Online backup not found.");
                 data = snapshot.val();
             }
