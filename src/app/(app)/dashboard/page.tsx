@@ -18,6 +18,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/componen
 import { ClockControl } from "@/components/attendance/ClockControl";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import Link from 'next/link';
+import QuickActions from "@/components/dashboard/QuickActions";
 
 // Local component for the ClockIn slide
 const ClockInCard = ({ userProfile, permissions, systemConfig }: { userProfile: UserProfile | null; permissions: Permissions; systemConfig: SystemConfig | null }) => {
@@ -163,6 +164,8 @@ export default function DashboardPage() {
                     </CarouselContent>
                 </Carousel>
              )}
+
+            <QuickActions />
 
             <ActiveTasks />
             
