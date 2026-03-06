@@ -26,12 +26,47 @@ type DialogManager = {
   [key in 'settings' | 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'chat' | 'leave' | 'reports' | 'profile']: (open: boolean) => void;
 };
 
-const navItems = [
+const navItemsLeft = [
   { href: "/dashboard", icon: Home, label: "Home" },
   { dialog: "tasks", icon: ListTodo, label: "Tasks" },
+];
+
+const navItemsRight = [
   { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
   { dialog: "profile", icon: User, label: "Profile" },
 ];
+
+const NavItem = ({ item, pathname, dialogManager }: { item: any, pathname: string, dialogManager: DialogManager }) => {
+    if ('href' in item) {
+        return (
+            <Link
+                href={item.href}
+                key={item.label}
+                className={cn(
+                "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors flex-1",
+                pathname === item.href ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                )}
+            >
+                <item.icon className="h-6 w-6" />
+                <span className="text-xs font-medium">{item.label}</span>
+            </Link>
+        );
+    }
+    return (
+        <button
+            key={item.label}
+            onClick={() => dialogManager[item.dialog as keyof DialogManager](true)}
+            className={cn(
+            "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors flex-1",
+            "text-muted-foreground hover:text-foreground"
+            )}
+        >
+            <item.icon className="h-6 w-6" />
+            <span className="text-xs font-medium">{item.label}</span>
+        </button>
+    )
+};
+
 
 export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }) {
   const pathname = usePathname();
@@ -52,44 +87,18 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
 
   return (
     <>
-      <div className="fixed bottom-0 left-0 right-0 z-40 border-t bg-background/80 backdrop-blur-lg md:hidden">
-        <div className="flex h-16 items-center">
-          {navItems.map(item => {
-              if ('href' in item) {
-                return (
-                    <Link 
-                        href={item.href}
-                        key={item.label}
-                        className={cn(
-                        "flex flex-1 flex-col items-center gap-1 p-2 rounded-lg transition-colors",
-                        pathname === item.href ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                        )}
-                    >
-                        <item.icon className="h-6 w-6" />
-                        <span className="text-xs font-medium">{item.label}</span>
-                    </Link>
-                );
-              }
-              return (
-                  <button
-                    key={item.label}
-                    onClick={() => dialogManager[item.dialog as keyof DialogManager](true)}
-                    className={cn(
-                    "flex flex-1 flex-col items-center gap-1 p-2 rounded-lg transition-colors",
-                    "text-muted-foreground hover:text-foreground"
-                    )}
-                >
-                    <item.icon className="h-6 w-6" />
-                    <span className="text-xs font-medium">{item.label}</span>
-                </button>
-              )
-          })}
-        </div>
-      </div>
-       <div className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 md:hidden">
-            <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
+      <div className="fixed bottom-0 left-0 right-0 z-40 h-16 border-t bg-background/80 backdrop-blur-lg md:hidden">
+        <div className="flex h-full items-center justify-around">
+          <div className="flex flex-1 justify-around">
+            {navItemsLeft.map(item => (
+                <NavItem key={item.label} item={item} pathname={pathname} dialogManager={dialogManager} />
+            ))}
+          </div>
+
+          <div className="relative -top-6">
+             <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
                 <SheetTrigger asChild>
-                    <Button className="h-14 w-14 rounded-full shadow-lg shadow-primary/40">
+                    <Button className="h-16 w-16 rounded-full shadow-lg shadow-primary/40 flex items-center justify-center">
                       <Plus className="h-8 w-8" />
                     </Button>
                 </SheetTrigger>
@@ -119,8 +128,16 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
                     </div>
                 </SheetContent>
             </Sheet>
-       </div>
-
+          </div>
+          
+          <div className="flex flex-1 justify-around">
+             {navItemsRight.map(item => (
+                <NavItem key={item.label} item={item} pathname={pathname} dialogManager={dialogManager} />
+            ))}
+          </div>
+        </div>
+      </div>
+      
        {userProfile && (
             <AssignTaskDialog 
                 open={isAssignTaskOpen} 
