@@ -18,6 +18,7 @@ import { TasksDialog } from '@/components/tasks/TasksDialog';
 import { AttendanceDialog } from '@/components/attendance/AttendanceDialog';
 import { ChatDialog } from '@/components/chat/ChatDialog';
 import { LeaveDialog } from '@/components/leave/LeaveDialog';
+import { ReportsDialog } from '@/components/reports/ReportsDialog';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -30,6 +31,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     user ? doc(firestore, 'users', user.uid) : null
@@ -84,6 +86,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             onOpenAttendance={() => setIsAttendanceOpen(true)}
             onOpenChat={() => setIsChatOpen(true)}
             onOpenLeave={() => setIsLeaveOpen(true)}
+            onOpenReports={() => setIsReportsOpen(true)}
           />
           <div className="flex flex-1 flex-col">
               <AppHeader />
@@ -100,6 +103,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <AttendanceDialog open={isAttendanceOpen} onOpenChange={setIsAttendanceOpen} />
       <ChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} />
       <LeaveDialog open={isLeaveOpen} onOpenChange={setIsLeaveOpen} />
+      <ReportsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
     </>
   );
 }

@@ -43,7 +43,7 @@ const mainNavItems = [
 ];
 
 
-export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions, onOpenTasks, onOpenAttendance, onOpenChat, onOpenLeave }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void, onOpenTasks: () => void, onOpenAttendance: () => void, onOpenChat: () => void, onOpenLeave: () => void }) {
+export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWorkbooks, onOpenRequisitions, onOpenTasks, onOpenAttendance, onOpenChat, onOpenLeave, onOpenReports }: { isMobile?: boolean, onOpenSettings: () => void, onOpenWorkbooks: () => void, onOpenRequisitions: () => void, onOpenTasks: () => void, onOpenAttendance: () => void, onOpenChat: () => void, onOpenLeave: () => void, onOpenReports: () => void }) {
   const pathname = usePathname();
   const auth = useAuth();
   const { user: authUser } = useUser();
@@ -181,6 +181,21 @@ export default function AppSidebar({ isMobile = false, onOpenSettings, onOpenWor
                     <button
                         key={item.href}
                         onClick={onOpenRequisitions}
+                        className={cn(
+                          "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
+                          isMobile && "text-lg"
+                        )}
+                    >
+                        <item.icon className="h-4 w-4" />
+                        {item.label}
+                    </button>
+                )
+             }
+            if (item.href === '/reports') {
+                return (
+                    <button
+                        key={item.href}
+                        onClick={onOpenReports}
                         className={cn(
                           "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary text-left w-full",
                           isMobile && "text-lg"

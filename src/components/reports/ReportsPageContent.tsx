@@ -14,7 +14,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { AttendanceHistory } from "@/components/attendance/AttendanceHistory";
 import { useState, useEffect } from "react";
 
-export default function ReportsPage() {
+export function ReportsPageContent() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
 
