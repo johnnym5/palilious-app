@@ -19,6 +19,7 @@ import { AttendanceDialog } from '@/components/attendance/AttendanceDialog';
 import { ChatDialog } from '@/components/chat/ChatDialog';
 import { LeaveDialog } from '@/components/leave/LeaveDialog';
 import { ReportsDialog } from '@/components/reports/ReportsDialog';
+import { uiEmitter } from '@/lib/ui-emitter';
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
@@ -65,6 +66,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
 
   }, [config, theme]);
+
+  useEffect(() => {
+    const openReports = () => setIsReportsOpen(true);
+    uiEmitter.on('open-reports-dialog', openReports);
+    return () => {
+      uiEmitter.off('open-reports-dialog', openReports);
+    };
+  }, []);
 
 
   if (isUserLoading || !user || isProfileLoading) {

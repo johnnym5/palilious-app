@@ -6,7 +6,8 @@ import { TrendingUp } from "lucide-react";
 import { useState, useEffect } from "react";
 import type { UserProfile } from "@/lib/types";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
-import Link from 'next/link';
+import { uiEmitter } from "@/lib/ui-emitter";
+
 
 interface PerformanceCardProps {
     userProfile: UserProfile;
@@ -37,9 +38,13 @@ export function PerformanceCard({ userProfile }: PerformanceCardProps) {
                         <p className="text-5xl font-bold font-headline">{workdayProgress}%</p>
                         <p className="text-primary-foreground/80">Monthly Target Progress</p>
                     </div>
-                     <Link href="/reports">
-                        <Button variant="secondary" className="bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30">View Details</Button>
-                    </Link>
+                    <Button 
+                        variant="secondary" 
+                        className="bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30"
+                        onClick={() => uiEmitter.emit('open-reports-dialog')}
+                    >
+                        View Details
+                    </Button>
                 </div>
                  <Progress value={workdayProgress} className="mt-4 h-2 bg-primary-foreground/20" indicatorClassName="bg-primary-foreground" />
             </CardContent>
