@@ -6,7 +6,7 @@ import { useFirestore, updateDocumentNonBlocking } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ScrollArea } from '@/components/ui/scroll-area';
+import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -335,6 +335,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                         )}
                     </TableBody>
                 </Table>
+                <ScrollBar orientation="horizontal" />
             </ScrollArea>
              <div className="flex-shrink-0 border-t p-2 flex flex-col sm:flex-row items-center gap-2">
                 <div className="flex items-center gap-2 w-full sm:w-auto">
