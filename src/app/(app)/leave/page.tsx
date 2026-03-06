@@ -10,10 +10,15 @@ import { LeaveBalanceCard } from "@/components/leave/LeaveBalanceCard";
 import { MyLeaveHistory } from "@/components/leave/MyLeaveHistory";
 import { PendingLeaveApprovals } from "@/components/leave/PendingLeaveApprovals";
 import { TeamLeaveCalendar } from "@/components/leave/TeamLeaveCalendar";
+import { Button } from "@/components/ui/button";
+import { PlusCircle } from "lucide-react";
+import { RequestLeaveDialog } from "@/components/leave/RequestLeaveDialog";
 
 export default function LeavePage() {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
+
+  const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, "users", authUser.uid) : null,
@@ -52,6 +57,7 @@ export default function LeavePage() {
   }
 
   return (
+    <>
     <div className="space-y-6">
        <div className="flex items-center justify-between">
          <div>
@@ -60,6 +66,10 @@ export default function LeavePage() {
             Request time off and manage your leave balance.
           </p>
          </div>
+         <Button onClick={() => setIsRequestLeaveOpen(true)}>
+            <PlusCircle className="mr-2"/>
+            Request Leave
+         </Button>
        </div>
       
       {permissions.canManageStaff ? (
@@ -89,5 +99,12 @@ export default function LeavePage() {
         </div>
       )}
     </div>
+
+    <RequestLeaveDialog
+        open={isRequestLeaveOpen}
+        onOpenChange={setIsRequestLeaveOpen}
+        userProfile={userProfile}
+    />
+    </>
   );
 }
