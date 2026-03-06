@@ -3,13 +3,11 @@ import { useState, useMemo } from 'react';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query, where } from 'firebase/firestore';
 import type { UserProfile, Workbook } from '@/lib/types';
-import { usePermissions } from '@/hooks/usePermissions';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { Plus, ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search } from 'lucide-react';
+import { ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { NewWorkbookDialog } from '@/components/workbook/NewWorkbookDialog';
 import { EditWorkbookDialog } from '@/components/workbook/EditWorkbookDialog';
 import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -181,7 +179,6 @@ export default function WorkbookPage() {
   const firestore = useFirestore();
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
 
   const workbookId = searchParams.get('workbookId');
 
@@ -221,19 +218,7 @@ export default function WorkbookPage() {
        </div>
 
        <WorkbookList userProfile={userProfile} />
-      
-       {userProfile && (
-         <>
-           <Button 
-               className="fixed bottom-6 right-6 h-16 w-16 rounded-full shadow-lg shadow-primary/30 z-40" 
-               onClick={() => setIsNewWorkbookOpen(true)}
-               aria-label="New Workbook"
-           >
-             <Plus className="h-8 w-8" />
-           </Button>
-           <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile} />
-         </>
-       )}
+       
     </div>
   );
 }

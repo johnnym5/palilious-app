@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, ListTodo, Bell, User, Plus, FileText, CalendarPlus } from "lucide-react";
+import { Home, ListTodo, Bell, User, Plus, FileText, CalendarPlus, BookCopy } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useState } from "react";
@@ -13,6 +13,7 @@ import { AssignTaskDialog } from "../tasks/AssignTaskDialog";
 import { usePermissions } from "@/hooks/usePermissions";
 import { NewRequisitionDialog } from "../requisitions/NewRequisitionDialog";
 import { RequestLeaveDialog } from '../leave/RequestLeaveDialog';
+import { NewWorkbookDialog } from '../workbook/NewWorkbookDialog';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,7 @@ export function BottomNavBar() {
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
+  const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     authUser ? doc(firestore, 'users', authUser.uid) : null
@@ -92,6 +94,10 @@ export function BottomNavBar() {
                     <CalendarPlus className="mr-2 h-4 w-4" />
                     Request Leave
                 </DropdownMenuItem>
+                 <DropdownMenuItem onSelect={() => setIsNewWorkbookOpen(true)}>
+                    <BookCopy className="mr-2 h-4 w-4" />
+                    New Workbook
+                </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
        </div>
@@ -115,6 +121,13 @@ export function BottomNavBar() {
             <RequestLeaveDialog 
                 open={isRequestLeaveOpen} 
                 onOpenChange={setIsRequestLeaveOpen} 
+                userProfile={userProfile}
+            />
+       )}
+       {userProfile && (
+            <NewWorkbookDialog 
+                open={isNewWorkbookOpen} 
+                onOpenChange={setIsNewWorkbookOpen} 
                 userProfile={userProfile}
             />
        )}
