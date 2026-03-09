@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CalendarIcon, CheckCircle2, XCircle } from "lucide-react";
+import { Loader2, CalendarIcon, CheckCircle2, XCircle, Settings } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import type { Sheet } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -16,6 +16,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { format } from "date-fns";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ManageHeadersDialog } from "./ManageHeadersDialog";
 
 interface EditRowDialogProps {
   open: boolean;
@@ -23,6 +24,7 @@ interface EditRowDialogProps {
   sheet: Sheet;
   rowData: Record<string, any>;
   onSave: (updatedData: Record<string, any>) => void;
+  canEdit: boolean;
 }
 
 const ChecklistItem = ({ label, isChecked }: { label: string, isChecked: boolean }) => (
@@ -32,8 +34,9 @@ const ChecklistItem = ({ label, isChecked }: { label: string, isChecked: boolean
     </div>
 );
 
-export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: EditRowDialogProps) {
+export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave, canEdit }: EditRowDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isManageHeadersOpen, setIsManageHeadersOpen] = useState(false);
 
   const formSchema = useMemo(() => {
     const schemaShape: Record<string, z.ZodType<any, any>> = {};
@@ -131,10 +134,10 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
     const config = sheet.columnConfig?.[header];
     switch(config?.type) {
         case 'number':
-            return <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} />;
+            return <Input type="number" {...field} onChange={e => field.onChange(parseFloat(e.target.value) || 0)} disabled={!canEdit} />;
         case 'select':
             return (
-                <Select onValueChange={field.onChange} value={field.value}>
+                <Select onValueChange={field.onChange} value={field.value} disabled={!canEdit}>
                     <SelectTrigger><SelectValue placeholder="Select an option" /></SelectTrigger>
                     <SelectContent>
                         {config.selectOptions?.map(opt => <SelectItem key={opt} value={opt}>{opt}</SelectItem>)}
@@ -145,7 +148,7 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
              return (
                 <Popover>
                     <PopoverTrigger asChild>
-                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")}>
+                        <Button variant={"outline"} className={cn("w-full justify-start text-left font-normal", !field.value && "text-muted-foreground")} disabled={!canEdit}>
                             <CalendarIcon className="mr-2 h-4 w-4" />
                             {field.value ? format(new Date(field.value), "PPP") : <span>Pick a date</span>}
                         </Button>
@@ -157,11 +160,14 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
             );
         case 'text':
         default:
-            return <Input {...field} />;
+            return <Input {...field} disabled={!canEdit} />;
     }
   }
+  
+  const visibleHeaders = sheet.headers.filter(h => !sheet.hiddenHeaders?.includes(h));
 
   return (
+    <>
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="max-w-4xl">
         <DialogHeader>
@@ -174,7 +180,7 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
                 <div className="grid md:grid-cols-3 gap-6 py-4">
                     <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
-                        {sheet.headers.map(header => (
+                        {visibleHeaders.map(header => (
                             <FormField
                                 key={header}
                                 control={form.control}
@@ -192,8 +198,13 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
 
                     <div className="md:col-span-1">
                         <Card>
-                            <CardHeader>
-                                <CardTitle className="text-lg">Asset Data Checklist</CardTitle>
+                            <CardHeader className="flex flex-row items-center justify-between">
+                                <CardTitle className="text-lg">Sheet Header Checklist</CardTitle>
+                                {canEdit && (
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2" onClick={() => setIsManageHeadersOpen(true)}>
+                                        <Settings className="h-4 w-4" />
+                                    </Button>
+                                )}
                             </CardHeader>
                             <CardContent className="space-y-4">
                                 {requiredFields.length > 0 && (
@@ -233,14 +244,24 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
                 </div>
                  <div className="flex justify-end gap-2">
                     <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Close</Button>
-                    <Button type="submit" disabled={isLoading}>
-                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Save Changes
-                    </Button>
+                    {canEdit && (
+                        <Button type="submit" disabled={isLoading}>
+                            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Save Changes
+                        </Button>
+                    )}
                 </div>
             </form>
         </Form>
       </DialogContent>
     </Dialog>
+    {canEdit && (
+        <ManageHeadersDialog 
+            open={isManageHeadersOpen}
+            onOpenChange={setIsManageHeadersOpen}
+            sheet={sheet}
+        />
+    )}
+    </>
   );
 }

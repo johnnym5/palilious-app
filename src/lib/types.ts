@@ -233,6 +233,7 @@ export interface Sheet {
   data: Record<string, any>[];
   headers: string[];
   columnConfig?: Record<string, ColumnConfig>;
+  hiddenHeaders?: string[];
   createdAt: string; // ISO String
 }
 

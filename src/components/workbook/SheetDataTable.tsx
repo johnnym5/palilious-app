@@ -9,7 +9,7 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 import { Input } from '@/components/ui/input';
 import { useToast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
-import { Plus, Trash2, MoreVertical, FileDown, Settings, Type, Hash, Calendar as CalendarIcon, ChevronsUpDown, Search } from 'lucide-react';
+import { Plus, Trash2, Search } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,14 +21,6 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
-import { AddColumnDialog } from './AddColumnDialog';
-import { ConfigureColumnDialog } from './ConfigureColumnDialog';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { AddRowDialog } from './AddRowDialog';
 import { EditRowDialog } from './EditRowDialog';
 import { SheetDataCard } from './SheetDataCard';
@@ -42,23 +34,13 @@ interface SheetDataTableProps {
   };
 }
 
-const TYPE_ICONS: Record<string, React.ElementType> = {
-    text: Type,
-    number: Hash,
-    date: CalendarIcon,
-    select: ChevronsUpDown,
-}
-
 export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [data, setData] = useState<Record<string, any>[]>([]);
     const [headers, setHeaders] = useState<string[]>([]);
-    const [isAddColumnOpen, setIsAddColumnOpen] = useState(false);
     const [isAddRowOpen, setIsAddRowOpen] = useState(false);
-    const [columnToDelete, setColumnToDelete] = useState<string | null>(null);
     const [rowToDelete, setRowToDelete] = useState<number | null>(null);
-    const [columnToConfigure, setColumnToConfigure] = useState<string | null>(null);
     const [rowToEdit, setRowToEdit] = useState<{ rowIndex: number; data: Record<string, any> } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const [selectedRows, setSelectedRows] = useState<number[]>([]);
@@ -71,6 +53,10 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         setSelectedRows([]);
     }, [sheet]);
     
+    const visibleHeaders = useMemo(() => {
+      return headers.filter(h => !sheet.hiddenHeaders?.includes(h))
+    }, [headers, sheet.hiddenHeaders]);
+
     const filteredData = useMemo(() => {
         if (!searchTerm) {
             return data.map((row, index) => ({ ...row, __originalIndex: index }));
@@ -122,25 +108,6 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         setSelectedRows([]);
     };
     
-    const handleDeleteColumn = () => {
-        if (!columnToDelete || !permissions.canEdit) return;
-
-        const newHeaders = headers.filter(h => h !== columnToDelete);
-        const newColumnConfig = { ...sheet.columnConfig };
-        delete newColumnConfig[columnToDelete];
-
-        const newData = data.map(row => {
-            const newRow = {...row};
-            delete newRow[columnToDelete];
-            return newRow;
-        });
-
-        setHeaders(newHeaders);
-        setData(newData);
-        saveChanges({ data: newData, headers: newHeaders, columnConfig: newColumnConfig }, `Column "${columnToDelete}" has been deleted.`);
-        setColumnToDelete(null);
-    };
-    
     const handleExport = () => {
         const sheetData = [
             headers, // First row is headers
@@ -167,12 +134,12 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     };
 
 
-    if (!headers || headers.length === 0) {
+    if (headers.length === 0) {
         return (
              <div className="flex flex-col items-center justify-center h-full text-center text-muted-foreground p-8 space-y-4">
                  <p className="text-sm font-semibold">This sheet is empty.</p>
                  {permissions.canEdit && (
-                    <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
+                    <AddColumnDialog open onOpenChange={() => {}} sheet={sheet}>
                         <Button variant="outline">
                             <Plus className="mr-2 h-4 w-4" />
                             Add First Column
@@ -254,7 +221,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                                 key={row.__originalIndex}
                                 rowData={row}
                                 rowIndex={row.__originalIndex}
-                                headers={headers}
+                                headers={visibleHeaders}
                                 sheet={sheet}
                                 isSelected={selectedRows.includes(row.__originalIndex)}
                                 onSelect={handleSelectRow}
@@ -275,6 +242,7 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                     sheet={sheet}
                     rowData={rowToEdit.data}
                     onSave={(updatedData) => handleSaveEdit(rowToEdit.rowIndex, updatedData)}
+                    canEdit={permissions.canEdit}
                 />
             )}
             
@@ -289,34 +257,6 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction onClick={handleDeleteRow} className="bg-destructive hover:bg-destructive/90">
                                 Delete Row
-                            </AlertDialogAction>
-                        </AlertDialogFooter>
-                    </AlertDialogContent>
-                </AlertDialog>
-            )}
-
-             {columnToConfigure && (
-                <ConfigureColumnDialog
-                    open={!!columnToConfigure}
-                    onOpenChange={(isOpen) => !isOpen && setColumnToConfigure(null)}
-                    sheet={sheet}
-                    header={columnToConfigure}
-                />
-            )}
-
-            {columnToDelete && (
-                 <AlertDialog open={!!columnToDelete} onOpenChange={(isOpen) => !isOpen && setColumnToDelete(null)}>
-                    <AlertDialogContent>
-                        <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Column "{columnToDelete}"?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                                This action cannot be undone. All data in this column will be permanently deleted.
-                            </AlertDialogDescription>
-                        </AlertDialogHeader>
-                        <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteColumn} className="bg-destructive hover:bg-destructive/90">
-                                Delete Column
                             </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
