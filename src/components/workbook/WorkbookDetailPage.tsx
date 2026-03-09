@@ -16,7 +16,7 @@ import { AddSheetDialog } from '@/components/workbook/AddSheetDialog';
 import { RenameSheetDialog } from '@/components/workbook/RenameSheetDialog';
 import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
 import { usePermissions } from '@/hooks/usePermissions';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 
 interface WorkbookPermissions {
@@ -77,8 +77,6 @@ export default function WorkbookDetailPage({ workbookId, initialSheetId, onBack 
         firestore && workbookId ? query(collection(firestore, `workbooks/${workbookId}/sheets`)) : null, 
     [firestore, workbookId]);
     const { data: sheets, isLoading: areSheetsLoading } = useCollection<Sheet>(sheetsQuery);
-    
-    const activeSheet = useMemo(() => sheets?.find(s => s.id === activeTab), [sheets, activeTab]);
     
     const activeTabStorageKey = `workbook-active-tab-${workbookId}`;
 
@@ -160,60 +158,50 @@ export default function WorkbookDetailPage({ workbookId, initialSheetId, onBack 
                 </div>
 
                 {sheets && sheets.length > 0 && workbookId ? (
-                    <Card className="flex flex-col">
-                        <CardHeader>
-                            <div className='flex items-center justify-between'>
-                                <div className="flex items-center gap-2">
-                                    <Select value={activeTab} onValueChange={setActiveTab}>
-                                        <SelectTrigger className="w-auto md:w-[250px] font-semibold text-base h-11">
-                                            <SelectValue placeholder="Select a sheet" />
-                                        </SelectTrigger>
-                                        <SelectContent>
-                                            {sheets?.map(sheet => <SelectItem key={sheet.id} value={sheet.id}>{sheet.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
+                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                        <div className="flex items-center justify-between gap-4">
+                            <TabsList>
+                                {sheets.map(sheet => (
+                                    <TabsTrigger key={sheet.id} value={sheet.id} className="relative group pr-8">
+                                        {sheet.name}
+                                        {workbookPermissions.canManage && (
+                                            <DropdownMenu>
+                                                <DropdownMenuTrigger asChild>
+                                                    <Button variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100">
+                                                        <MoreVertical className="h-4 w-4" />
+                                                    </Button>
+                                                </DropdownMenuTrigger>
+                                                <DropdownMenuContent align="start">
+                                                    <DropdownMenuItem onSelect={() => setSheetToRename(sheet)}>
+                                                        <Edit className="mr-2 h-4 w-4" /> Rename
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => setSheetToMakeTask(sheet)}>
+                                                        <ListTodo className="mr-2 h-4 w-4" /> Create Task
+                                                    </DropdownMenuItem>
+                                                    <DropdownMenuItem onSelect={() => setSheetToDelete(sheet)} className="text-destructive focus:text-destructive">
+                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                                    </DropdownMenuItem>
+                                                </DropdownMenuContent>
+                                            </DropdownMenu>
+                                        )}
+                                    </TabsTrigger>
+                                ))}
+                            </TabsList>
 
-                                    {workbookPermissions.canManage && activeSheet && (
-                                        <DropdownMenu>
-                                            <DropdownMenuTrigger asChild>
-                                                <Button variant="ghost" size="icon" className="h-11 w-11">
-                                                    <MoreVertical className="h-5 w-5" />
-                                                </Button>
-                                            </DropdownMenuTrigger>
-                                            <DropdownMenuContent align="start">
-                                                <DropdownMenuItem onSelect={() => setSheetToRename(activeSheet)}>
-                                                    <Edit className="mr-2 h-4 w-4" /> Rename
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => setSheetToMakeTask(activeSheet)}>
-                                                    <ListTodo className="mr-2 h-4 w-4" /> Create Task
-                                                </DropdownMenuItem>
-                                                <DropdownMenuItem onSelect={() => setSheetToDelete(activeSheet)} className="text-destructive focus:text-destructive">
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                </DropdownMenuItem>
-                                            </DropdownMenuContent>
-                                        </DropdownMenu>
-                                    )}
-                                </div>
-                                
-                                {workbookPermissions.canEdit && (
-                                    <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
-                                        <Button variant="outline">
-                                            <Plus className="mr-2 h-4 w-4" /> Add Sheet
-                                        </Button>
-                                    </AddSheetDialog>
-                                )}
-                            </div>
-                        </CardHeader>
-                        <CardContent className="flex-1 mt-4">
-                            {activeSheet ? (
-                                <SheetDataTable sheet={activeSheet} permissions={workbookPermissions} />
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-muted-foreground">
-                                    <p>Select a sheet to view its content.</p>
-                                </div>
+                            {workbookPermissions.canEdit && (
+                                <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
+                                    <Button variant="outline">
+                                        <Plus className="mr-2 h-4 w-4" /> Add Sheet
+                                    </Button>
+                                </AddSheetDialog>
                             )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                        {sheets.map(sheet => (
+                             <TabsContent key={sheet.id} value={sheet.id} className="mt-4">
+                                <SheetDataTable sheet={sheet} permissions={workbookPermissions} />
+                             </TabsContent>
+                        ))}
+                    </Tabs>
                 ) : (
                     <Card>
                         <CardContent className="p-8 text-center text-muted-foreground">
