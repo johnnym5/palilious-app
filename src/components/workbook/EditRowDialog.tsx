@@ -27,8 +27,8 @@ interface EditRowDialogProps {
 
 const ChecklistItem = ({ label, isChecked }: { label: string, isChecked: boolean }) => (
     <div className="flex items-center justify-between text-sm">
-        <span>{label}</span>
-        {isChecked ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-destructive" />}
+        <span className="truncate" title={label}>{label}</span>
+        {isChecked ? <CheckCircle2 className="h-5 w-5 text-green-500 flex-shrink-0" /> : <XCircle className="h-5 w-5 text-destructive flex-shrink-0" />}
     </div>
 );
 
@@ -58,8 +58,27 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
   });
   
   const watchedData = form.watch();
-  const requiredFields = ['Category', 'Asset Description', 'Serial Number', 'Location', 'Condition'];
-  const importantFields = ['Asset ID Code', 'LGA', 'Assignee', 'Manufacturer', 'Model Number', 'Engine Number', 'Chassis Number'];
+
+  const { requiredFields, importantFields } = useMemo(() => {
+    const REQUIRED_KEYWORDS = ['category', 'description', 'serial', 'location', 'condition'];
+    const IMPORTANT_KEYWORDS = ['id', 'lga', 'assignee', 'manufacturer', 'model', 'engine', 'chassis'];
+    
+    const req: string[] = [];
+    const imp: string[] = [];
+    
+    if (sheet && sheet.headers) {
+      sheet.headers.forEach(header => {
+        const lowerHeader = header.toLowerCase();
+        if (REQUIRED_KEYWORDS.some(keyword => lowerHeader.includes(keyword))) {
+          req.push(header);
+        } else if (IMPORTANT_KEYWORDS.some(keyword => lowerHeader.includes(keyword))) {
+          imp.push(header);
+        }
+      });
+    }
+
+    return { requiredFields: req, importantFields: imp };
+  }, [sheet]);
 
 
   useEffect(() => {
@@ -68,7 +87,11 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
         for(const header of sheet.headers) {
             const config = sheet.columnConfig?.[header];
             if (config?.type === 'date' && rowData[header]) {
-                initialValues[header] = new Date(rowData[header]);
+                try {
+                    initialValues[header] = new Date(rowData[header]);
+                } catch(e) {
+                    initialValues[header] = rowData[header];
+                }
             } else {
                 initialValues[header] = rowData[header] ?? '';
             }
@@ -173,30 +196,37 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
                                 <CardTitle className="text-lg">Asset Data Checklist</CardTitle>
                             </CardHeader>
                             <CardContent className="space-y-4">
-                                <div>
-                                    <h4 className="font-semibold mb-2 text-sm">Required Fields</h4>
-                                    <div className="space-y-2">
-                                        {requiredFields.map(field => (
-                                            <ChecklistItem 
-                                                key={field} 
-                                                label={field} 
-                                                isChecked={!!watchedData[field]}
-                                            />
-                                        ))}
+                                {requiredFields.length > 0 && (
+                                    <div>
+                                        <h4 className="font-semibold mb-2 text-sm">Required Fields</h4>
+                                        <div className="space-y-2">
+                                            {requiredFields.map(field => (
+                                                <ChecklistItem 
+                                                    key={field} 
+                                                    label={field} 
+                                                    isChecked={!!watchedData[field]}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
-                                <div>
-                                    <h4 className="font-semibold mb-2 text-sm">Important Fields</h4>
-                                    <div className="space-y-2">
-                                        {importantFields.map(field => (
-                                            <ChecklistItem 
-                                                key={field} 
-                                                label={field} 
-                                                isChecked={!!watchedData[field]}
-                                            />
-                                        ))}
+                                )}
+                                {importantFields.length > 0 && (
+                                    <div>
+                                        <h4 className="font-semibold mb-2 text-sm">Important Fields</h4>
+                                        <div className="space-y-2">
+                                            {importantFields.map(field => (
+                                                <ChecklistItem 
+                                                    key={field} 
+                                                    label={field} 
+                                                    isChecked={!!watchedData[field]}
+                                                />
+                                            ))}
+                                        </div>
                                     </div>
-                                </div>
+                                )}
+                                 {requiredFields.length === 0 && importantFields.length === 0 && (
+                                     <p className="text-sm text-muted-foreground text-center py-4">No specific checklist fields identified for this sheet.</p>
+                                 )}
                             </CardContent>
                         </Card>
                     </div>
