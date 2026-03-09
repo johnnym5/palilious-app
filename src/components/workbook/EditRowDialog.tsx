@@ -6,7 +6,7 @@ import * as z from "zod";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2, CalendarIcon } from "lucide-react";
+import { Loader2, CalendarIcon, CheckCircle2, XCircle } from "lucide-react";
 import { useState, useMemo, useEffect } from "react";
 import type { Sheet } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -15,6 +15,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Calendar } from "../ui/calendar";
 import { format } from "date-fns";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface EditRowDialogProps {
   open: boolean;
@@ -23,6 +24,13 @@ interface EditRowDialogProps {
   rowData: Record<string, any>;
   onSave: (updatedData: Record<string, any>) => void;
 }
+
+const ChecklistItem = ({ label, isChecked }: { label: string, isChecked: boolean }) => (
+    <div className="flex items-center justify-between text-sm">
+        <span>{label}</span>
+        {isChecked ? <CheckCircle2 className="h-5 w-5 text-green-500" /> : <XCircle className="h-5 w-5 text-destructive" />}
+    </div>
+);
 
 export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: EditRowDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +56,11 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
   });
+  
+  const watchedData = form.watch();
+  const requiredFields = ['Category', 'Asset Description', 'Serial Number', 'Location', 'Condition'];
+  const importantFields = ['Asset ID Code', 'LGA', 'Assignee', 'Manufacturer', 'Model Number', 'Engine Number', 'Chassis Number'];
+
 
   useEffect(() => {
     if (rowData) {
@@ -115,7 +128,7 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
                         </Button>
                     </PopoverTrigger>
                     <PopoverContent className="w-auto p-0">
-                        <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                        <Calendar mode="single" selected={field.value ? new Date(field.value) : undefined} onSelect={field.onChange} initialFocus />
                     </PopoverContent>
                 </Popover>
             );
@@ -127,33 +140,74 @@ export function EditRowDialog({ open, onOpenChange, sheet, rowData, onSave }: Ed
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="max-w-4xl">
         <DialogHeader>
-          <DialogTitle>Edit Row</DialogTitle>
+          <DialogTitle>View Asset Details</DialogTitle>
           <DialogDescription>
-            Update the details for this entry.
+            Viewing asset details.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-                {sheet.headers.map(header => (
-                     <FormField
-                        key={header}
-                        control={form.control}
-                        name={header}
-                        render={({ field }) => (
-                        <FormItem>
-                            <FormLabel>{header}</FormLabel>
-                            <FormControl>{renderFormControl(header, field)}</FormControl>
-                            <FormMessage />
-                        </FormItem>
-                        )}
-                    />
-                ))}
-                <Button type="submit" className="w-full" disabled={isLoading}>
-                    {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                    Save Changes
-                </Button>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                <div className="grid md:grid-cols-3 gap-6 py-4">
+                    <div className="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4 content-start">
+                        {sheet.headers.map(header => (
+                            <FormField
+                                key={header}
+                                control={form.control}
+                                name={header}
+                                render={({ field }) => (
+                                <FormItem>
+                                    <FormLabel>{header}</FormLabel>
+                                    <FormControl>{renderFormControl(header, field)}</FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                                )}
+                            />
+                        ))}
+                    </div>
+
+                    <div className="md:col-span-1">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-lg">Asset Data Checklist</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                                <div>
+                                    <h4 className="font-semibold mb-2 text-sm">Required Fields</h4>
+                                    <div className="space-y-2">
+                                        {requiredFields.map(field => (
+                                            <ChecklistItem 
+                                                key={field} 
+                                                label={field} 
+                                                isChecked={!!watchedData[field]}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div>
+                                    <h4 className="font-semibold mb-2 text-sm">Important Fields</h4>
+                                    <div className="space-y-2">
+                                        {importantFields.map(field => (
+                                            <ChecklistItem 
+                                                key={field} 
+                                                label={field} 
+                                                isChecked={!!watchedData[field]}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    </div>
+                </div>
+                 <div className="flex justify-end gap-2">
+                    <Button type="button" variant="outline" onClick={() => handleOpenChange(false)}>Close</Button>
+                    <Button type="submit" disabled={isLoading}>
+                        {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                        Save Changes
+                    </Button>
+                </div>
             </form>
         </Form>
       </DialogContent>
