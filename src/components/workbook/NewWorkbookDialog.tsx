@@ -68,7 +68,7 @@ export function NewWorkbookDialog({ open, onOpenChange, userProfile }: NewWorkbo
                     const ws = workbook.Sheets[sheetName];
                     
                     // Convert sheet to array of arrays, skipping any blank rows at the top.
-                    const aoa: any[][] = XLSX.utils.sheet_to_aoa(ws, { blankrows: false });
+                    const aoa: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
 
                     if (aoa.length === 0) {
                         sheets.push({ name: sheetName, data: [], headers: [] });
