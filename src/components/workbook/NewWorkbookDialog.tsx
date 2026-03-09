@@ -66,30 +66,25 @@ export function NewWorkbookDialog({ open, onOpenChange, userProfile }: NewWorkbo
                 const sheets: ParsedSheet[] = [];
                 workbook.SheetNames.forEach(sheetName => {
                     const ws = workbook.Sheets[sheetName];
+                    const data: Record<string, any>[] = XLSX.utils.sheet_to_json(ws);
                     
-                    // Convert sheet to array of arrays, skipping any blank rows at the top.
-                    const aoa: any[][] = XLSX.utils.sheet_to_json(ws, { header: 1, blankrows: false });
-
-                    if (aoa.length === 0) {
-                        sheets.push({ name: sheetName, data: [], headers: [] });
-                        return; // Continue to next sheet
+                    if (data.length === 0) {
+                         sheets.push({ name: sheetName, data: [], headers: [] });
+                         return;
                     }
-                    
-                    // The first row is now guaranteed to be our header.
-                    const headers: string[] = aoa[0].map(h => String(h).trim());
-                    const dataRows = aoa.slice(1);
 
-                    // Manually convert the rest of the rows to an array of objects.
-                    const data = dataRows.map(row => {
-                        const rowObject: Record<string, any> = {};
-                        headers.forEach((header, index) => {
-                            // Ensure we don't try to access an index that doesn't exist in the row
-                            rowObject[header] = row.length > index ? row[index] : null;
+                    const headers = Object.keys(data[0]);
+
+                    // Sanitize the data to ensure no `undefined` values are present, replacing them with `null`.
+                    const sanitizedData = data.map(row => {
+                        const newRow: Record<string, any> = {};
+                        headers.forEach(header => {
+                            newRow[header] = row[header] !== undefined ? row[header] : null;
                         });
-                        return rowObject;
+                        return newRow;
                     });
 
-                    sheets.push({ name: sheetName, data, headers });
+                    sheets.push({ name: sheetName, data: sanitizedData, headers });
                 });
                 setParsedSheets(sheets);
             } catch (err) {
