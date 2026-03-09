@@ -25,6 +25,7 @@ import { AddRowDialog } from './AddRowDialog';
 import { EditRowDialog } from './EditRowDialog';
 import { SheetDataCard } from './SheetDataCard';
 import { Checkbox } from '../ui/checkbox';
+import { AddColumnDialog } from './AddColumnDialog';
 
 
 interface SheetDataTableProps {
