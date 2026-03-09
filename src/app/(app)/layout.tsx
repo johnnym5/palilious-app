@@ -33,6 +33,7 @@ import { ChatDialog } from '@/components/chat/ChatDialog';
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isUserLoading } = useUser();
   const firestore = useFirestore();
+  const router = useRouter();
   const { theme } = useTheme();
   const [isWorkbookOpen, setIsWorkbookOpen] = useState(false);
   const [isRequisitionsOpen, setIsRequisitionsOpen] = useState(false);
@@ -55,6 +56,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const permissions = usePermissions(userProfile);
   const { config, isLoading: isConfigLoading } = useSystemConfig(userProfile?.orgId);
   
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.replace('/login');
+    }
+  }, [isUserLoading, user, router]);
+
   useEffect(() => {
     const root = document.documentElement;
     const defaultPrimary = '217.2 91.2% 59.8%';
