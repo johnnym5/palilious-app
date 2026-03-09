@@ -162,12 +162,8 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         }
     };
     
-    const handleSelectAll = () => {
-        if (selectedRows.length === filteredData.length) {
-            setSelectedRows([]);
-        } else {
-            setSelectedRows(filteredData.map(row => row.__originalIndex));
-        }
+    const handleSelectAll = (checked: boolean | 'indeterminate') => {
+        setSelectedRows(checked === true ? filteredData.map((row) => row.__originalIndex) : []);
     };
 
 
@@ -203,10 +199,27 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
                 {permissions.canEdit && (
                     <>
                          <div className="flex items-center space-x-2">
-                             <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={filteredData.length === 0}>
-                                 <Checkbox checked={selectedRows.length > 0 && selectedRows.length === filteredData.length} />
-                                 <span className="ml-2">Select All</span>
-                             </Button>
+                             <div className="flex items-center space-x-2">
+                                 <Checkbox
+                                     id="select-all-rows"
+                                     checked={
+                                         filteredData.length > 0 &&
+                                         selectedRows.length === filteredData.length
+                                             ? true
+                                             : selectedRows.length > 0
+                                             ? "indeterminate"
+                                             : false
+                                     }
+                                     onCheckedChange={handleSelectAll}
+                                     disabled={filteredData.length === 0}
+                                 />
+                                 <label
+                                     htmlFor="select-all-rows"
+                                     className="text-sm font-medium leading-none cursor-pointer peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                 >
+                                     Select All
+                                 </label>
+                             </div>
                             <AlertDialog>
                                 <AlertDialogTrigger asChild>
                                      <Button variant="destructive" size="sm" disabled={selectedRows.length === 0}>
