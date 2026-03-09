@@ -24,8 +24,8 @@ interface SheetDataCardProps {
 
 // Heuristic to find a suitable title/identifier from the row data
 const getCardTitles = (rowData: Record<string, any>, headers: string[]): { title: string; subtitle: string } => {
-    let title = 'Untitled Row';
-    let subtitle = `Row ${rowData.__originalIndex + 1}`;
+    let title: any = 'Untitled Row';
+    let subtitle: any = `Row ${rowData.__originalIndex + 1}`;
     
     const lowerCaseHeaders = headers.map(h => h.toLowerCase());
 
@@ -35,7 +35,7 @@ const getCardTitles = (rowData: Record<string, any>, headers: string[]): { title
     // Find title
     for (const keyword of titleKeywords) {
         const index = lowerCaseHeaders.findIndex(h => h.includes(keyword));
-        if (index !== -1 && rowData[headers[index]]) {
+        if (index !== -1 && rowData[headers[index]] != null) {
             title = rowData[headers[index]];
             break;
         }
@@ -44,18 +44,18 @@ const getCardTitles = (rowData: Record<string, any>, headers: string[]): { title
     // Find subtitle
     for (const keyword of subtitleKeywords) {
         const index = lowerCaseHeaders.findIndex(h => h.includes(keyword));
-        if (index !== -1 && rowData[headers[index]]) {
-            subtitle = String(rowData[headers[index]]);
+        if (index !== -1 && rowData[headers[index]] != null) {
+            subtitle = rowData[headers[index]];
             break;
         }
     }
     
     // Fallback if title is still default
-    if (title === 'Untitled Row' && headers.length > 0 && rowData[headers[0]]) {
+    if (title === 'Untitled Row' && headers.length > 0 && rowData[headers[0]] != null) {
         title = rowData[headers[0]];
     }
 
-    return { title, subtitle };
+    return { title: String(title), subtitle: String(subtitle) };
 };
 
 
@@ -82,7 +82,7 @@ export function SheetDataCard({
             .filter(h => {
                 const lowerH = h.toLowerCase();
                 // Exclude title/subtitle fields and select fields which are rendered separately
-                return !title.includes(rowData[h]) && !subtitle.includes(String(rowData[h])) && !selectFields.includes(h);
+                return !title.includes(String(rowData[h] ?? '')) && !subtitle.includes(String(rowData[h] ?? '')) && !selectFields.includes(h);
             })
             .sort((a, b) => {
                 const aIsPrio = priorityKeywords.some(k => a.toLowerCase().includes(k));
