@@ -1,15 +1,14 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, deleteDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, where, orderBy } from 'firebase/firestore';
+import { doc, collection, query, where, orderBy, limit } from 'firebase/firestore';
 import type { UserProfile, Workbook, Sheet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search, PlusCircle } from 'lucide-react';
+import { ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search, PlusCircle, ArrowRight } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { EditWorkbookDialog } from '@/components/workbook/EditWorkbookDialog';
-import { format } from 'date-fns';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { useToast } from '@/hooks/use-toast';
@@ -20,40 +19,94 @@ import { NewWorkbookDialog } from './NewWorkbookDialog';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
-import { Separator } from '@/components/ui/separator';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Progress } from '@/components/ui/progress';
 
-
-function SheetList({ workbookId, onSelectSheet }: { workbookId: string, onSelectSheet: (workbookId: string, sheetId: string) => void }) {
+function WorkbookCard({ 
+    workbook, 
+    userProfile, 
+    onSelectSheet,
+    onEdit,
+    onShare,
+    onDelete,
+ }: { 
+    workbook: Workbook, 
+    userProfile: UserProfile, 
+    onSelectSheet: (workbookId: string, sheetId: string | null) => void,
+    onEdit: (workbook: Workbook) => void,
+    onShare: (workbook: Workbook) => void,
+    onDelete: (workbook: Workbook) => void,
+}) {
     const firestore = useFirestore();
-    const sheetsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `workbooks/${workbookId}/sheets`), orderBy('name')) : null, [firestore, workbookId]);
+    const sheetsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `workbooks/${workbook.id}/sheets`), limit(1)) : null, [firestore, workbook.id]);
     const { data: sheets, isLoading } = useCollection<Sheet>(sheetsQuery);
 
-    if (isLoading) {
-        return <div className="px-4 py-2"><Skeleton className="h-10 w-full rounded-full" /></div>;
-    }
+    const recordCount = sheets?.[0]?.data?.length ?? 0;
+    const firstSheetId = sheets?.[0]?.id ?? null;
 
-    if (!sheets || sheets.length === 0) {
-        return <p className="px-4 text-xs text-muted-foreground text-center py-4">No sheets in this workbook.</p>;
+    const handleViewRecords = () => {
+        onSelectSheet(workbook.id, firstSheetId);
+    };
+    
+    const canManage = (workbook: Workbook) => {
+        if (workbook.createdBy === userProfile.id) return true;
+        const sharingInfo = workbook.sharedWith?.find(s => s.userId === userProfile.id);
+        return sharingInfo?.role === 'MANAGER';
     }
 
     return (
-        <div className="py-2 px-4">
-            <Select onValueChange={(sheetId) => onSelectSheet(workbookId, sheetId)}>
-                <SelectTrigger className="w-full rounded-full">
-                    <SelectValue placeholder="View Sheets..." />
-                </SelectTrigger>
-                <SelectContent>
-                    {sheets.map(sheet => (
-                        <SelectItem key={sheet.id} value={sheet.id}>{sheet.name}</SelectItem>
-                    ))}
-                </SelectContent>
-            </Select>
-        </div>
+        <Card className="group bg-card/50 hover:bg-card/90 transition-all flex flex-col justify-between">
+            <CardHeader className="flex flex-row items-start justify-between pb-2">
+                <CardTitle className="text-base font-semibold leading-tight line-clamp-1">{workbook.title}</CardTitle>
+                 {canManage(workbook) && (
+                    <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-2 opacity-50 group-hover:opacity-100">
+                                <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                            <DropdownMenuItem onClick={() => onShare(workbook)}>
+                                <Share2 className="mr-2 h-4 w-4" />
+                                <span>Share</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onEdit(workbook)}>
+                                <Edit className="mr-2 h-4 w-4" />
+                                <span>Edit</span>
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => onDelete(workbook)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                <span>Delete</span>
+                            </DropdownMenuItem>
+                        </DropdownMenuContent>
+                    </DropdownMenu>
+                )}
+            </CardHeader>
+            <CardContent className="py-2 flex-grow flex flex-col justify-center">
+                <div className="flex items-center justify-between">
+                    <div>
+                        {isLoading ? <Skeleton className="h-10 w-12" /> : <p className="text-4xl font-bold font-headline">{recordCount}</p>}
+                        <p className="text-xs text-muted-foreground tracking-widest">ASSET RECORDS</p>
+                    </div>
+                     <BookCopy className="h-8 w-8 text-muted-foreground/50" />
+                </div>
+                <div className="mt-4">
+                    <div className="flex justify-between text-xs text-muted-foreground mb-1">
+                        <span>VERIFICATION</span>
+                        <span>0 / {recordCount}</span>
+                    </div>
+                    <Progress value={0} className="h-1" />
+                </div>
+            </CardContent>
+            <CardFooter>
+                 <Button variant="outline" className="w-full" onClick={handleViewRecords}>
+                    View Records <ArrowRight className="ml-2 h-4 w-4" />
+                 </Button>
+            </CardFooter>
+        </Card>
     );
 }
 
-function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile, onSelectSheet: (workbookId: string, sheetId: string) => void }) {
+function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile, onSelectSheet: (workbookId: string, sheetId: string | null) => void }) {
     const firestore = useFirestore();
     const { toast } = useToast();
     const [workbookToEdit, setWorkbookToEdit] = useState<Workbook | null>(null);
@@ -88,21 +141,14 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
         setWorkbookToDelete(null);
     };
 
-    const canManage = (workbook: Workbook) => {
-        if (workbook.createdBy === userProfile.id) return true;
-        const sharingInfo = workbook.sharedWith?.find(s => s.userId === userProfile.id);
-        return sharingInfo?.role === 'MANAGER';
-    }
-
-
     if (isLoading) {
         return (
             <>
                 <div className="relative mb-4">
                     <Skeleton className="h-10 w-full" />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-48" />)}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-56" />)}
                 </div>
             </>
         )
@@ -126,48 +172,17 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
                     <p className="mt-1 text-sm text-muted-foreground">{searchTerm ? 'Try a different search term.' : 'Get started by creating your first workbook or ask a colleague to share one.'}</p>
                 </div>
             ) : (
-                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {filteredWorkbooks.map(workbook => (
-                        <Card key={workbook.id} className="group hover:shadow-md transition-shadow flex flex-col">
-                            <CardHeader className="flex flex-row items-start justify-between">
-                                <div className='flex-1 pr-2'>
-                                    <CardTitle className="break-words">{workbook.title}</CardTitle>
-                                    <CardDescription className="line-clamp-1">{workbook.description || "No description."}</CardDescription>
-                                </div>
-                            {canManage(workbook) && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="shrink-0">
-                                            <MoreHorizontal className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onClick={() => setWorkbookToShare(workbook)}>
-                                            <Share2 className="mr-2 h-4 w-4" />
-                                            <span>Share</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setWorkbookToEdit(workbook)}>
-                                            <Edit className="mr-2 h-4 w-4" />
-                                            <span>Edit</span>
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onClick={() => setWorkbookToDelete(workbook)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            <span>Delete</span>
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                            </CardHeader>
-                             <CardContent className="flex-grow flex flex-col justify-end pt-2">
-                                <div>
-                                    <p className="text-xs text-muted-foreground px-4 pb-2">
-                                        Created by {workbook.creatorName} on {format(new Date(workbook.createdAt), 'PP')}
-                                    </p>
-                                    <Separator />
-                                    <SheetList workbookId={workbook.id} onSelectSheet={onSelectSheet} />
-                                </div>
-                            </CardContent>
-                        </Card>
+                        <WorkbookCard
+                            key={workbook.id}
+                            workbook={workbook}
+                            userProfile={userProfile}
+                            onSelectSheet={onSelectSheet}
+                            onEdit={setWorkbookToEdit}
+                            onShare={setWorkbookToShare}
+                            onDelete={setWorkbookToDelete}
+                        />
                     ))}
                 </div>
             )}
@@ -220,7 +235,7 @@ function WorkbookDialogContent() {
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   
-  const handleSelectSheet = (workbookId: string, sheetId: string) => {
+  const handleSelectSheet = (workbookId: string, sheetId: string | null) => {
     setViewingWorkbookId(workbookId);
     setInitialSheetId(sheetId);
   }
