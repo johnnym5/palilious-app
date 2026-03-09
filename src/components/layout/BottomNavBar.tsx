@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ListTodo, Plus, FileText, CalendarPlus, BookOpenCheck, BarChart } from "lucide-react";
+import { Home, ListTodo, Plus, FileText, CalendarPlus, BookOpenCheck, BarChart, UserPlus } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useState } from "react";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sheet";
 
 type DialogManager = {
-  [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave' | 'chat' | 'settings']: (open: boolean) => void;
+  [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave' | 'chat' | 'settings' | 'inviteUser']: (open: boolean) => void;
 };
 
 const navItemsLeft = [
@@ -99,6 +99,12 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
                         <SheetTitle>Create New</SheetTitle>
                     </SheetHeader>
                     <div className="grid grid-cols-2 gap-4 py-4">
+                        {permissions.canManageStaff && (
+                            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.inviteUser(true); setIsCreateSheetOpen(false); }}>
+                                <UserPlus className="h-6 w-6" />
+                                Add Member
+                            </Button>
+                        )}
                         <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.assignTask(true); setIsCreateSheetOpen(false); }}>
                             <ListTodo className="h-6 w-6" />
                             New Task

@@ -1,6 +1,6 @@
 'use client';
 import { StatCard } from "@/components/dashboard/StatCard";
-import { CheckCircle, Megaphone, BookOpenCheck, FilePlus2, ListTodo } from "lucide-react";
+import { CheckCircle, Megaphone, BookOpenCheck, FilePlus2, ListTodo, UserPlus } from "lucide-react";
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc, collection, query, where, orderBy, limit } from "firebase/firestore";
@@ -83,7 +83,17 @@ const QuickActionsCard = ({ permissions }: { permissions: Permissions }) => {
         <CardTitle>Quick Actions</CardTitle>
         <CardDescription className="text-primary-foreground/80">Your most common tasks, just a click away.</CardDescription>
       </CardHeader>
-      <CardContent className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+      <CardContent className="flex-grow grid grid-cols-2 sm:grid-cols-2 gap-4 items-center">
+        {permissions.canManageStaff && (
+             <Button variant="secondary" size="lg" className="flex-col h-auto py-4 w-full bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" onClick={() => uiEmitter.emit('open-invite-user-dialog')}>
+                <UserPlus className="h-6 w-6 mb-2" />
+                <span className="font-semibold">Add Member</span>
+            </Button>
+        )}
+        <Button variant="secondary" size="lg" className="flex-col h-auto py-4 w-full bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" onClick={() => uiEmitter.emit('open-assign-task-dialog')}>
+          <ListTodo className="h-6 w-6 mb-2" />
+          <span className="font-semibold">Add a Task</span>
+        </Button>
         <Button variant="secondary" size="lg" className="flex-col h-auto py-4 w-full bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" onClick={() => uiEmitter.emit('open-new-workbook-dialog')}>
           <BookOpenCheck className="h-6 w-6 mb-2" />
           <span className="font-semibold">New Workbook</span>
@@ -94,10 +104,6 @@ const QuickActionsCard = ({ permissions }: { permissions: Permissions }) => {
             <span className="font-semibold">New Requisition</span>
           </Button>
         )}
-        <Button variant="secondary" size="lg" className="flex-col h-auto py-4 w-full bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" onClick={() => uiEmitter.emit('open-assign-task-dialog')}>
-          <ListTodo className="h-6 w-6 mb-2" />
-          <span className="font-semibold">Add a Task</span>
-        </Button>
       </CardContent>
     </Card>
   );

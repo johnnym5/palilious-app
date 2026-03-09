@@ -13,6 +13,7 @@ type AppEvents = {
   'open-assign-task-dialog': void;
   'open-new-requisition-dialog': void;
   'open-new-workbook-dialog': void;
+  'open-invite-user-dialog': void;
 };
 
 type Callback<T> = (data: T) => void;

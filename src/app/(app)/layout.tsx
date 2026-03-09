@@ -2,7 +2,7 @@
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2, ListTodo, FileText, CalendarPlus, BookOpenCheck, Plus } from 'lucide-react';
+import { Loader2, ListTodo, FileText, CalendarPlus, BookOpenCheck, Plus, UserPlus } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
@@ -28,6 +28,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { ChatDialog } from '@/components/chat/ChatDialog';
+import { InviteUserDialog } from '@/components/settings/InviteUserDialog';
 
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -48,6 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [isInviteUserOpen, setIsInviteUserOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     firestore && user ? doc(firestore, 'users', user.uid) : null
@@ -100,6 +102,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const openAssignTask = () => setIsAssignTaskOpen(true);
     const openNewRequisition = () => setIsNewRequisitionOpen(true);
     const openNewWorkbook = () => setIsNewWorkbookOpen(true);
+    const openInviteUser = () => setIsInviteUserOpen(true);
 
 
     uiEmitter.on('open-reports-dialog', openReports);
@@ -114,6 +117,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     uiEmitter.on('open-assign-task-dialog', openAssignTask);
     uiEmitter.on('open-new-requisition-dialog', openNewRequisition);
     uiEmitter.on('open-new-workbook-dialog', openNewWorkbook);
+    uiEmitter.on('open-invite-user-dialog', openInviteUser);
     
     return () => {
       uiEmitter.off('open-reports-dialog', openReports);
@@ -128,6 +132,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       uiEmitter.off('open-assign-task-dialog', openAssignTask);
       uiEmitter.off('open-new-requisition-dialog', openNewRequisition);
       uiEmitter.off('open-new-workbook-dialog', openNewWorkbook);
+      uiEmitter.off('open-invite-user-dialog', openInviteUser);
     };
   }, []);
 
@@ -154,6 +159,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     requestLeave: setIsRequestLeaveOpen,
     chat: setIsChatOpen,
     settings: setIsSettingsOpen,
+    inviteUser: setIsInviteUserOpen,
   };
 
 
@@ -179,6 +185,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 mb-2" align="end">
+                {permissions.canManageStaff && (
+                    <DropdownMenuItem onSelect={() => setIsInviteUserOpen(true)}>
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        <span>Add Team Member</span>
+                    </DropdownMenuItem>
+                )}
                 <DropdownMenuItem onSelect={() => setIsAssignTaskOpen(true)}>
                     <ListTodo className="mr-2 h-4 w-4" />
                     <span>New Task</span>
@@ -219,6 +231,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <NewRequisitionDialog open={isNewRequisitionOpen} onOpenChange={setIsNewRequisitionOpen} userProfile={userProfile} />
             <RequestLeaveDialog open={isRequestLeaveOpen} onOpenChange={setIsRequestLeaveOpen} userProfile={userProfile} />
             <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile} />
+            <InviteUserDialog open={isInviteUserOpen} onOpenChange={setIsInviteUserOpen} currentUserProfile={userProfile} />
         </>
       )}
     </>
