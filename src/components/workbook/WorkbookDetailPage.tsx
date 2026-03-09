@@ -130,8 +130,8 @@ export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetai
     
     if (selectedSheet) {
         return (
-            <div className="space-y-4 p-6">
-                <div className="flex items-center gap-4">
+            <div className="space-y-4 p-6 h-full flex flex-col">
+                <div className="flex items-center gap-4 flex-shrink-0">
                     <Button variant="ghost" size="icon" onClick={() => setSelectedSheet(null)} className="-ml-2">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
@@ -140,7 +140,9 @@ export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetai
                         <p className="text-sm text-muted-foreground">Part of "{workbook.title}" workbook</p>
                     </div>
                 </div>
-                <SheetDataTable sheet={selectedSheet} permissions={workbookPermissions} />
+                <div className="flex-grow min-h-0">
+                    <SheetDataTable sheet={selectedSheet} permissions={workbookPermissions} />
+                </div>
             </div>
         );
     }

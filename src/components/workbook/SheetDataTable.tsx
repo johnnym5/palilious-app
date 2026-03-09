@@ -30,12 +30,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { AddRowDialog } from './AddRowDialog';
 import { EditRowDialog } from './EditRowDialog';
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
+import { SheetDataCard } from './SheetDataCard';
+import { Checkbox } from '../ui/checkbox';
 
 
 interface SheetDataTableProps {
@@ -64,12 +60,14 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
     const [columnToConfigure, setColumnToConfigure] = useState<string | null>(null);
     const [rowToEdit, setRowToEdit] = useState<{ rowIndex: number; data: Record<string, any> } | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedRows, setSelectedRows] = useState<number[]>([]);
 
 
     // Update local state if the sheet prop changes (e.g., user switches tabs)
     useEffect(() => {
         setData(sheet.data ? JSON.parse(JSON.stringify(sheet.data)) : []);
         setHeaders(sheet.headers ? [...sheet.headers] : []);
+        setSelectedRows([]);
     }, [sheet]);
     
     const filteredData = useMemo(() => {
@@ -92,6 +90,13 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         updateDocumentNonBlocking(sheetRef, payload);
         toast({ title: 'Saved', description: toastMessage });
     };
+    
+    const handleFieldChangeOnCard = (rowIndex: number, field: string, value: any) => {
+        const newData = [...data];
+        newData[rowIndex][field] = value;
+        setData(newData);
+        saveChanges({ data: newData }, `Updated ${field} for row.`);
+    };
 
     const handleSaveEdit = (rowIndex: number, updatedRowData: Record<string, any>) => {
         const newData = [...data];
@@ -106,7 +111,15 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         setData(updatedData);
         saveChanges({ data: updatedData }, 'The row has been deleted.');
         setRowToDelete(null);
-    }
+    };
+
+    const handleDeleteSelectedRows = () => {
+        if (selectedRows.length === 0 || !permissions.canEdit) return;
+        const updatedData = data.filter((_, index) => !selectedRows.includes(index));
+        setData(updatedData);
+        saveChanges({ data: updatedData }, `${selectedRows.length} row(s) deleted.`);
+        setSelectedRows([]);
+    };
     
     const handleDeleteColumn = () => {
         if (!columnToDelete || !permissions.canEdit) return;
@@ -122,10 +135,10 @@ export function SheetDataTable({ sheet, permissions }: SheetDataTableProps) {
         });
 
         setHeaders(newHeaders);
-setData(newData);
+        setData(newData);
         saveChanges({ data: newData, headers: newHeaders, columnConfig: newColumnConfig }, `Column "${columnToDelete}" has been deleted.`);
         setColumnToDelete(null);
-    }
+    };
     
     const handleExport = () => {
         const sheetData = [
@@ -140,18 +153,20 @@ setData(newData);
         toast({ title: 'Exporting...', description: `The sheet "${sheet.name}" is being downloaded.` });
     };
 
-    const getRowTitle = (row: Record<string, any>, headers: string[]): string => {
-        const nameHeaders = ['name', 'full name', 'title', 'subject'];
-        const lowerCaseHeaders = headers.map(h => h.toLowerCase());
-
-        for (const nameHeader of nameHeaders) {
-            const index = lowerCaseHeaders.indexOf(nameHeader);
-            if (index !== -1 && row[headers[index]]) {
-                return row[headers[index]];
-            }
+    const handleSelectRow = (rowIndex: number, checked: boolean) => {
+        if (checked) {
+            setSelectedRows(prev => [...prev, rowIndex]);
+        } else {
+            setSelectedRows(prev => prev.filter(idx => idx !== rowIndex));
         }
-        // Fallback to the first column's value if it exists, otherwise a generic title
-        return row[headers[0]] || 'Untitled Row';
+    };
+    
+    const handleSelectAll = () => {
+        if (selectedRows.length === filteredData.length) {
+            setSelectedRows([]);
+        } else {
+            setSelectedRows(filteredData.map(row => row.__originalIndex));
+        }
     };
 
 
@@ -172,124 +187,72 @@ setData(newData);
     }
 
     return (
-        <div className="h-[calc(100vh-24rem)] flex flex-col border rounded-lg">
-            <div className="flex-shrink-0 border-b p-2 flex flex-col sm:flex-row items-center gap-2">
-                 <ScrollArea className="w-full sm:w-auto">
-                    <div className="flex items-center gap-2 pb-2 sm:pb-0">
-                    {headers.map(header => {
-                        const Icon = TYPE_ICONS[sheet.columnConfig?.[header]?.type || 'text'];
-                        return (
-                        <div key={header} className="group flex items-center gap-1 rounded-full border bg-secondary/50 px-3 py-1 text-sm whitespace-nowrap">
-                            <Icon className="h-4 w-4 text-muted-foreground" />
-                            <span>{header}</span>
-                            {permissions.canEdit && (
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-5 w-5 -mr-2 opacity-50 group-hover:opacity-100">
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent>
-                                        <DropdownMenuItem onSelect={() => setColumnToConfigure(header)}>
-                                            <Settings className="mr-2 h-4 w-4"/>
-                                            Configure
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem 
-                                            className="text-destructive focus:text-destructive"
-                                            onSelect={() => setColumnToDelete(header)}>
-                                            <Trash2 className="mr-2 h-4 w-4" />
-                                            Delete
-                                        </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            )}
-                        </div>
-                    )})}
-                    </div>
-                    <ScrollBar orientation="horizontal" />
-                </ScrollArea>
-                <div className="relative w-full sm:w-auto sm:ml-auto">
+        <div className="h-full flex flex-col">
+            <div className="flex-shrink-0 p-2 flex flex-col sm:flex-row items-center gap-4">
+                <div className="relative w-full sm:flex-1">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                     <Input
                         type="search"
-                        placeholder="Search sheet..."
+                        placeholder={`Search ${sheet.name}...`}
                         className="pl-9 h-9 w-full"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
                     />
                 </div>
+                {permissions.canEdit && (
+                    <>
+                         <div className="flex items-center space-x-2">
+                             <Button variant="outline" size="sm" onClick={handleSelectAll} disabled={filteredData.length === 0}>
+                                 <Checkbox checked={selectedRows.length > 0 && selectedRows.length === filteredData.length} />
+                                 <span className="ml-2">Select All</span>
+                             </Button>
+                            <AlertDialog>
+                                <AlertDialogTrigger asChild>
+                                     <Button variant="destructive" size="sm" disabled={selectedRows.length === 0}>
+                                        <Trash2 className="mr-2 h-4 w-4" /> Delete ({selectedRows.length})
+                                    </Button>
+                                </AlertDialogTrigger>
+                                <AlertDialogContent>
+                                    <AlertDialogHeader><AlertDialogTitle>Are you sure?</AlertDialogTitle><AlertDialogDescription>This will delete {selectedRows.length} selected row(s).</AlertDialogDescription></AlertDialogHeader>
+                                    <AlertDialogFooter><AlertDialogCancel>Cancel</AlertDialogCancel><AlertDialogAction onClick={handleDeleteSelectedRows} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction></AlertDialogFooter>
+                                </AlertDialogContent>
+                            </AlertDialog>
+                         </div>
+                        <AddRowDialog open={isAddRowOpen} onOpenChange={setIsAddRowOpen} sheet={sheet}>
+                            <Button size="sm">
+                                <Plus className="mr-2 h-4 w-4" />
+                                New Asset
+                            </Button>
+                        </AddRowDialog>
+                    </>
+                )}
             </div>
             
-            <ScrollArea className="flex-grow bg-muted/20">
+            <ScrollArea className="flex-grow bg-muted/20 p-4">
                 {filteredData.length === 0 ? (
                     <div className="text-center py-24 text-sm text-muted-foreground">
-                        {searchTerm ? "No rows match your search." : "No rows yet. Click 'Add Row' to start."}
+                        {searchTerm ? "No rows match your search." : "No rows yet. Click 'New Asset' to start."}
                     </div>
                 ) : (
-                    <Accordion type="single" collapsible className="w-full">
-                        {filteredData.map((row) => {
-                            const originalRowIndex = row.__originalIndex;
-                            const rowTitle = getRowTitle(row, headers);
-                            return (
-                                <AccordionItem value={`item-${originalRowIndex}`} key={originalRowIndex} className="border-b">
-                                    <div className="flex items-center group">
-                                        <AccordionTrigger className="flex-1 text-left p-4 hover:no-underline">
-                                            <p className="font-semibold text-foreground line-clamp-1">{rowTitle}</p>
-                                        </AccordionTrigger>
-                                        {permissions.canEdit && (
-                                            <div className="pr-4">
-                                                <DropdownMenu>
-                                                    <DropdownMenuTrigger asChild>
-                                                        <Button variant="ghost" size="icon" className="h-8 w-8 opacity-50 group-hover:opacity-100">
-                                                            <MoreVertical className="h-4 w-4" />
-                                                        </Button>
-                                                    </DropdownMenuTrigger>
-                                                    <DropdownMenuContent align="end">
-                                                        <DropdownMenuItem onSelect={() => setRowToEdit({ rowIndex: originalRowIndex, data: row })}>Edit Row</DropdownMenuItem>
-                                                        <DropdownMenuItem onSelect={() => setRowToDelete(originalRowIndex)} className="text-destructive focus:text-destructive">Delete Row</DropdownMenuItem>
-                                                    </DropdownMenuContent>
-                                                </DropdownMenu>
-                                            </div>
-                                        )}
-                                    </div>
-                                    <AccordionContent>
-                                        <div className="px-4 pb-4 space-y-3">
-                                            {headers.map(header => (
-                                                <div key={header} className="grid grid-cols-3 gap-4 text-sm">
-                                                    <p className="font-semibold text-muted-foreground truncate">{header}</p>
-                                                    <p className="text-foreground col-span-2 break-words">{String(row[header] ?? '')}</p>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    </AccordionContent>
-                                </AccordionItem>
-                            )
-                        })}
-                    </Accordion>
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {filteredData.map((row) => (
+                           <SheetDataCard 
+                                key={row.__originalIndex}
+                                rowData={row}
+                                rowIndex={row.__originalIndex}
+                                headers={headers}
+                                sheet={sheet}
+                                isSelected={selectedRows.includes(row.__originalIndex)}
+                                onSelect={handleSelectRow}
+                                onEdit={() => setRowToEdit({ rowIndex: row.__originalIndex, data: row })}
+                                onDelete={() => setRowToDelete(row.__originalIndex)}
+                                onFieldChange={handleFieldChangeOnCard}
+                                permissions={permissions}
+                           />
+                        ))}
+                    </div>
                 )}
             </ScrollArea>
-             <div className="flex-shrink-0 border-t p-2 flex items-center gap-2">
-                 {permissions.canEdit && (
-                        <>
-                            <AddRowDialog open={isAddRowOpen} onOpenChange={setIsAddRowOpen} sheet={sheet}>
-                                <Button variant="outline" size="sm">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Row
-                                </Button>
-                            </AddRowDialog>
-                            <AddColumnDialog open={isAddColumnOpen} onOpenChange={setIsAddColumnOpen} sheet={sheet}>
-                                <Button variant="outline" size="sm">
-                                    <Plus className="mr-2 h-4 w-4" />
-                                    Add Column
-                                </Button>
-                            </AddColumnDialog>
-                        </>
-                    )}
-                    <Button variant="outline" size="sm" onClick={handleExport}>
-                        <FileDown className="mr-2 h-4 w-4" />
-                        Export as Excel
-                    </Button>
-            </div>
 
             {rowToEdit && (
                 <EditRowDialog
