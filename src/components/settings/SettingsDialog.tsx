@@ -1,6 +1,6 @@
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserProfile } from '@/lib/types';
 import { TeamPane } from './TeamPane';
@@ -24,12 +24,18 @@ export function SettingsDialog({ open, onOpenChange, userProfile }: SettingsDial
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent>
-                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
-                    <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
-                    <h1 className="text-2xl font-bold font-headline">Access Denied</h1>
-                    <p className="text-muted-foreground mt-2">You do not have permission to access organization settings.</p>
-                    <Button onClick={() => onOpenChange(false)} className="mt-6">Close</Button>
-                </div>
+                 <DialogHeader className="items-center text-center">
+                    <div className="p-3 rounded-full bg-destructive/10 mb-4">
+                        <ShieldAlert className="w-10 h-10 text-destructive" />
+                    </div>
+                    <DialogTitle className="text-2xl">Access Denied</DialogTitle>
+                    <DialogDescription>
+                        You do not have permission to access organization settings.
+                    </DialogDescription>
+                 </DialogHeader>
+                 <DialogFooter>
+                    <Button onClick={() => onOpenChange(false)} className="w-full">Close</Button>
+                 </DialogFooter>
             </DialogContent>
         </Dialog>
     )
