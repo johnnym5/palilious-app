@@ -85,17 +85,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const openProfile = () => setIsProfileOpen(true);
     const openSettings = () => setIsSettingsOpen(true);
     const openChat = () => setIsChatOpen(true);
+    const openTasks = () => setIsTasksOpen(true);
+    const openWorkbooks = () => setIsWorkbookOpen(true);
+    const openRequisitions = () => setIsRequisitionsOpen(true);
+    const openAttendance = () => setIsAttendanceOpen(true);
+    const openLeave = () => setIsLeaveOpen(true);
 
     uiEmitter.on('open-reports-dialog', openReports);
     uiEmitter.on('open-profile-dialog', openProfile);
     uiEmitter.on('open-settings-dialog', openSettings);
     uiEmitter.on('open-chat-dialog', openChat);
+    uiEmitter.on('open-tasks-dialog', openTasks);
+    uiEmitter.on('open-workbooks-dialog', openWorkbooks);
+    uiEmitter.on('open-requisitions-dialog', openRequisitions);
+    uiEmitter.on('open-attendance-dialog', openAttendance);
+    uiEmitter.on('open-leave-dialog', openLeave);
     
     return () => {
       uiEmitter.off('open-reports-dialog', openReports);
       uiEmitter.off('open-profile-dialog', openProfile);
       uiEmitter.off('open-settings-dialog', openSettings);
       uiEmitter.off('open-chat-dialog', openChat);
+      uiEmitter.off('open-tasks-dialog', openTasks);
+      uiEmitter.off('open-workbooks-dialog', openWorkbooks);
+      uiEmitter.off('open-requisitions-dialog', openRequisitions);
+      uiEmitter.off('open-attendance-dialog', openAttendance);
+      uiEmitter.off('open-leave-dialog', openLeave);
     };
   }, []);
 

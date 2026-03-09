@@ -5,6 +5,11 @@ type AppEvents = {
   'open-profile-dialog': void;
   'open-settings-dialog': void;
   'open-chat-dialog': void;
+  'open-tasks-dialog': void;
+  'open-workbooks-dialog': void;
+  'open-requisitions-dialog': void;
+  'open-attendance-dialog': void;
+  'open-leave-dialog': void;
 };
 
 type Callback<T> = (data: T) => void;

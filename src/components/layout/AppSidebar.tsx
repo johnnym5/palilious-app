@@ -82,7 +82,21 @@ export default function AppSidebar({ isMobile = false }: { isMobile?: boolean })
       case 'reports':
         uiEmitter.emit('open-reports-dialog');
         break;
-      // You can add other dialogs here if needed
+      case 'tasks':
+        uiEmitter.emit('open-tasks-dialog');
+        break;
+      case 'workbooks':
+        uiEmitter.emit('open-workbooks-dialog');
+        break;
+      case 'requisitions':
+        uiEmitter.emit('open-requisitions-dialog');
+        break;
+      case 'attendance':
+        uiEmitter.emit('open-attendance-dialog');
+        break;
+      case 'leave':
+        uiEmitter.emit('open-leave-dialog');
+        break;
     }
   };
   
