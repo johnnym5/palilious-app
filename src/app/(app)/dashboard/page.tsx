@@ -1,6 +1,6 @@
 'use client';
 import { StatCard } from "@/components/dashboard/StatCard";
-import { CheckCircle, Megaphone } from "lucide-react";
+import { CheckCircle, Megaphone, BookOpenCheck, FilePlus2, ListTodo } from "lucide-react";
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { useUser, useDoc, useCollection, useMemoFirebase, useFirestore } from "@/firebase";
 import { doc, collection, query, where, orderBy, limit } from "firebase/firestore";
@@ -12,11 +12,11 @@ import { usePermissions, type Permissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
 import { NewAnnouncementDialog } from "@/components/dashboard/NewAnnouncementDialog";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
-import { Card, CardHeader, CardTitle, CardContent, CardFooter } from "@/components/ui/card";
+import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { ClockControl } from "@/components/attendance/ClockControl";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import Link from 'next/link';
-import QuickActions from "@/components/dashboard/QuickActions";
+import { uiEmitter } from '@/lib/ui-emitter';
 
 // Local component for the ClockIn slide
 const ClockInCard = ({ userProfile, permissions, systemConfig }: { userProfile: UserProfile | null; permissions: Permissions; systemConfig: SystemConfig | null }) => {
@@ -71,6 +71,34 @@ const LatestAnnouncementCard = ({ userProfile }: { userProfile: UserProfile | nu
                 <Button variant="secondary" className="w-full bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30">View All</Button>
             </Link>
         </CardFooter>
+    </Card>
+  );
+};
+
+// Local component for Quick Actions
+const QuickActionsCard = ({ permissions }: { permissions: Permissions }) => {
+  return (
+    <Card className="bg-primary/90 text-primary-foreground h-full flex flex-col">
+      <CardHeader>
+        <CardTitle>Quick Actions</CardTitle>
+        <CardDescription className="text-primary-foreground/80">Your most common tasks, just a click away.</CardDescription>
+      </CardHeader>
+      <CardContent className="flex-grow grid grid-cols-1 sm:grid-cols-3 gap-4 items-center">
+        <Button variant="secondary" size="lg" className="flex-col h-auto py-4 w-full bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" onClick={() => uiEmitter.emit('open-new-workbook-dialog')}>
+          <BookOpenCheck className="h-6 w-6 mb-2" />
+          <span className="font-semibold">New Workbook</span>
+        </Button>
+        {permissions.canAccessRequisitions && (
+          <Button variant="secondary" size="lg" className="flex-col h-auto py-4 w-full bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" onClick={() => uiEmitter.emit('open-new-requisition-dialog')}>
+            <FilePlus2 className="h-6 w-6 mb-2" />
+            <span className="font-semibold">New Requisition</span>
+          </Button>
+        )}
+        <Button variant="secondary" size="lg" className="flex-col h-auto py-4 w-full bg-primary-foreground/20 text-primary-foreground hover:bg-primary-foreground/30" onClick={() => uiEmitter.emit('open-assign-task-dialog')}>
+          <ListTodo className="h-6 w-6 mb-2" />
+          <span className="font-semibold">Add a Task</span>
+        </Button>
+      </CardContent>
     </Card>
   );
 };
@@ -140,11 +168,12 @@ export default function DashboardPage() {
                          <CarouselItem className="pl-4">
                             <LatestAnnouncementCard userProfile={userProfile} />
                         </CarouselItem>
+                        <CarouselItem className="pl-4">
+                            <QuickActionsCard permissions={permissions} />
+                        </CarouselItem>
                     </CarouselContent>
                 </Carousel>
              )}
-
-            <QuickActions />
 
             <ActiveTasks />
 
