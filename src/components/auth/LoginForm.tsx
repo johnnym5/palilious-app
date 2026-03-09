@@ -21,6 +21,7 @@ import { useAuth, useFirestore } from "@/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
 import { query, collection, where, getDocs } from "firebase/firestore";
 import type { UserProfile } from "@/lib/types";
+import { sanitizeInput } from "@/lib/utils";
 
 
 const formSchema = z.object({
@@ -47,9 +48,10 @@ export function LoginForm() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsSubmitting(true);
     try {
+      const sanitizedOrgName = sanitizeInput(values.organizationName.toLowerCase());
       // 1. Find organization by name, using lowercase for case-insensitive search
       const orgsRef = collection(firestore, "organizations");
-      const orgQuery = query(orgsRef, where("name", "==", values.organizationName.toLowerCase()));
+      const orgQuery = query(orgsRef, where("name", "==", sanitizedOrgName));
       const orgSnapshot = await getDocs(orgQuery);
 
       if (orgSnapshot.empty) {
@@ -64,7 +66,8 @@ export function LoginForm() {
       const orgUsersQuery = query(usersRef, where("orgId", "==", orgId));
       const orgUsersSnapshot = await getDocs(orgUsersQuery);
       
-      const userDoc = orgUsersSnapshot.docs.find(doc => doc.data().username === values.username.toLowerCase());
+      const sanitizedUsername = sanitizeInput(values.username.toLowerCase());
+      const userDoc = orgUsersSnapshot.docs.find(doc => doc.data().username === sanitizedUsername);
       
       if (!userDoc) {
           throw new Error("Invalid credentials.");
