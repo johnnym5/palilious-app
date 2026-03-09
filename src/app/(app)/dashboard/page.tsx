@@ -7,7 +7,6 @@ import { doc, collection, query, where, orderBy, limit } from "firebase/firestor
 import type { UserProfile, Requisition, Announcement, SystemConfig } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useMemo, useState, useEffect } from "react";
-import { PerformanceCard } from "@/components/dashboard/PerformanceCard";
 import { Announcements } from "@/components/dashboard/Announcements";
 import { usePermissions, type Permissions } from "@/hooks/usePermissions";
 import { Button } from "@/components/ui/button";
@@ -135,9 +134,6 @@ export default function DashboardPage() {
              ) : (
                 <Carousel setApi={setApi} className="w-full" opts={{ loop: true }}>
                     <CarouselContent className="-ml-4">
-                        <CarouselItem className="pl-4">
-                            {userProfile && <PerformanceCard userProfile={userProfile} />}
-                        </CarouselItem>
                         <CarouselItem className="pl-4">
                             <ClockInCard userProfile={userProfile} permissions={permissions} systemConfig={systemConfig} />
                         </CarouselItem>
