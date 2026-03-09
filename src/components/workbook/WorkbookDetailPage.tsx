@@ -1,22 +1,20 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useFirestore, useDoc, useCollection, useMemoFirebase, useUser, deleteDocumentNonBlocking } from '@/firebase';
 import { doc, collection, query } from 'firebase/firestore';
-import type { Workbook, Sheet, UserProfile, WorkbookRole } from '@/lib/types';
+import type { Workbook, Sheet, UserProfile } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { ShieldAlert, Plus, MoreVertical, Trash2, Edit, ListTodo, ArrowLeft } from 'lucide-react';
+import { ShieldAlert, Plus, ArrowLeft, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SheetDataTable } from '@/components/workbook/SheetDataTable';
-import { useState, useMemo, useEffect } from 'react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { useState, useMemo } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddSheetDialog } from '@/components/workbook/AddSheetDialog';
 import { RenameSheetDialog } from '@/components/workbook/RenameSheetDialog';
 import { AssignTaskDialog } from '@/components/tasks/AssignTaskDialog';
 import { usePermissions } from '@/hooks/usePermissions';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { SheetCard } from './SheetCard';
+import { Input } from '../ui/input';
 
 
 interface WorkbookPermissions {
@@ -50,20 +48,20 @@ const useWorkbookPermissions = (workbook: Workbook | null, userProfile: UserProf
 
 interface WorkbookDetailPageProps {
     workbookId: string;
-    initialSheetId?: string | null;
     onBack: () => void;
 }
 
 
-export default function WorkbookDetailPage({ workbookId, initialSheetId, onBack }: WorkbookDetailPageProps) {
+export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetailPageProps) {
     const firestore = useFirestore();
     const { user: authUser } = useUser();
 
-    const [activeTab, setActiveTab] = useState<string | undefined>();
+    const [selectedSheet, setSelectedSheet] = useState<Sheet | null>(null);
     const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
     const [sheetToRename, setSheetToRename] = useState<Sheet | null>(null);
     const [sheetToDelete, setSheetToDelete] = useState<Sheet | null>(null);
     const [sheetToMakeTask, setSheetToMakeTask] = useState<Sheet | null>(null);
+    const [searchTerm, setSearchTerm] = useState('');
 
     const userProfileRef = useMemoFirebase(() => 
         firestore && authUser ? doc(firestore, 'users', authUser.uid) : null,
@@ -77,37 +75,19 @@ export default function WorkbookDetailPage({ workbookId, initialSheetId, onBack 
         firestore && workbookId ? query(collection(firestore, `workbooks/${workbookId}/sheets`)) : null, 
     [firestore, workbookId]);
     const { data: sheets, isLoading: areSheetsLoading } = useCollection<Sheet>(sheetsQuery);
-    
-    const activeTabStorageKey = `workbook-active-tab-${workbookId}`;
-
-    useEffect(() => {
-        if (sheets && sheets.length > 0) {
-            if (initialSheetId && sheets.some(s => s.id === initialSheetId)) {
-                setActiveTab(initialSheetId);
-                return;
-            }
-            const savedTabId = localStorage.getItem(activeTabStorageKey);
-            const isValidSavedTab = sheets.some(s => s.id === savedTabId);
-            
-            if (savedTabId && isValidSavedTab) {
-                setActiveTab(savedTabId);
-            } else {
-                setActiveTab(sheets[0].id);
-            }
-        }
-    }, [sheets, workbookId, activeTabStorageKey, initialSheetId]);
-
-    useEffect(() => {
-        if (activeTab) {
-            localStorage.setItem(activeTabStorageKey, activeTab);
-        }
-    }, [activeTab, activeTabStorageKey]);
 
     const workbookPermissions = useWorkbookPermissions(workbook, userProfile);
     const generalPermissions = usePermissions(userProfile);
 
-
     const isLoading = isWorkbookLoading || areSheetsLoading || isProfileLoading;
+    
+    const filteredSheets = useMemo(() => {
+        if (!sheets) return [];
+        if (!searchTerm) return sheets;
+        return sheets.filter(sheet =>
+            sheet.name.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+    }, [sheets, searchTerm]);
 
     const handleDeleteSheet = () => {
         if (!sheetToDelete || !workbookPermissions.canEdit || !workbookId) return;
@@ -116,7 +96,28 @@ export default function WorkbookDetailPage({ workbookId, initialSheetId, onBack 
         setSheetToDelete(null);
     }
     
-    if (!isLoading && !workbookPermissions.canView) {
+    if (isLoading) {
+        return (
+            <div className="space-y-6 p-6">
+                <div className="flex items-center gap-4">
+                    <Skeleton className="h-10 w-10" />
+                    <div>
+                        <Skeleton className="h-8 w-64" />
+                        <Skeleton className="h-5 w-80 mt-1" />
+                    </div>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {Array.from({length: 4}).map((_, i) => <Skeleton key={i} className="h-56" />)}
+                </div>
+            </div>
+        )
+    }
+
+    if (!workbook) {
+        return <p className="p-6">Workbook not found.</p>;
+    }
+    
+    if (!workbookPermissions.canView) {
       return (
            <div className="flex flex-col items-center justify-center h-full text-center p-8">
               <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
@@ -127,94 +128,74 @@ export default function WorkbookDetailPage({ workbookId, initialSheetId, onBack 
       )
     }
     
-    if (isLoading) {
+    if (selectedSheet) {
         return (
             <div className="space-y-4 p-6">
-                <Skeleton className="h-8 w-1/2" />
-                <Skeleton className="h-6 w-3/4" />
-                <Card>
-                    <CardHeader><Skeleton className="h-10 w-1/4" /></CardHeader>
-                    <CardContent><Skeleton className="h-[60vh] w-full" /></CardContent>
-                </Card>
+                <div className="flex items-center gap-4">
+                    <Button variant="ghost" size="icon" onClick={() => setSelectedSheet(null)} className="-ml-2">
+                        <ArrowLeft className="h-5 w-5" />
+                    </Button>
+                    <div>
+                        <h1 className="text-xl font-bold font-headline tracking-tight">{selectedSheet.name}</h1>
+                        <p className="text-sm text-muted-foreground">Part of "{workbook.title}" workbook</p>
+                    </div>
+                </div>
+                <SheetDataTable sheet={selectedSheet} permissions={workbookPermissions} />
             </div>
-        )
-    }
-
-    if (!workbook) {
-        return <p className="p-6">Workbook not found.</p>;
+        );
     }
 
     return (
         <>
-            <div className="space-y-4 p-6">
+            <div className="space-y-6 p-6">
                 <div className="flex items-center gap-4">
-                    <Button variant="ghost" size="icon" onClick={onBack} className="-ml-2">
+                     <Button variant="ghost" size="icon" onClick={onBack} className="-ml-2">
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
                         <h1 className="text-3xl font-bold font-headline tracking-tight">{workbook.title}</h1>
-                        <p className="text-muted-foreground">{workbook.description || 'No description provided.'}</p>
+                        <p className="text-muted-foreground">{workbook.description || 'Manage sheets for this workbook.'}</p>
                     </div>
                 </div>
+                
+                <div className="flex flex-col sm:flex-row gap-4 justify-between items-center">
+                    <div className="relative w-full sm:max-w-xs">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input
+                            placeholder="Search sheets..."
+                            className="pl-10"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                        />
+                    </div>
+                    {workbookPermissions.canEdit && (
+                        <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
+                            <Button>
+                                <Plus className="mr-2 h-4 w-4" /> Add Sheet
+                            </Button>
+                        </AddSheetDialog>
+                    )}
+                </div>
 
-                {sheets && sheets.length > 0 && workbookId ? (
-                     <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                        <div className="flex items-center justify-between gap-4">
-                            <TabsList>
-                                {sheets.map(sheet => (
-                                    <TabsTrigger key={sheet.id} value={sheet.id} className="relative group pr-8">
-                                        {sheet.name}
-                                        {workbookPermissions.canManage && (
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="absolute right-0 top-1/2 -translate-y-1/2 h-8 w-8 opacity-0 group-hover:opacity-100 data-[state=open]:opacity-100">
-                                                        <MoreVertical className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="start">
-                                                    <DropdownMenuItem onSelect={() => setSheetToRename(sheet)}>
-                                                        <Edit className="mr-2 h-4 w-4" /> Rename
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={() => setSheetToMakeTask(sheet)}>
-                                                        <ListTodo className="mr-2 h-4 w-4" /> Create Task
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem onSelect={() => setSheetToDelete(sheet)} className="text-destructive focus:text-destructive">
-                                                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        )}
-                                    </TabsTrigger>
-                                ))}
-                            </TabsList>
-
-                            {workbookPermissions.canEdit && (
-                                <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
-                                    <Button variant="outline">
-                                        <Plus className="mr-2 h-4 w-4" /> Add Sheet
-                                    </Button>
-                                </AddSheetDialog>
-                            )}
-                        </div>
-                        {sheets.map(sheet => (
-                             <TabsContent key={sheet.id} value={sheet.id} className="mt-4">
-                                <SheetDataTable sheet={sheet} permissions={workbookPermissions} />
-                             </TabsContent>
+                {filteredSheets.length > 0 ? (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                        {filteredSheets.map(sheet => (
+                            <SheetCard 
+                                key={sheet.id}
+                                sheet={sheet}
+                                onSelect={setSelectedSheet}
+                                onRename={setSheetToRename}
+                                onDelete={setSheetToDelete}
+                                onCreateTask={setSheetToMakeTask}
+                                canManage={workbookPermissions.canManage}
+                            />
                         ))}
-                    </Tabs>
+                    </div>
                 ) : (
-                    <Card>
-                        <CardContent className="p-8 text-center text-muted-foreground">
-                            This workbook has no sheets yet.
-                            {workbookPermissions.canEdit && workbookId && (
-                                <AddSheetDialog open={isAddSheetOpen} onOpenChange={setIsAddSheetOpen} workbookId={workbookId}>
-                                    <Button variant="outline" className="mt-4">
-                                        <Plus className="mr-2 h-4 w-4" /> Add First Sheet
-                                    </Button>
-                                </AddSheetDialog>
-                            )}
-                        </CardContent>
-                    </Card>
+                    <div className="text-center py-20 border-2 border-dashed rounded-lg">
+                        <p className="font-semibold">{searchTerm ? 'No sheets found' : 'This workbook is empty'}</p>
+                        <p className="text-sm text-muted-foreground">{searchTerm ? 'Try a different search term.' : 'Click "Add Sheet" to get started.'}</p>
+                    </div>
                 )}
             </div>
 
