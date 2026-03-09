@@ -5,10 +5,6 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
-
-// Import the layouts and pages directly
-import AppLayout from './(app)/layout';
-import DashboardPage from './(app)/dashboard/page';
 import { Button } from '@/components/ui/button';
 import { Logo } from '@/components/Logo';
 import { AuthDialog } from '@/components/auth/AuthDialog';
@@ -51,12 +47,17 @@ export default function RootPage() {
   useEffect(() => {
       // This is for Super Admin, which has a completely different layout.
       // We will keep this redirect for now as it's a separate part of the app.
-      if (!isUserLoading && user && isSuperAdmin) {
-          router.replace('/superadmin');
+      if (!isUserLoading && user) {
+          if (isSuperAdmin) {
+              router.replace('/superadmin');
+          } else {
+              router.replace('/dashboard');
+          }
       }
   }, [user, isUserLoading, isSuperAdmin, router])
 
-  if (isUserLoading) {
+  // While the initial user state is loading, or if a user is found (and we are waiting for the redirect), show a loader.
+  if (isUserLoading || user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Loader2 className="animate-spin text-primary w-12 h-12" />
@@ -64,16 +65,7 @@ export default function RootPage() {
     );
   }
   
-  // If user is logged in (and not a super admin), show the main app.
-  if (user && !isSuperAdmin) {
-    return (
-        <AppLayout>
-            <DashboardPage />
-        </AppLayout>
-    );
-  }
-
-  // If user is not logged in, show the public landing page.
+  // If we're done loading and there is no user, show the public landing page.
   return (
     <>
         <PublicLandingPage onLoginClick={() => setIsAuthDialogOpen(true)} />
