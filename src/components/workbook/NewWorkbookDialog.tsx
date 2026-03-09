@@ -84,7 +84,7 @@ export function NewWorkbookDialog({ open, onOpenChange, userProfile }: NewWorkbo
                         const rowObject: Record<string, any> = {};
                         headers.forEach((header, index) => {
                             // Ensure we don't try to access an index that doesn't exist in the row
-                            rowObject[header] = row.length > index ? row[index] : undefined;
+                            rowObject[header] = row.length > index ? row[index] : null;
                         });
                         return rowObject;
                     });
