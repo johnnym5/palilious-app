@@ -20,6 +20,7 @@ export function PendingApprovals({ userProfile }: PendingApprovalsProps) {
   const { toast } = useToast();
 
   const pendingQuery = useMemoFirebase(() => {
+    if (!firestore) return null;
     return query(
       collection(firestore, 'attendance'),
       where('orgId', '==', userProfile.orgId),

@@ -49,7 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
+    firestore && user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);

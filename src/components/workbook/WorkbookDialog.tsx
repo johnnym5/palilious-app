@@ -26,7 +26,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 
 function SheetList({ workbookId, onSelectSheet }: { workbookId: string, onSelectSheet: (workbookId: string, sheetId: string) => void }) {
     const firestore = useFirestore();
-    const sheetsQuery = useMemoFirebase(() => query(collection(firestore, `workbooks/${workbookId}/sheets`), orderBy('name')), [firestore, workbookId]);
+    const sheetsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `workbooks/${workbookId}/sheets`), orderBy('name')) : null, [firestore, workbookId]);
     const { data: sheets, isLoading } = useCollection<Sheet>(sheetsQuery);
 
     if (isLoading) {
@@ -62,6 +62,7 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
     const [searchTerm, setSearchTerm] = useState('');
 
     const workbooksQuery = useMemoFirebase(() => {
+        if (!firestore) return null;
         return query(
             collection(firestore, 'workbooks'),
             where('visibleTo', 'array-contains', userProfile.id)
@@ -215,7 +216,7 @@ function WorkbookDialogContent() {
   const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, 'users', authUser.uid) : null
+    firestore && authUser ? doc(firestore, 'users', authUser.uid) : null
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   

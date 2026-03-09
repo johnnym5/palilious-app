@@ -18,7 +18,7 @@ export function AttendancePageContent() {
   const firestore = useFirestore();
 
   const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, "users", authUser.uid) : null
+    firestore && authUser ? doc(firestore, "users", authUser.uid) : null
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 

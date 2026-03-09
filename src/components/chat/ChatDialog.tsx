@@ -23,7 +23,7 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile }: ChatDialo
   const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
 
   const usersQuery = useMemoFirebase(() => 
-    query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId))
+    firestore ? query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId)) : null
   , [firestore, currentUserProfile.orgId]);
   const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
 

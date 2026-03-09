@@ -66,15 +66,15 @@ export default function WorkbookDetailPage({ workbookId, initialSheetId, onBack 
     const [sheetToMakeTask, setSheetToMakeTask] = useState<Sheet | null>(null);
 
     const userProfileRef = useMemoFirebase(() => 
-        authUser ? doc(firestore, 'users', authUser.uid) : null,
+        firestore && authUser ? doc(firestore, 'users', authUser.uid) : null,
     [firestore, authUser]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
-    const workbookRef = useMemoFirebase(() => workbookId ? doc(firestore, 'workbooks', workbookId) : null, [firestore, workbookId]);
+    const workbookRef = useMemoFirebase(() => firestore && workbookId ? doc(firestore, 'workbooks', workbookId) : null, [firestore, workbookId]);
     const { data: workbook, isLoading: isWorkbookLoading } = useDoc<Workbook>(workbookRef);
 
     const sheetsQuery = useMemoFirebase(() => 
-        workbookId ? query(collection(firestore, `workbooks/${workbookId}/sheets`)) : null, 
+        firestore && workbookId ? query(collection(firestore, `workbooks/${workbookId}/sheets`)) : null, 
     [firestore, workbookId]);
     const { data: sheets, isLoading: areSheetsLoading } = useCollection<Sheet>(sheetsQuery);
     

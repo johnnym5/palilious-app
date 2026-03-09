@@ -97,7 +97,7 @@ export function DataManagement() {
     const [isDeleteAlertOpen, setIsDeleteAlertOpen] = useState(false);
 
     const { data: organizations, isLoading: areOrgsLoading } = useCollection<Organization>(
-        useMemoFirebase(() => collection(firestore, 'organizations'), [firestore])
+        useMemoFirebase(() => firestore ? collection(firestore, 'organizations') : null, [firestore])
     );
     
     const storageKey = 'superadmin-data-management-tab';

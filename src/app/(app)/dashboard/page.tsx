@@ -37,7 +37,7 @@ const ClockInCard = ({ userProfile, permissions, systemConfig }: { userProfile: 
 const LatestAnnouncementCard = ({ userProfile }: { userProfile: UserProfile | null }) => {
   const firestore = useFirestore();
   const announcementQuery = useMemoFirebase(() => {
-    if (!userProfile) return null;
+    if (!firestore || !userProfile) return null;
     return query(
       collection(firestore, 'announcements'),
       where('orgId', '==', userProfile.orgId),
@@ -84,7 +84,7 @@ export default function DashboardPage() {
     const [api, setApi] = useState<CarouselApi>()
 
     const userProfileRef = useMemoFirebase(() => 
-        authUser ? doc(firestore, 'users', authUser.uid) : null, 
+        firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, 
     [firestore, authUser]);
     const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
     const permissions = usePermissions(userProfile);
@@ -92,7 +92,7 @@ export default function DashboardPage() {
 
     // Fetch pending approvals for requisitions
     const reqsQuery = useMemoFirebase(() => {
-        if (!userProfile) return null;
+        if (!firestore || !userProfile) return null;
         const inboxStatuses: string[] = [];
         if (permissions.canApproveHR) inboxStatuses.push('PENDING_HR');
         if (permissions.canApproveFinance) inboxStatuses.push('PENDING_FINANCE');

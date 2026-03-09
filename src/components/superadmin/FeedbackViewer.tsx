@@ -23,7 +23,7 @@ interface FeedbackViewerProps {
 export function FeedbackViewer({ open, onOpenChange }: FeedbackViewerProps) {
     const firestore = useFirestore();
 
-    const allFeedbackQuery = useMemoFirebase(() => query(collection(firestore, 'feedback'), orderBy('createdAt', 'desc')), [firestore]);
+    const allFeedbackQuery = useMemoFirebase(() => firestore ? query(collection(firestore, 'feedback'), orderBy('createdAt', 'desc')) : null, [firestore]);
     const { data: allFeedback, isLoading } = useCollection<Feedback>(allFeedbackQuery);
 
     const handleMarkAsRead = (feedbackId: string) => {

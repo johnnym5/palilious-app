@@ -23,7 +23,7 @@ export function TasksPageContent() {
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, 'users', authUser.uid) : null, 
+    firestore && authUser ? doc(firestore, 'users', authUser.uid) : null, 
   [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
 
@@ -31,7 +31,7 @@ export function TasksPageContent() {
 
   const taskIdFromUrl = searchParams.get('taskId');
   const taskFromUrlRef = useMemoFirebase(() => 
-    taskIdFromUrl ? doc(firestore, 'tasks', taskIdFromUrl) : null,
+    firestore && taskIdFromUrl ? doc(firestore, 'tasks', taskIdFromUrl) : null,
   [firestore, taskIdFromUrl]);
   const { data: taskFromUrl } = useDoc<Task>(taskFromUrlRef);
 

@@ -16,14 +16,14 @@ export function ActiveTasks() {
     const [selectedTask, setSelectedTask] = useState<Task | null>(null);
 
     const userProfileRef = useMemoFirebase(() => 
-        authUser ? doc(firestore, 'users', authUser.uid) : null,
+        firestore && authUser ? doc(firestore, 'users', authUser.uid) : null,
     [firestore, authUser]);
     const { data: userProfile } = useDoc(userProfileRef);
     const permissions = usePermissions(userProfile);
 
     // Simplified query to avoid composite index.
     const tasksQuery = useMemoFirebase(() => {
-        if (!authUser) return null;
+        if (!firestore || !authUser) return null;
         return query(
             collection(firestore, 'tasks'),
             where('assignedTo', '==', authUser.uid),

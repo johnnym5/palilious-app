@@ -28,7 +28,7 @@ export default function AppHeader() {
 
   // Get user profile and permissions
   const userProfileRef = useMemoFirebase(() => 
-    user ? doc(firestore, 'users', user.uid) : null
+    firestore && user ? doc(firestore, 'users', user.uid) : null
   , [firestore, user]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
@@ -40,7 +40,7 @@ export default function AppHeader() {
 
   // --- Start of logic from Notifications ---
   const notificationsQuery = useMemoFirebase(() => {
-    if (!user) return null;
+    if (!firestore || !user) return null;
     return query(
         collection(firestore, 'notifications'),
         where('userId', '==', user.uid),

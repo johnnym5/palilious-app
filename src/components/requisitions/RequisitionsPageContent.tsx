@@ -57,7 +57,7 @@ export function RequisitionsPageContent() {
   const [isNewRequestOpen, setIsNewRequestOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, "users", authUser.uid) : null
+    firestore && authUser ? doc(firestore, "users", authUser.uid) : null
   , [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
@@ -65,7 +65,7 @@ export function RequisitionsPageContent() {
 
   const reqIdFromUrl = searchParams.get('reqId');
   const reqFromUrlRef = useMemoFirebase(() => 
-    reqIdFromUrl ? doc(firestore, 'requisitions', reqIdFromUrl) : null
+    firestore && reqIdFromUrl ? doc(firestore, 'requisitions', reqIdFromUrl) : null
   , [firestore, reqIdFromUrl]);
   const { data: reqFromUrl } = useDoc<Requisition>(reqFromUrlRef);
 

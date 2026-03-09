@@ -17,7 +17,7 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
   const firestore = useFirestore();
 
   const attendanceQuery = useMemoFirebase(() => {
-    if (!userProfile) return null;
+    if (!firestore || !userProfile) return null;
     return query(
       collection(firestore, 'attendance'),
       where('userId', '==', userProfile.id),

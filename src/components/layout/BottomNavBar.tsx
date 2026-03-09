@@ -72,7 +72,7 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, 'users', authUser.uid) : null
+    firestore && authUser ? doc(firestore, 'users', authUser.uid) : null
   , [firestore, authUser]);
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);

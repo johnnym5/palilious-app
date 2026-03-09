@@ -25,14 +25,14 @@ export function Announcements() {
     const [annToDelete, setAnnToDelete] = useState<Announcement | null>(null);
 
     const userProfileRef = useMemoFirebase(() => 
-        authUser ? doc(firestore, "users", authUser.uid) : null,
+        firestore && authUser ? doc(firestore, "users", authUser.uid) : null,
     [firestore, authUser]);
     
     const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
     const permissions = usePermissions(userProfile);
 
     const announcementsQuery = useMemoFirebase(() => {
-        if (!userProfile) return null;
+        if (!firestore || !userProfile) return null;
         return query(
             collection(firestore, 'announcements'),
             where('orgId', '==', userProfile.orgId),

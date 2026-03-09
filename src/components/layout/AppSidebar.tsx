@@ -56,13 +56,13 @@ export default function AppSidebar({ isMobile = false }: { isMobile?: boolean })
   const firestore = useFirestore();
 
   const userProfileRef = useMemoFirebase(() => 
-    authUser ? doc(firestore, "users", authUser.uid) : null,
+    firestore && authUser ? doc(firestore, "users", authUser.uid) : null,
   [firestore, authUser]);
   const { data: userProfile, isLoading: isProfileLoading } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
   
   const orgRef = useMemoFirebase(() => 
-    userProfile?.orgId ? doc(firestore, "organizations", userProfile.orgId) : null,
+    firestore && userProfile?.orgId ? doc(firestore, "organizations", userProfile.orgId) : null,
   [firestore, userProfile?.orgId]);
   const { data: organization, isLoading: isOrgLoading } = useDoc<Organization>(orgRef);
 
