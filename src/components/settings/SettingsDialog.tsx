@@ -3,6 +3,12 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { UserProfile } from '@/lib/types';
+import { TeamPane } from './TeamPane';
+import { SystemPane } from './SystemPane';
+import { usePermissions } from '@/hooks/usePermissions';
+import { ShieldAlert } from 'lucide-react';
+import { Button } from '../ui/button';
+import { useRouter } from 'next/navigation';
 
 interface SettingsDialogProps {
   open: boolean;
@@ -10,43 +16,46 @@ interface SettingsDialogProps {
   userProfile: UserProfile;
 }
 
-// Basic placeholder panes for now
-const TeamPane = () => (
-    <div className="p-4">
-        <h3 className="font-semibold mb-2">Team Management</h3>
-        <p className="text-sm text-muted-foreground">User listing and invitation features will be implemented here.</p>
-    </div>
-);
-
-const SystemPane = () => (
-    <div className="p-4">
-        <h3 className="font-semibold mb-2">System Settings</h3>
-        <p className="text-sm text-muted-foreground">Configuration for branding and system toggles will be implemented here.</p>
-    </div>
-);
-
-
 export function SettingsDialog({ open, onOpenChange, userProfile }: SettingsDialogProps) {
+  const permissions = usePermissions(userProfile);
+  const router = useRouter();
+
+  if (!permissions.canManageStaff) {
+    return (
+        <Dialog open={open} onOpenChange={onOpenChange}>
+            <DialogContent>
+                 <div className="flex flex-col items-center justify-center h-full text-center p-8">
+                    <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
+                    <h1 className="text-2xl font-bold font-headline">Access Denied</h1>
+                    <p className="text-muted-foreground mt-2">You do not have permission to access organization settings.</p>
+                    <Button onClick={() => onOpenChange(false)} className="mt-6">Close</Button>
+                </div>
+            </DialogContent>
+        </Dialog>
+    )
+  }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[70vh] flex flex-col">
-        <DialogHeader>
+      <DialogContent className="max-w-4xl h-[90vh] flex flex-col p-0">
+        <DialogHeader className="p-6 pb-0">
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>
             Manage your organization's team members and system configuration.
           </DialogDescription>
         </DialogHeader>
-        <Tabs defaultValue="team" className="w-full flex-1 flex flex-col">
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="team">Team</TabsTrigger>
-            <TabsTrigger value="system">System</TabsTrigger>
-          </TabsList>
-          <TabsContent value="team" className="flex-1 overflow-y-auto mt-4">
-            <TeamPane />
+        <Tabs defaultValue="team" className="w-full flex-1 flex flex-col overflow-hidden">
+          <div className="px-6">
+            <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="team">Team</TabsTrigger>
+                <TabsTrigger value="system">System</TabsTrigger>
+            </TabsList>
+          </div>
+          <TabsContent value="team" className="flex-1 overflow-y-auto mt-4 px-6 pb-6">
+            <TeamPane currentUserProfile={userProfile} />
           </TabsContent>
-          <TabsContent value="system" className="flex-1 overflow-y-auto mt-4">
-            <SystemPane />
+          <TabsContent value="system" className="flex-1 overflow-y-auto mt-4 px-6 pb-6">
+            <SystemPane currentUserProfile={userProfile} />
           </TabsContent>
         </Tabs>
       </DialogContent>
