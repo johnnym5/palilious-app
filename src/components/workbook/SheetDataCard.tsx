@@ -100,11 +100,16 @@ export function SheetDataCard({
     }, [sheet.columnConfig]);
     
     return (
-        <Card className="group bg-card/50 hover:bg-card/90 transition-all flex flex-col justify-between">
+        <Card 
+            className="group bg-card/50 hover:bg-card/90 transition-all flex flex-col justify-between cursor-pointer"
+            onClick={() => onEdit(rowIndex, rowData)}
+        >
             <CardHeader className="flex flex-row items-start justify-between pb-2">
                 <div className="flex items-center gap-3">
                     {permissions.canEdit && (
-                        <Checkbox checked={isSelected} onCheckedChange={(checked) => onSelect(rowIndex, !!checked)} />
+                        <div onClick={(e) => e.stopPropagation()}>
+                            <Checkbox checked={isSelected} onCheckedChange={(checked) => onSelect(rowIndex, !!checked)} />
+                        </div>
                     )}
                     <div>
                         <p className="font-semibold text-foreground line-clamp-1">{title}</p>
@@ -112,23 +117,25 @@ export function SheetDataCard({
                     </div>
                 </div>
                  {permissions.canEdit && (
-                    <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-2 opacity-50 group-hover:opacity-100">
-                                <MoreVertical className="h-4 w-4" />
-                            </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => onEdit(rowIndex, rowData)}>
-                                <Edit className="mr-2 h-4 w-4" />
-                                <span>Edit Full Row</span>
-                            </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => onDelete(rowIndex)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                <span>Delete Row</span>
-                            </DropdownMenuItem>
-                        </DropdownMenuContent>
-                    </DropdownMenu>
+                    <div onClick={(e) => e.stopPropagation()}>
+                        <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1 -mr-2 opacity-50 group-hover:opacity-100">
+                                    <MoreVertical className="h-4 w-4" />
+                                </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                                <DropdownMenuItem onClick={() => onEdit(rowIndex, rowData)}>
+                                    <Edit className="mr-2 h-4 w-4" />
+                                    <span>Edit Full Row</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={() => onDelete(rowIndex)} className="text-destructive focus:bg-destructive/10 focus:text-destructive">
+                                    <Trash2 className="mr-2 h-4 w-4" />
+                                    <span>Delete Row</span>
+                                </DropdownMenuItem>
+                            </DropdownMenuContent>
+                        </DropdownMenu>
+                    </div>
                 )}
             </CardHeader>
             <CardContent className="space-y-4">
@@ -140,7 +147,7 @@ export function SheetDataCard({
                         </div>
                     ))}
                 </div>
-                 <div className="space-y-2">
+                 <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
                     {selectFields.map(header => {
                         const config = sheet.columnConfig![header];
                         return (
