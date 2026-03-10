@@ -33,7 +33,7 @@ type DialogManager = {
 };
 
 const mainNavItems = [
-  { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
+  { href: "/overview", icon: LayoutDashboard, label: "Overview" },
   { isSeparator: true },
   { dialog: "attendance", icon: CalendarCheck2, label: "Attendance" },
   { dialog: "leave", icon: CalendarPlus, label: "Leave" },

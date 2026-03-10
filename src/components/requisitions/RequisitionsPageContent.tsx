@@ -116,7 +116,7 @@ export function RequisitionsPageContent() {
             <ShieldAlert className="w-16 h-16 text-destructive mb-4" />
             <h1 className="text-2xl font-bold font-headline">Access Denied</h1>
             <p className="text-muted-foreground mt-2">The financial requisitions module is currently disabled for your account or organization.</p>
-            <Button onClick={() => router.push('/dashboard')} className="mt-6">Return to Dashboard</Button>
+            <Button onClick={() => router.push('/overview')} className="mt-6">Return to Overview</Button>
           </div>
     )
   }

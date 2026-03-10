@@ -51,7 +51,7 @@ export default function RootPage() {
           if (isSuperAdmin) {
               router.replace('/superadmin');
           } else {
-              router.replace('/dashboard');
+              router.replace('/overview');
           }
       }
   }, [user, isUserLoading, isSuperAdmin, router])
