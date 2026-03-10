@@ -8,13 +8,13 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { PREDEFINED_ROLES, PREDEFINED_DEPARTMENTS } from "@/lib/roles-and-departments";
+import { PREDEFINED_DEPARTMENTS, ROLES_BY_DEPARTMENT } from "@/lib/roles-and-departments";
 import { sanitizeInput } from "@/lib/utils";
 import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
@@ -25,8 +25,8 @@ const formSchema = z.object({
   fullName: z.string().min(1, "Full name is required."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
+  departmentName: z.string({ required_error: "Please select a department."}),
   position: z.string().min(1, "Position is required."),
-  departmentName: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -51,6 +51,22 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
     },
   });
   
+  const selectedDepartment = form.watch('departmentName');
+
+  useEffect(() => {
+      // When department changes, reset the position field
+      form.resetField('position');
+  }, [selectedDepartment, form]);
+
+  const rolesForSelectedDepartment = useMemo(() => {
+    if (!selectedDepartment) return [];
+    const departmentRoles = ROLES_BY_DEPARTMENT[selectedDepartment as keyof typeof ROLES_BY_DEPARTMENT] || [];
+    // Also include 'Staff' as a generic option for any department, but exclude Org Admin from creation
+    const genericRoles = ["Staff"];
+    return [...new Set([...departmentRoles, ...genericRoles])];
+  }, [selectedDepartment]);
+
+
   const handleOpenChange = (isOpen: boolean) => {
     if (!isOpen) {
       form.reset();
@@ -139,22 +155,22 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
              <FormField control={form.control} name="password" render={({ field }) => (
                 <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="Min. 8 characters" {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
-             <FormField control={form.control} name="position" render={({ field }) => (
-                <FormItem><FormLabel>Position</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                        <SelectContent>
-                            {PREDEFINED_ROLES.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                        </SelectContent>
-                    </Select>
-                <FormMessage /></FormItem>
-            )}/>
-             <FormField control={form.control} name="departmentName" render={({ field }) => (
+            <FormField control={form.control} name="departmentName" render={({ field }) => (
                 <FormItem><FormLabel>Department</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl><SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger></FormControl>
                         <SelectContent>
                             {PREDEFINED_DEPARTMENTS.map(dep => <SelectItem key={dep} value={dep}>{dep}</SelectItem>)}
+                        </SelectContent>
+                    </Select>
+                <FormMessage /></FormItem>
+            )}/>
+             <FormField control={form.control} name="position" render={({ field }) => (
+                <FormItem><FormLabel>Position</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value} disabled={!selectedDepartment}>
+                        <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
+                        <SelectContent>
+                            {rolesForSelectedDepartment.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
                         </SelectContent>
                     </Select>
                 <FormMessage /></FormItem>

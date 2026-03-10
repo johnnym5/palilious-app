@@ -7,17 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useFirestore, updateDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
-import { PREDEFINED_ROLES, PREDEFINED_DEPARTMENTS } from "@/lib/roles-and-departments";
+import { PREDEFINED_DEPARTMENTS, ROLES_BY_DEPARTMENT } from "@/lib/roles-and-departments";
 
 const formSchema = z.object({
   position: z.string().min(1, "Position is required."),
-  departmentName: z.string().optional(),
+  departmentName: z.string({ required_error: "Department is required." }),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -32,10 +32,13 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
+  const isInitialRender = useRef(true);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
   });
+
+  const selectedDepartment = form.watch('departmentName');
 
   useEffect(() => {
     if (userToEdit) {
@@ -43,8 +46,33 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
         position: userToEdit.position,
         departmentName: userToEdit.departmentName,
       });
+      isInitialRender.current = true; // Reset for next time dialog opens
     }
   }, [userToEdit, form]);
+  
+  useEffect(() => {
+    if (isInitialRender.current) {
+        isInitialRender.current = false;
+        return;
+    }
+    form.resetField('position');
+  }, [selectedDepartment, form]);
+
+  const rolesForSelectedDepartment = useMemo(() => {
+    if (!selectedDepartment) return [];
+    const departmentRoles = ROLES_BY_DEPARTMENT[selectedDepartment as keyof typeof ROLES_BY_DEPARTMENT] || [];
+    
+    // Always include "Staff" as a generic option
+    const rolesToShow = [...new Set(['Staff', ...departmentRoles])];
+    
+    // Ensure the user's current position is in the list, especially for roles like 'Organization Administrator'
+    if (userToEdit && !rolesToShow.includes(userToEdit.position)) {
+        rolesToShow.push(userToEdit.position);
+    }
+    
+    return rolesToShow;
+  }, [selectedDepartment, userToEdit]);
+
 
   async function onSubmit(values: FormData) {
     if (!firestore) return;
@@ -82,22 +110,22 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField control={form.control} name="position" render={({ field }) => (
-              <FormItem><FormLabel>Position</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={userToEdit.position === 'Organization Administrator'}>
-                  <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {PREDEFINED_ROLES.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              <FormMessage /></FormItem>
-            )}/>
             <FormField control={form.control} name="departmentName" render={({ field }) => (
               <FormItem><FormLabel>Department</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
                   <FormControl><SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger></FormControl>
                   <SelectContent>
                     {PREDEFINED_DEPARTMENTS.map(dep => <SelectItem key={dep} value={dep}>{dep}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              <FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="position" render={({ field }) => (
+              <FormItem><FormLabel>Position</FormLabel>
+                <Select onValueChange={field.onChange} value={field.value} disabled={userToEdit.position === 'Organization Administrator' || !selectedDepartment}>
+                  <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
+                  <SelectContent>
+                    {rolesForSelectedDepartment.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
                   </SelectContent>
                 </Select>
               <FormMessage /></FormItem>
