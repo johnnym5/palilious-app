@@ -44,7 +44,7 @@ export default function SuperAdminPage() {
 
     useEffect(() => {
         if (!isUserLoading && user && !isSuperAdmin) {
-            router.replace('/dashboard');
+            router.replace('/overview');
         }
          if (!isUserLoading && !user) {
             router.replace('/login');

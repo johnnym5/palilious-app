@@ -1,20 +1,17 @@
 'use client';
+import { Button } from '@/components/ui/button';
+import { Info } from 'lucide-react';
+import Link from 'next/link';
 
-import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { Loader2 } from 'lucide-react';
-
-export default function DashboardRedirectPage() {
-  const router = useRouter();
-
-  useEffect(() => {
-    router.replace('/overview');
-  }, [router]);
-
+export default function DashboardMovedPage() {
   return (
     <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
-      <Loader2 className="h-12 w-12 animate-spin text-primary" />
-      <p className="mt-4 text-muted-foreground">Redirecting to your Overview...</p>
+        <Info className="h-12 w-12 text-primary" />
+        <h1 className="mt-4 text-2xl font-bold">This page has moved</h1>
+        <p className="mt-2 text-muted-foreground">The dashboard is now called "Overview".</p>
+        <Button asChild className="mt-6">
+            <Link href="/overview">Go to Overview</Link>
+        </Button>
     </div>
   );
 }
