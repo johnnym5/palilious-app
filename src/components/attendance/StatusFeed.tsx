@@ -7,11 +7,11 @@ import { useFirestore, useCollection, useMemoFirebase } from "@/firebase";
 import { collection, query, where } from "firebase/firestore";
 import { Skeleton } from "../ui/skeleton";
 import { useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
 import { Popover, PopoverContent, PopoverTrigger } from "../ui/popover";
 import { Button } from "../ui/button";
 import { MessageSquare, LifeBuoy } from "lucide-react";
 import { RequestAssistanceDialog } from "../tasks/RequestAssistanceDialog";
+import { uiEmitter } from '@/lib/ui-emitter';
 
 interface StatusFeedProps {
   userProfile: UserProfile | null;
@@ -20,7 +20,6 @@ interface StatusFeedProps {
 
 export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
   const firestore = useFirestore();
-  const router = useRouter();
 
   // State for assistance dialog
   const [assistanceUser, setAssistanceUser] = useState<UserProfile | null>(null);
@@ -45,10 +44,7 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
   }, [users]);
   
   const handleChat = (userId: string) => {
-      // This is a known issue - routing to a page that doesn't exist.
-      // A proper implementation would use the uiEmitter to open the chat dialog.
-      // For now, we preserve the original flawed behavior to focus on the user's request.
-      router.push(`/chat?with=${userId}`);
+      uiEmitter.emit('open-chat-dialog');
   };
 
 

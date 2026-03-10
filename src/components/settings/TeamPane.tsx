@@ -7,8 +7,7 @@ import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { MoreHorizontal, PlusCircle, Trash2 } from 'lucide-react';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { PlusCircle, Trash2, Edit } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { InviteUserDialog } from './InviteUserDialog';
 import { EditUserDialog } from './EditUserDialog';
@@ -88,21 +87,18 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
                                 <TableCell><Badge variant="secondary">{user.position}</Badge></TableCell>
                                 <TableCell>{user.departmentName || 'N/A'}</TableCell>
                                 <TableCell className="text-right">
-                                    <DropdownMenu>
-                                        <DropdownMenuTrigger asChild>
-                                            <Button variant="ghost" size="icon">
-                                                <MoreHorizontal className="h-4 w-4" />
+                                    <div className="flex items-center justify-end gap-2">
+                                        <Button variant="outline" size="sm" onClick={() => setUserToEdit(user)}>
+                                            <Edit className="mr-2 h-4 w-4" />
+                                            Edit
+                                        </Button>
+                                        {canBeDeleted(user) && (
+                                            <Button variant="destructive" size="sm" onClick={() => setUserToDelete(user)}>
+                                                <Trash2 className="mr-2 h-4 w-4" />
+                                                Delete
                                             </Button>
-                                        </DropdownMenuTrigger>
-                                        <DropdownMenuContent>
-                                            <DropdownMenuItem onSelect={() => setUserToEdit(user)}>Edit</DropdownMenuItem>
-                                            {canBeDeleted(user) && (
-                                                <DropdownMenuItem className="text-destructive" onSelect={() => setUserToDelete(user)}>
-                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                                </DropdownMenuItem>
-                                            )}
-                                        </DropdownMenuContent>
-                                    </DropdownMenu>
+                                        )}
+                                    </div>
                                 </TableCell>
                             </TableRow>
                         ))}

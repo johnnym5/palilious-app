@@ -4,14 +4,13 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
-import { Loader2, Building, Users, ArrowRight, LogOut, Bell } from 'lucide-react';
+import { Loader2, Building, Users, LogOut, Bell } from 'lucide-react';
 import { signOut } from 'firebase/auth';
 import { collection, getDocs, query, where } from 'firebase/firestore';
 import type { Organization, UserProfile, Feedback } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
 import { Skeleton } from "@/components/ui/skeleton";
-import Link from "next/link";
 import { Logo } from '@/components/Logo';
 import { FeedbackViewer } from '@/components/superadmin/FeedbackViewer';
 import { DataManagement } from '@/components/superadmin/DataManagement';
@@ -127,28 +126,23 @@ export default function SuperAdminPage() {
                     ))}
 
                     {!isLoading && organizations?.map(org => (
-                        <Link key={org.id} href={`/settings?orgId=${org.id}`} className="block transition-all hover:-translate-y-1 hover:shadow-primary/20">
-                            <Card className="h-full bg-card/50 hover:bg-card">
-                                <CardHeader>
-                                    <CardTitle className="flex items-center gap-2">
-                                        <Building className="h-5 w-5 text-primary" />
-                                        {org.name.charAt(0).toUpperCase() + org.name.slice(1)}
-                                    </CardTitle>
-                                    <CardDescription className="font-mono text-xs pt-1">{org.id}</CardDescription>
-                                </CardHeader>
-                                <CardContent>
-                                    <div className="flex items-center justify-between text-muted-foreground">
-                                        <div className="flex items-center gap-2">
-                                            <Users className="h-4 w-4" />
-                                            <span>{orgStats[org.id]?.userCount ?? 0} Members</span>
-                                        </div>
-                                        <div className="flex items-center gap-1 text-primary font-semibold text-sm">
-                                            Manage <ArrowRight className="h-4 w-4" />
-                                        </div>
+                        <Card key={org.id} className="h-full bg-card/50">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2">
+                                    <Building className="h-5 w-5 text-primary" />
+                                    {org.name.charAt(0).toUpperCase() + org.name.slice(1)}
+                                </CardTitle>
+                                <CardDescription className="font-mono text-xs pt-1">{org.id}</CardDescription>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="flex items-center justify-between text-muted-foreground">
+                                    <div className="flex items-center gap-2">
+                                        <Users className="h-4 w-4" />
+                                        <span>{orgStats[org.id]?.userCount ?? 0} Members</span>
                                     </div>
-                                </CardContent>
-                            </Card>
-                        </Link>
+                                </div>
+                            </CardContent>
+                        </Card>
                     ))}
                     {!isLoading && organizations?.length === 0 && (
                         <p className="text-muted-foreground col-span-full text-center py-16">No organizations found.</p>
