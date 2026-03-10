@@ -1,18 +1,19 @@
 "use client";
 
 import { useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useAuth } from '@/firebase';
 import { collection, query, where, doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2, Edit } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Loader2, KeyRound } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { InviteUserDialog } from './InviteUserDialog';
 import { EditUserDialog } from './EditUserDialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { sendPasswordResetEmail } from 'firebase/auth';
 
 
 interface TeamPaneProps {
@@ -21,10 +22,12 @@ interface TeamPaneProps {
 
 export function TeamPane({ currentUserProfile }: TeamPaneProps) {
     const firestore = useFirestore();
+    const auth = useAuth();
     const { toast } = useToast();
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
     const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
+    const [isResetting, setIsResetting] = useState<string | null>(null);
 
     const usersQuery = useMemoFirebase(() =>
         firestore ? query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId)) : null
@@ -49,6 +52,29 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
             description: `${userToDelete.fullName} has been removed from the organization.`,
         });
         setUserToDelete(null);
+    };
+
+    const handlePasswordReset = async (user: UserProfile) => {
+        if (!auth) {
+            toast({ variant: 'destructive', title: 'Error', description: 'Authentication service is not available.' });
+            return;
+        }
+        setIsResetting(user.id);
+        try {
+            await sendPasswordResetEmail(auth, user.email);
+            toast({
+                title: 'Password Reset Email Sent',
+                description: `An email has been sent to ${user.email} with instructions.`,
+            });
+        } catch (error: any) {
+            toast({
+                variant: 'destructive',
+                title: 'Failed to Send Reset Email',
+                description: error.message || 'An unexpected error occurred.',
+            });
+        } finally {
+            setIsResetting(null);
+        }
     };
 
     return (
@@ -87,10 +113,23 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
                                 <TableCell><Badge variant="secondary">{user.position}</Badge></TableCell>
                                 <TableCell>{user.departmentName || 'N/A'}</TableCell>
                                 <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2">
+                                    <div className="flex items-center justify-end gap-2 flex-wrap">
                                         <Button variant="outline" size="sm" onClick={() => setUserToEdit(user)}>
                                             <Edit className="mr-2 h-4 w-4" />
                                             Edit
+                                        </Button>
+                                         <Button
+                                            variant="outline"
+                                            size="sm"
+                                            onClick={() => handlePasswordReset(user)}
+                                            disabled={isResetting === user.id}
+                                        >
+                                            {isResetting === user.id ? (
+                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                            ) : (
+                                                <KeyRound className="mr-2 h-4 w-4" />
+                                            )}
+                                            Reset Pass
                                         </Button>
                                         {canBeDeleted(user) && (
                                             <Button variant="destructive" size="sm" onClick={() => setUserToDelete(user)}>
