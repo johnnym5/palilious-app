@@ -9,16 +9,16 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
-import { useFirestore, setDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
+import { useFirestore, setDocumentNonBlocking } from "@/firebase";
 import { collection, doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PREDEFINED_ROLES, PREDEFINED_DEPARTMENTS } from "@/lib/roles-and-departments";
 import { sanitizeInput } from "@/lib/utils";
+import { initializeApp, deleteApp } from "firebase/app";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
-import { Alert, AlertDescription, AlertTitle } from "../ui/alert";
-import { Terminal } from 'lucide-react';
+import { firebaseConfig } from "@/firebase/config";
 
 
 const formSchema = z.object({
@@ -40,7 +40,6 @@ interface InviteUserDialogProps {
 export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: InviteUserDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const firestore = useFirestore();
-  const auth = getAuth(); // We need to be careful with this
   const { toast } = useToast();
 
   const form = useForm<FormData>({
@@ -60,21 +59,21 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
   async function onSubmit(values: FormData) {
     if (!firestore) return;
     setIsLoading(true);
+    
+    const tempAppName = `temp-user-creation-app-${Date.now()}`;
+    let secondaryApp;
 
     try {
-      // This is a tricky operation on the client, as it can interfere with the admin's session.
-      // A backend function is the recommended approach. This is a client-side workaround.
+      // Initialize a secondary Firebase app to not interfere with the admin's auth state
+      secondaryApp = initializeApp(firebaseConfig, tempAppName);
+      const secondaryAuth = getAuth(secondaryApp);
+
+      // Create the user in Firebase Authentication
+      const userCredential = await createUserWithEmailAndPassword(secondaryAuth, values.email, values.password);
+      const newAuthUser = userCredential.user;
       
-      // We can't use the main auth instance from context as it would re-trigger auth state changes.
-      // We create a temporary, secondary app instance to handle this one-off user creation.
-      
-      // Creating a user this way on the client is not ideal. A proper implementation would use Firebase Admin SDK
-      // on a secure backend to mint a custom token or create the user directly.
-      // This is a placeholder to demonstrate the UI flow.
-      
-      // Placeholder logic: Just create the Firestore document.
-      const newUserId = doc(collection(firestore, 'users')).id; // Generate a new ID
-      const userDocRef = doc(firestore, "users", newUserId);
+      // Create the user's profile in Firestore using the new Auth UID
+      const userDocRef = doc(firestore, "users", newAuthUser.uid);
 
       const newUserProfile: Omit<UserProfile, 'id'> = {
         orgId: currentUserProfile.orgId,
@@ -87,49 +86,56 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
         status: 'OFFLINE',
       };
       
-      await setDocumentNonBlocking(userDocRef, newUserProfile, { merge: false });
+      // Use setDoc to create the document with the specific ID.
+      setDocumentNonBlocking(userDocRef, newUserProfile, { merge: false });
 
       toast({
-        title: "User Profile Created",
-        description: `${values.fullName}'s profile has been added. They will not be able to log in until an administrator creates their authentication credentials.`,
+        title: "User Account Created",
+        description: `${values.fullName}'s authentication and database records have been created.`,
       });
       
       handleDialogClose();
 
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Failed to Add User",
-        description: error.message || "An unexpected error occurred.",
-      });
+        let errorMessage = "An unexpected error occurred.";
+        if (error.code === 'auth/email-already-in-use') {
+            errorMessage = "This email address is already in use by another account.";
+        } else if (error.message) {
+            errorMessage = error.message;
+        }
+        toast({
+            variant: "destructive",
+            title: "Failed to Create User",
+            description: errorMessage,
+        });
     } finally {
-      setIsLoading(false);
+        setIsLoading(false);
+        // Clean up the temporary app instance
+        if (secondaryApp) {
+            await deleteApp(secondaryApp);
+        }
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Invite New User</DialogTitle>
           <DialogDescription>
-            Add a new member to your organization.
+            Create a new user account with their own credentials and database record.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-             <Alert>
-                <Terminal className="h-4 w-4" />
-                <AlertTitle>Developer Note</AlertTitle>
-                <AlertDescription>
-                    This form only creates the user's database record. A backend function using the Firebase Admin SDK is required to securely create their authentication account.
-                </AlertDescription>
-            </Alert>
             <FormField control={form.control} name="fullName" render={({ field }) => (
                 <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+             <FormField control={form.control} name="password" render={({ field }) => (
+                <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="Min. 8 characters" {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
              <FormField control={form.control} name="position" render={({ field }) => (
                 <FormItem><FormLabel>Position</FormLabel>
@@ -152,7 +158,7 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
                 <FormMessage /></FormItem>
             )}/>
             <Button type="submit" className="w-full" disabled={isLoading}>
-              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Add User Profile"}
+              {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Create User Account"}
             </Button>
           </form>
         </Form>
