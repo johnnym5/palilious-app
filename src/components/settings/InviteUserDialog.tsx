@@ -51,9 +51,11 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
     },
   });
   
-  const handleDialogClose = () => {
-    form.reset();
-    onOpenChange(false);
+  const handleOpenChange = (isOpen: boolean) => {
+    if (!isOpen) {
+      form.reset();
+    }
+    onOpenChange(isOpen);
   }
 
   async function onSubmit(values: FormData) {
@@ -94,7 +96,7 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
         description: `${values.fullName}'s authentication and database records have been created.`,
       });
       
-      handleDialogClose();
+      handleOpenChange(false);
 
     } catch (error: any) {
         let errorMessage = "An unexpected error occurred.";
