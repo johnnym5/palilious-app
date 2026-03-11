@@ -1,7 +1,7 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, RotateCw, RefreshCw, Undo } from 'lucide-react';
+import { ShieldAlert, RefreshCw } from 'lucide-react';
 import { useEffect } from 'react';
 
 export default function GlobalError({
@@ -12,7 +12,8 @@ export default function GlobalError({
   reset: () => void;
 }) {
   useEffect(() => {
-    // Optionally log the error to an error reporting service
+    // Cannot use hooks here, so we just log to console.
+    // A production app would use a third-party logging service.
     console.error("Global Error Boundary Caught:", error);
   }, [error]);
 
@@ -29,32 +30,18 @@ export default function GlobalError({
                 <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-full mb-6">
                     <ShieldAlert className="h-12 w-12 text-destructive" />
                 </div>
-                <h1 className="text-3xl font-bold font-headline text-foreground">Application Error</h1>
+                <h1 className="text-3xl font-bold font-headline text-foreground">A Critical Error Occurred</h1>
                 <p className="text-muted-foreground mt-2 max-w-md">
-                    An unexpected error occurred. This could be a temporary issue. Please try one of the recovery options below.
+                    The application has encountered a serious problem. The error has been logged for review. Please reload the page to restart.
                 </p>
                 
                 <div className="mt-8 flex flex-wrap justify-center gap-4">
-                    <Button
-                        onClick={() => window.history.back()}
-                        variant="outline"
-                    >
-                        <Undo className="mr-2 h-4 w-4" />
-                        Go Back
-                    </Button>
-                    <Button
-                        onClick={() => reset()}
-                        variant="outline"
-                    >
-                        <RotateCw className="mr-2 h-4 w-4" />
-                        Retry Action
-                    </Button>
                      <Button
                         onClick={() => window.location.reload()}
                         variant="destructive"
                     >
                         <RefreshCw className="mr-2 h-4 w-4" />
-                        Restart Page
+                        Reload Page
                     </Button>
                 </div>
             </div>

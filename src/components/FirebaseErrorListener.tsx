@@ -1,24 +1,40 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useEffect } from 'react';
 import { errorEmitter } from '@/firebase/error-emitter';
 import { FirestorePermissionError } from '@/firebase/errors';
-import { Button } from '@/components/ui/button';
-import { ShieldAlert } from 'lucide-react';
+import { useToast } from '@/hooks/use-toast';
+import { useUser, useDoc, useMemoFirebase, useFirestore } from '@/firebase';
+import { doc } from 'firebase/firestore';
+import { logErrorToFirestore } from '@/lib/error-logger';
+import type { UserProfile } from '@/lib/types';
 
-/**
- * An invisible component that listens for globally emitted 'permission-error' events.
- * It displays a full-screen "Access Denied" overlay instead of crashing the app.
- */
+
 export function FirebaseErrorListener() {
-  const [error, setError] = useState<FirestorePermissionError | null>(null);
-  const router = useRouter();
+  const { toast } = useToast();
+  const firestore = useFirestore();
+  const { user } = useUser();
+  
+  const userProfileRef = useMemoFirebase(() =>
+      firestore && user ? doc(firestore, 'users', user.uid) : null
+  , [firestore, user]);
+  const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
 
   useEffect(() => {
     const handleError = (error: FirestorePermissionError) => {
-      console.error("Firebase Permission Error Caught:", error.message);
-      setError(error);
+      // Log the full error to the backend for admin review
+      if (firestore) {
+        logErrorToFirestore(firestore, error, null, userProfile);
+      } else {
+        console.error("Firestore not available to log permission error:", error);
+      }
+
+      // Show a generic, non-blocking toast to the user
+      toast({
+        variant: 'destructive',
+        title: 'Action Denied',
+        description: 'You do not have permission to perform this action.',
+      });
     };
 
     errorEmitter.on('permission-error', handleError);
@@ -26,30 +42,8 @@ export function FirebaseErrorListener() {
     return () => {
       errorEmitter.off('permission-error', handleError);
     };
-  }, []);
+  }, [firestore, toast, userProfile]);
 
-  if (error) {
-    return (
-      <div className="fixed inset-0 z-[200] bg-background/95 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center animate-in fade-in-0 duration-300">
-        <div className="bg-destructive/10 border border-destructive/20 p-4 rounded-full mb-6">
-          <ShieldAlert className="h-12 w-12 text-destructive" />
-        </div>
-        <h1 className="text-3xl font-bold font-headline text-foreground">Access Denied</h1>
-        <p className="text-muted-foreground mt-2 max-w-md">
-          You do not have the required permissions to perform this action or view this data. This is likely a Firestore Security Rule issue.
-        </p>
-
-        <Button
-          onClick={() => router.back()}
-          className="mt-8"
-          variant="outline"
-        >
-          Go Back to Previous Page
-        </Button>
-      </div>
-    );
-  }
-
-  // This component renders nothing if there is no error.
+  // This component now renders nothing, it only listens and acts.
   return null;
 }

@@ -563,6 +563,22 @@
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["orgId", "userId", "userName", "reportDate", "content", "createdAt"]
+    },
+    "ErrorLog": {
+      "title": "Error Log",
+      "type": "object",
+      "description": "Represents a single error log captured from the application.",
+      "properties": {
+        "orgId": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" },
+        "errorMessage": { "type": "string" },
+        "stackTrace": { "type": "string" },
+        "componentStack": { "type": "string" },
+        "path": { "type": "string" }
+      },
+      "required": ["timestamp", "errorMessage"]
     }
   },
   "auth": {
@@ -814,6 +830,22 @@
             {
               "name": "reportId",
               "description": "The unique ID for the report."
+            }
+          ]
+        }
+      },
+      {
+        "path": "/error_logs/{errorId}",
+        "definition": {
+          "entityName": "ErrorLog",
+          "schema": {
+            "$ref": "#/entities/ErrorLog"
+          },
+          "description": "Stores client-side application errors for admin review.",
+          "params": [
+            {
+              "name": "errorId",
+              "description": "The unique ID for the error log."
             }
           ]
         }

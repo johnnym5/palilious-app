@@ -14,6 +14,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Logo } from '@/components/Logo';
 import { FeedbackViewer } from '@/components/superadmin/FeedbackViewer';
 import { DataManagement } from '@/components/superadmin/DataManagement';
+import { ErrorLogViewer } from '@/components/superadmin/ErrorLogViewer';
 
 interface OrgStats {
     userCount: number;
@@ -150,6 +151,7 @@ export default function SuperAdminPage() {
                 </div>
 
                 <DataManagement />
+                <ErrorLogViewer />
             </main>
             <FeedbackViewer open={showFeedback} onOpenChange={setShowFeedback} />
         </div>

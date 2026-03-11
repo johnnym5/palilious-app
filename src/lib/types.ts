@@ -303,3 +303,15 @@ export interface DailyReport {
   }[];
   createdAt: string; // ISO String
 }
+
+export interface ErrorLog {
+  id: string;
+  orgId?: string;
+  userId?: string;
+  userName?: string;
+  timestamp: string;
+  errorMessage: string;
+  stackTrace?: string;
+  componentStack?: string;
+  path?: string; // e.g., window.location.pathname
+}
