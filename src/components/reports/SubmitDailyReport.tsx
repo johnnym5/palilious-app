@@ -1,4 +1,4 @@
-'use client';
+"use client";
 
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -76,7 +76,7 @@ export function SubmitDailyReport({ userProfile }: SubmitDailyReportProps) {
             userName: userProfile.fullName,
             reportDate: today,
             content: sanitizeInput(values.content),
-            completedTasks: completedTaskDetails,
+            completedTasks: completedTaskDetails || [],
             createdAt: new Date().toISOString(),
         };
 

@@ -110,7 +110,7 @@ export interface Requisition {
   title: string;
   amount: number;
   description: string;
-  attachmentUrl?: string;
+  attachmentUrl?: string | null;
   status: RequisitionStatus;
   activity: ActivityEntry[];
   createdAt: string; // ISO String for timestamp
@@ -133,12 +133,12 @@ export interface Task {
   assignedToName: string;
   priority: TaskPriority;
   status: TaskStatus;
-  dueDate?: string; // ISO String
+  dueDate?: string | null;
   createdBy: string; // userId
   activity: ActivityEntry[];
   createdAt: string; // ISO string
-  workbookId?: string;
-  sheetId?: string;
+  workbookId?: string | null;
+  sheetId?: string | null;
   sharedWith?: string[];
   subTasks?: SubTask[];
   type?: 'STANDARD' | 'ASSISTANCE_REQUEST';

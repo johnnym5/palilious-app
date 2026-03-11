@@ -113,7 +113,7 @@ export function NewRequisitionDialog({ open, onOpenChange, userProfile }: NewReq
             status: nextStatus,
             createdAt: now,
             activity: [initialActivity],
-            attachmentUrl,
+            attachmentUrl: attachmentUrl || null,
         };
 
         await addDocumentNonBlocking(reqsCollection, newRequisition);
