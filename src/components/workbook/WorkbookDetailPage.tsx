@@ -7,7 +7,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { ShieldAlert, Plus, ArrowLeft, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SheetDataTable } from '@/components/workbook/SheetDataTable';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AddSheetDialog } from '@/components/workbook/AddSheetDialog';
 import { RenameSheetDialog } from '@/components/workbook/RenameSheetDialog';
@@ -49,10 +49,11 @@ const useWorkbookPermissions = (workbook: Workbook | null, userProfile: UserProf
 interface WorkbookDetailPageProps {
     workbookId: string;
     onBack: () => void;
+    initialSheetId: string | null;
 }
 
 
-export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetailPageProps) {
+export default function WorkbookDetailPage({ workbookId, onBack, initialSheetId }: WorkbookDetailPageProps) {
     const firestore = useFirestore();
     const { user: authUser } = useUser();
 
@@ -81,6 +82,15 @@ export default function WorkbookDetailPage({ workbookId, onBack }: WorkbookDetai
 
     const isLoading = isWorkbookLoading || areSheetsLoading || isProfileLoading;
     
+    useEffect(() => {
+        if (sheets && initialSheetId) {
+            const sheet = sheets.find(s => s.id === initialSheetId);
+            if (sheet) {
+                setSelectedSheet(sheet);
+            }
+        }
+    }, [sheets, initialSheetId]);
+
     const filteredSheets = useMemo(() => {
         if (!sheets) return [];
         if (!searchTerm) return sheets;
