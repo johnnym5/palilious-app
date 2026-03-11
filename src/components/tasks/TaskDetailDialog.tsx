@@ -36,6 +36,7 @@ import {
 import { ActivityFeed } from '../shared/ActivityFeed';
 import { ShareTaskDialog } from './ShareTaskDialog';
 import { EditTaskDialog } from './EditTaskDialog';
+import { uiEmitter } from '@/lib/ui-emitter';
 
 interface TaskDetailDialogProps {
   task: Task;
@@ -199,9 +200,16 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                     <span className="flex items-center gap-2 text-muted-foreground">
                       <BookOpenCheck className="h-4 w-4" /> Workbook
                     </span>
-                    <Link href={`/workbook?workbookId=${task.workbookId}`} onClick={() => onOpenChange(false)} className='font-medium text-primary hover:underline truncate max-w-[100px]'>
+                    <Button
+                        variant="link"
+                        className="h-auto p-0 font-medium text-primary hover:underline truncate max-w-[100px]"
+                        onClick={() => {
+                            uiEmitter.emit('open-workbooks-dialog', { workbookId: task.workbookId!, sheetId: task.sheetId });
+                            onOpenChange(false);
+                        }}
+                    >
                         View Sheet
-                    </Link>
+                    </Button>
                   </div>
                )}
             </div>

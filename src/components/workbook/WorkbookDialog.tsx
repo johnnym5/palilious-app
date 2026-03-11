@@ -223,12 +223,19 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
     )
 }
 
-function WorkbookDialogContent() {
+function WorkbookDialogContent({ initialPayload }: { initialPayload?: { workbookId?: string; sheetId?: string | null; } }) {
   const { user: authUser } = useUser();
   const firestore = useFirestore();
   const [viewingWorkbookId, setViewingWorkbookId] = useState<string | null>(null);
   const [initialSheetId, setInitialSheetId] = useState<string | null>(null);
   const [isNewWorkbookOpen, setIsNewWorkbookOpen] = useState(false);
+
+  useEffect(() => {
+    if (initialPayload?.workbookId) {
+        setViewingWorkbookId(initialPayload.workbookId);
+        setInitialSheetId(initialPayload.sheetId || null);
+    }
+  }, [initialPayload]);
 
   const userProfileRef = useMemoFirebase(() => 
     firestore && authUser ? doc(firestore, 'users', authUser.uid) : null
@@ -289,9 +296,10 @@ function WorkbookDialogContent() {
 interface WorkbookDialogProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    initialPayload?: { workbookId?: string; sheetId?: string | null; };
 }
 
-export function WorkbookDialog({ open, onOpenChange }: WorkbookDialogProps) {
+export function WorkbookDialog({ open, onOpenChange, initialPayload }: WorkbookDialogProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-7xl h-[90vh] flex flex-col p-0">
@@ -304,7 +312,7 @@ export function WorkbookDialog({ open, onOpenChange }: WorkbookDialogProps) {
           </DialogHeader>
         </VisuallyHidden>
         <ScrollArea className="flex-1">
-            <WorkbookDialogContent />
+            <WorkbookDialogContent initialPayload={initialPayload} />
         </ScrollArea>
       </DialogContent>
     </Dialog>

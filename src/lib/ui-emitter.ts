@@ -5,7 +5,7 @@ type AppEvents = {
   'open-settings-dialog': void;
   'open-chat-dialog': { initialUserId?: string } | void;
   'open-tasks-dialog': void;
-  'open-workbooks-dialog': void;
+  'open-workbooks-dialog': { workbookId?: string; sheetId?: string | null; } | void;
   'open-requisitions-dialog': void;
   'open-attendance-dialog': void;
   'open-leave-dialog': void;

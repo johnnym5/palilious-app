@@ -38,6 +38,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const { theme } = useTheme();
   const [isWorkbookOpen, setIsWorkbookOpen] = useState(false);
+  const [initialWorkbookPayload, setInitialWorkbookPayload] = useState<{ workbookId?: string; sheetId?: string | null } | undefined>();
   const [isRequisitionsOpen, setIsRequisitionsOpen] = useState(false);
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
@@ -102,7 +103,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       setIsChatOpen(true);
     };
     const openTasks = () => setIsTasksOpen(true);
-    const openWorkbooks = () => setIsWorkbookOpen(true);
+    const openWorkbooks = (payload?: { workbookId?: string; sheetId?: string | null }) => {
+      if (payload) {
+        setInitialWorkbookPayload(payload);
+      }
+      setIsWorkbookOpen(true);
+    };
     const openRequisitions = () => setIsRequisitionsOpen(true);
     const openAttendance = () => setIsAttendanceOpen(true);
     const openLeave = () => setIsLeaveOpen(true);
@@ -123,8 +129,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     uiEmitter.on('open-leave-dialog', openLeave);
     uiEmitter.on('open-reports-dialog', openReports);
     uiEmitter.on('open-assign-task-dialog', openAssignTask);
-    uiEmitter.on('open-new-requisition-dialog', openNewRequisition);
-    uiEmitter.on('open-new-workbook-dialog', openNewWorkbook);
+    uiEmitter.on('open-new-requisition-dialog', openNewWorkbook);
     uiEmitter.on('open-invite-user-dialog', openInviteUser);
     
     return () => {
@@ -138,8 +143,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       uiEmitter.off('open-leave-dialog', openLeave);
       uiEmitter.off('open-reports-dialog', openReports);
       uiEmitter.off('open-assign-task-dialog', openAssignTask);
-      uiEmitter.off('open-new-requisition-dialog', openNewRequisition);
-      uiEmitter.off('open-new-workbook-dialog', openNewWorkbook);
+      uiEmitter.off('open-new-requisition-dialog', openNewWorkbook);
       uiEmitter.off('open-invite-user-dialog', openInviteUser);
     };
   }, []);
@@ -231,7 +235,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       </div>
 
       {/* Main Feature Dialogs */}
-      <WorkbookDialog open={isWorkbookOpen} onOpenChange={setIsWorkbookOpen} />
+      <WorkbookDialog
+        open={isWorkbookOpen}
+        onOpenChange={(isOpen) => {
+          setIsWorkbookOpen(isOpen);
+          if (!isOpen) {
+            setInitialWorkbookPayload(undefined); // Clear payload on close
+          }
+        }}
+        initialPayload={initialWorkbookPayload}
+      />
       <RequisitionsDialog open={isRequisitionsOpen} onOpenChange={setIsRequisitionsOpen} />
       <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
       <AttendanceDialog open={isAttendanceOpen} onOpenChange={setIsAttendanceOpen} />
