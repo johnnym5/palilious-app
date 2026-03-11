@@ -2,7 +2,7 @@
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2, ListTodo, FileText, CalendarPlus, BookOpenCheck, Plus, UserPlus } from 'lucide-react';
+import { Loader2, ListTodo, FileText, CalendarPlus, BookOpenCheck, Plus, UserPlus, Eye } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
@@ -29,6 +29,7 @@ import { ProfileDialog } from '@/components/profile/ProfileDialog';
 import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { ChatDialog } from '@/components/chat/ChatDialog';
 import { InviteUserDialog } from '@/components/settings/InviteUserDialog';
+import { useImpersonation } from '@/context/ImpersonationProvider';
 
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -51,6 +52,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [initialChatPayload, setInitialChatPayload] = useState<{ initialUserId?: string } | undefined>();
   const [isInviteUserOpen, setIsInviteUserOpen] = useState(false);
+  const { isImpersonating } = useImpersonation();
 
   const userProfileRef = useMemoFirebase(() => 
     firestore && user ? doc(firestore, 'users', user.uid) : null
@@ -181,6 +183,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           </div>
           <BottomNavBar dialogManager={dialogManager}/>
       </div>
+
+       {/* Impersonation Banner */}
+       {isImpersonating && (
+        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 md:left-72 bg-amber-500 text-black p-2 text-center text-sm font-semibold z-50 flex items-center justify-center gap-2">
+            <Eye className="h-4 w-4" />
+            Viewing as Staff. Some actions are restricted.
+        </div>
+      )}
+
 
        {/* Desktop FAB */}
       <div className="hidden md:block">

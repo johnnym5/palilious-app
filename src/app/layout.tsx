@@ -3,6 +3,7 @@ import './globals.css';
 import { Toaster } from '@/components/ui/toaster';
 import { FirebaseClientProvider } from '@/firebase';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { ImpersonationProvider } from '@/context/ImpersonationProvider';
 
 export const metadata: Metadata = {
   title: 'Palilious',
@@ -33,8 +34,10 @@ export default function RootLayout({
             disableTransitionOnChange
         >
             <FirebaseClientProvider>
-            {children}
-            <Toaster />
+              <ImpersonationProvider>
+                {children}
+                <Toaster />
+              </ImpersonationProvider>
             </FirebaseClientProvider>
         </ThemeProvider>
       </body>

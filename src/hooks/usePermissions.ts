@@ -3,6 +3,7 @@ import type { UserProfile, UserPosition } from '@/lib/types';
 import { useSuperAdmin } from './useSuperAdmin';
 import { useSystemConfig } from './useSystemConfig';
 import { useMemo } from 'react';
+import { useImpersonation } from '@/context/ImpersonationProvider';
 
 export interface Permissions {
   canApproveHR: boolean;
@@ -83,6 +84,7 @@ const defaultPermissions: Permissions = {
 export function usePermissions(userProfile: UserProfile | null): Permissions {
   const { isSuperAdmin } = useSuperAdmin();
   const { config: systemConfig } = useSystemConfig(userProfile?.orgId);
+  const { isImpersonating } = useImpersonation();
 
   const permissions = useMemo(() => {
     if (isSuperAdmin) {
@@ -107,8 +109,13 @@ export function usePermissions(userProfile: UserProfile | null): Permissions {
       return defaultPermissions;
     }
     
-    const baseRole = getBaseRoleForPermissions(userProfile.position);
-    const rolePerms = positionPermissions[baseRole] || {};
+    const actualBaseRole = getBaseRoleForPermissions(userProfile.position);
+    const canActuallyManage = !!positionPermissions[actualBaseRole]?.canManageStaff || actualBaseRole === 'Organization Administrator';
+    
+    const isCurrentlyImpersonating = canActuallyManage && isImpersonating;
+    const effectiveBaseRole = isCurrentlyImpersonating ? 'Staff' : actualBaseRole;
+
+    const rolePerms = positionPermissions[effectiveBaseRole] || {};
     const customPerms = userProfile.customPermissions || {};
 
     const perms: Permissions = {
@@ -147,7 +154,7 @@ export function usePermissions(userProfile: UserProfile | null): Permissions {
     perms.canEditOwnProfile = userProfile.position !== 'Staff' || (systemConfig?.allow_self_edit ?? true);
 
     return perms;
-  }, [isSuperAdmin, userProfile, systemConfig]);
+  }, [isSuperAdmin, userProfile, systemConfig, isImpersonating]);
 
   return permissions;
 }

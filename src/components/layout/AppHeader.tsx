@@ -157,7 +157,7 @@ export default function AppHeader() {
                 </ScrollArea>
             </PopoverContent>
           </Popover>
-        <UserNav />
+        <UserNav userProfile={userProfile} />
       </div>
     </header>
   );

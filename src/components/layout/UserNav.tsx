@@ -9,13 +9,18 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { useUser, useAuth } from "@/firebase";
-import { LogOut, User as UserIcon, Settings } from "lucide-react";
+import { LogOut, User as UserIcon, Settings, Eye, EyeOff } from "lucide-react";
 import { signOut } from "firebase/auth";
 import { uiEmitter } from "@/lib/ui-emitter";
+import { usePermissions } from "@/hooks/usePermissions";
+import type { UserProfile } from "@/lib/types";
+import { useImpersonation } from "@/context/ImpersonationProvider";
 
-export function UserNav() {
+export function UserNav({ userProfile }: { userProfile: UserProfile | null }) {
   const { user } = useUser();
   const auth = useAuth();
+  const permissions = usePermissions(userProfile);
+  const { isImpersonating, setIsImpersonating } = useImpersonation();
 
   if (!user) {
     return null;
@@ -25,6 +30,10 @@ export function UserNav() {
     signOut(auth);
   };
   
+  const handleToggleImpersonation = () => {
+    setIsImpersonating(!isImpersonating);
+  };
+
   const userInitials = user.displayName?.split(' ').map(n => n[0]).join('') || user.email?.charAt(0).toUpperCase();
 
   return (
@@ -56,6 +65,12 @@ export function UserNav() {
             <span>Settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          {permissions.canManageStaff && (
+            <DropdownMenuItem onSelect={handleToggleImpersonation}>
+              {isImpersonating ? <EyeOff className="mr-2 h-4 w-4" /> : <Eye className="mr-2 h-4 w-4" />}
+              <span>{isImpersonating ? "Return to Admin View" : "View as Staff"}</span>
+            </DropdownMenuItem>
+          )}
           <DropdownMenuItem onClick={handleLogout}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Log out</span>

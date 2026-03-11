@@ -103,7 +103,7 @@ export function TeamLeaveCalendar({ userProfile }: TeamLeaveCalendarProps) {
         <CardTitle>Team Leave Calendar</CardTitle>
         <CardDescription>An overview of all approved leave requests across the organization.</CardDescription>
       </CardHeader>
-      <CardContent className="flex justify-center">
+      <CardContent>
         <Calendar
           showOutsideDays
           month={month}
