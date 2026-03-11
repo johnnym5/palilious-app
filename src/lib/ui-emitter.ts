@@ -9,6 +9,7 @@ type AppEvents = {
   'open-requisitions-dialog': void;
   'open-attendance-dialog': void;
   'open-leave-dialog': void;
+  'open-reports-dialog': void;
   'open-assign-task-dialog': void;
   'open-new-requisition-dialog': void;
   'open-new-workbook-dialog': void;

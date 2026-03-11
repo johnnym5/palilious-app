@@ -41,6 +41,7 @@ const mainNavItems = [
   { dialog: "tasks", icon: ListTodo, label: "Tasks" },
   { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
   { dialog: "requisitions", icon: ReceiptText, label: "Requisitions", permission: 'canAccessRequisitions' },
+  { dialog: "reports", icon: BarChart, label: "Reports" },
   { isSeparator: true },
   { dialog: "chat", icon: MessageSquare, label: "Chat", permission: "canAccessChat"},
   { dialog: "settings", icon: Settings, label: "Settings", permission: "canManageStaff"},
@@ -91,6 +92,9 @@ export default function AppSidebar({ isMobile = false }: { isMobile?: boolean })
         break;
       case 'leave':
         uiEmitter.emit('open-leave-dialog');
+        break;
+      case 'reports':
+        uiEmitter.emit('open-reports-dialog');
         break;
     }
   };

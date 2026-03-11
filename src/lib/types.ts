@@ -281,3 +281,17 @@ export interface LeaveRequest {
   approvedAt?: string; // ISO String
   createdAt: string; // ISO String
 }
+
+export interface DailyReport {
+  id: string;
+  orgId: string;
+  userId: string;
+  userName: string;
+  reportDate: string; // YYYY-MM-DD
+  content: string;
+  completedTasks?: {
+    taskId: string;
+    title: string;
+  }[];
+  createdAt: string; // ISO String
+}

@@ -16,6 +16,7 @@ import { RequisitionsDialog } from '@/components/requisitions/RequisitionsDialog
 import { TasksDialog } from '@/components/tasks/TasksDialog';
 import { AttendanceDialog } from '@/components/attendance/AttendanceDialog';
 import { LeaveDialog } from '@/components/leave/LeaveDialog';
+import { ReportsDialog } from '@/components/reports/ReportsDialog';
 import { uiEmitter } from '@/lib/ui-emitter';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -40,6 +41,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
+  const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
   const [isNewRequisitionOpen, setIsNewRequisitionOpen] = useState(false);
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
@@ -96,6 +98,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const openRequisitions = () => setIsRequisitionsOpen(true);
     const openAttendance = () => setIsAttendanceOpen(true);
     const openLeave = () => setIsLeaveOpen(true);
+    const openReports = () => setIsReportsOpen(true);
     const openAssignTask = () => setIsAssignTaskOpen(true);
     const openNewRequisition = () => setIsNewRequisitionOpen(true);
     const openNewWorkbook = () => setIsNewWorkbookOpen(true);
@@ -110,6 +113,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     uiEmitter.on('open-requisitions-dialog', openRequisitions);
     uiEmitter.on('open-attendance-dialog', openAttendance);
     uiEmitter.on('open-leave-dialog', openLeave);
+    uiEmitter.on('open-reports-dialog', openReports);
     uiEmitter.on('open-assign-task-dialog', openAssignTask);
     uiEmitter.on('open-new-requisition-dialog', openNewRequisition);
     uiEmitter.on('open-new-workbook-dialog', openNewWorkbook);
@@ -124,6 +128,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       uiEmitter.off('open-requisitions-dialog', openRequisitions);
       uiEmitter.off('open-attendance-dialog', openAttendance);
       uiEmitter.off('open-leave-dialog', openLeave);
+      uiEmitter.off('open-reports-dialog', openReports);
       uiEmitter.off('open-assign-task-dialog', openAssignTask);
       uiEmitter.off('open-new-requisition-dialog', openNewRequisition);
       uiEmitter.off('open-new-workbook-dialog', openNewWorkbook);
@@ -146,6 +151,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     tasks: setIsTasksOpen,
     attendance: setIsAttendanceOpen,
     leave: setIsLeaveOpen,
+    reports: setIsReportsOpen,
     profile: setIsProfileOpen,
     newWorkbook: setIsNewWorkbookOpen,
     newRequisition: setIsNewRequisitionOpen,
@@ -213,6 +219,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
       <AttendanceDialog open={isAttendanceOpen} onOpenChange={setIsAttendanceOpen} />
       <LeaveDialog open={isLeaveOpen} onOpenChange={setIsLeaveOpen} />
+      <ReportsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
       {userProfile && <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} userProfile={userProfile} />}
       {userProfile && <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} userProfile={userProfile} />}
       {userProfile && <ChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} currentUserProfile={userProfile} />}
