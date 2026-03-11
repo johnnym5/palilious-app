@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useState } from 'react';
 import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
@@ -7,13 +7,15 @@ import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2, Edit, Loader2, KeyRound } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Loader2, KeyRound, MoreVertical } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { InviteUserDialog } from './InviteUserDialog';
 import { EditUserDialog } from './EditUserDialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { sendPasswordResetEmail } from 'firebase/auth';
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
 
 
 interface TeamPaneProps {
@@ -82,7 +84,6 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
         const actionCodeSettings = {
             url: `${window.location.origin}/login`,
             handleCodeInApp: true,
-            dynamicLinkDomain: process.env.NEXT_PUBLIC_FIREBASE_DYNAMIC_LINK_DOMAIN
         };
 
         try {
@@ -113,7 +114,53 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
                     </Button>
                 </InviteUserDialog>
             </div>
-            <div className="border rounded-lg">
+
+            {/* Mobile View */}
+            <div className="md:hidden space-y-4">
+                {isLoading && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
+                {!isLoading && users?.map(user => (
+                    <Card key={user.id}>
+                        <CardHeader>
+                            <div className="flex items-start justify-between">
+                                <div>
+                                    <CardTitle>{user.fullName}</CardTitle>
+                                    <CardDescription>{user.email}</CardDescription>
+                                </div>
+                                <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
+                                            <MoreVertical className="h-4 w-4" />
+                                        </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align="end">
+                                        <DropdownMenuItem onSelect={() => setUserToEdit(user)}>
+                                            <Edit className="mr-2 h-4 w-4" /> Edit
+                                        </DropdownMenuItem>
+                                        <DropdownMenuItem onSelect={() => handlePasswordReset(user)} disabled={isResetting === user.id}>
+                                            {isResetting === user.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
+                                            Reset Pass
+                                        </DropdownMenuItem>
+                                        {canBeDeleted(user) && (
+                                            <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive focus:text-destructive">
+                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                            </DropdownMenuItem>
+                                        )}
+                                    </DropdownMenuContent>
+                                </DropdownMenu>
+                            </div>
+                        </CardHeader>
+                        <CardContent>
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <Badge variant="secondary">{user.position}</Badge>
+                                <Badge variant="outline">{user.departmentName || 'N/A'}</Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            {/* Desktop View */}
+            <div className="hidden md:block border rounded-lg">
                 <Table>
                     <TableHeader>
                         <TableRow>

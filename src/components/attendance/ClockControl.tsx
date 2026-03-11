@@ -402,7 +402,7 @@ export function ClockControl({
                  <Button
                   size="lg"
                   variant={onBreak ? 'default' : 'outline'}
-                  className="w-full h-20 text-lg flex-col gap-1"
+                  className="w-full h-16 text-lg flex-col gap-1"
                   disabled={isSubmitting || !isApproved}
                   onClick={onBreak ? handleEndBreak : handleStartBreak}
                 >
@@ -414,7 +414,7 @@ export function ClockControl({
                 <Button
                   size="lg"
                   variant="destructive"
-                  className="w-full h-20 text-lg flex-col gap-1"
+                  className="w-full h-16 text-lg flex-col gap-1"
                   disabled={isSubmitting || onBreak}
                   onClick={handleClockOut}
                 >
@@ -462,7 +462,7 @@ export function ClockControl({
             </RadioGroup>
             <Button
               size="lg"
-              className="w-full h-20 text-lg bg-emerald-600 hover:bg-emerald-700"
+              className="w-full h-16 text-lg bg-emerald-600 hover:bg-emerald-700"
               disabled={isSubmitting}
               onClick={handleClockIn}
             >
