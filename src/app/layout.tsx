@@ -7,7 +7,6 @@ import { ThemeProvider } from '@/components/ThemeProvider';
 export const metadata: Metadata = {
   title: 'Palilious',
   description: 'Staff Internal Control & Automation',
-  icons: false,
 };
 
 export const viewport: Viewport = {

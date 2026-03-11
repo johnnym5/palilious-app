@@ -24,6 +24,11 @@
           "type": "string",
           "description": "The ID of the organization the user belongs to."
         },
+        "email": {
+          "type": "string",
+          "format": "email",
+          "description": "User's email, used for auth."
+        },
         "username": {
           "type": "string",
           "description": "User's unique username."
@@ -42,16 +47,21 @@
         },
         "position": {
           "type": "string",
-          "description": "The user's job position within the organization.",
-          "enum": ["Staff", "HR Manager", "Finance Manager", "Managing Director", "Organization Administrator"]
+          "description": "The user's job position within the organization."
         },
         "status": {
           "type": "string",
           "enum": [
             "ONLINE",
-            "OFFLINE"
+            "OFFLINE",
+            "ON_LEAVE"
           ],
           "description": "User's current status."
+        },
+        "joinedDate": {
+            "type": "string",
+            "format": "date-time",
+            "description": "The ISO timestamp when the user joined the organization."
         },
         "lastSeen": {
             "type": "string",
@@ -82,7 +92,9 @@
         "orgId",
         "username",
         "fullName",
-        "position"
+        "position",
+        "email",
+        "joinedDate"
       ]
     },
      "Department": {
@@ -438,6 +450,11 @@
                 },
                 "required": ["type"]
             }
+        },
+        "hiddenHeaders": {
+            "type": "array",
+            "description": "An array of header names that should be hidden from the default view.",
+            "items": { "type": "string" }
         },
         "createdAt": { "type": "string", "format": "date-time" }
       },
