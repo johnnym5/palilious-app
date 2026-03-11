@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from 'react';
-import { useCollection, useFirestore, useMemoFirebase, deleteDocumentNonBlocking, useAuth } from '@/firebase';
-import { collection, query, where, doc } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebase';
+import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -28,6 +28,7 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
     const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
     const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
     const [isResetting, setIsResetting] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const usersQuery = useMemoFirebase(() =>
         firestore ? query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId)) : null
@@ -40,18 +41,35 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
         return user.position !== "Organization Administrator" && user.id !== currentUserProfile.id;
     }
     
-    const handleDeleteUser = () => {
-        if (!userToDelete) return;
+    const handleDeleteUser = async () => {
+        if (!userToDelete || !firestore) return;
         
-        // This is a simplification. In a real app, you would need a backend function
-        // to delete the Firebase Auth user as well.
-        deleteDocumentNonBlocking(doc(firestore, 'users', userToDelete.id));
+        setIsDeleting(true);
+        try {
+            // STEP 1 (BACKEND SIMULATION): Delete from Firebase Authentication
+            // This action cannot be done safely from the client-side. It requires a backend
+            // environment (like a Cloud Function) with the Firebase Admin SDK.
+            // We are SIMULATING this step here. In a real app, a developer would
+            // replace this console log with a call to their backend function.
+            console.warn(`[SIMULATION] Deleting user from Firebase Auth: ${userToDelete.email} (${userToDelete.id}). Implement a backend function for this.`);
 
-        toast({
-            title: 'User Deleted',
-            description: `${userToDelete.fullName} has been removed from the organization.`,
-        });
-        setUserToDelete(null);
+            // STEP 2 (CLIENT): Delete user profile from Firestore Database
+            await deleteDoc(doc(firestore, 'users', userToDelete.id));
+
+            toast({
+                title: 'User Deleted',
+                description: `${userToDelete.fullName} has been permanently removed from the application.`,
+            });
+            setUserToDelete(null);
+        } catch (error: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Deletion Failed',
+                description: `Could not delete user from database. Error: ${error.message}`,
+            });
+        } finally {
+            setIsDeleting(false);
+        }
     };
 
     const handlePasswordReset = async (user: UserProfile) => {
@@ -157,14 +175,15 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
                  <AlertDialog open={!!userToDelete} onOpenChange={(isOpen) => !isOpen && setUserToDelete(null)}>
                     <AlertDialogContent>
                         <AlertDialogHeader>
-                            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This will delete {userToDelete.fullName}'s profile. This action cannot be undone. You will need a backend function to also remove their auth credentials.
+                                This will permanently delete {userToDelete.fullName}'s profile from the database and simulate the deletion of their authentication account. This action cannot be undone.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDeleteUser} className="bg-destructive hover:bg-destructive/90">
+                            <AlertDialogAction onClick={handleDeleteUser} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                                 Delete User
                             </AlertDialogAction>
                         </AlertDialogFooter>
