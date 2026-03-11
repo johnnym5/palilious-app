@@ -3,31 +3,34 @@
 
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { UserProfile, Chat, ChatMessage } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, updateDocumentNonBlocking } from '@/firebase';
-import { collection, query, where, orderBy, doc, serverTimestamp } from 'firebase/firestore';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { collection, query, where, orderBy, doc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Send, Loader2 } from 'lucide-react';
+import { Send, Loader2, PlusCircle, Hash, MessageSquare } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { cn, sanitizeInput } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
+import { CreateChannelDialog } from './CreateChannelDialog';
+import { Separator } from '../ui/separator';
 
 interface ChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentUserProfile: UserProfile;
+  initialPayload?: { initialUserId?: string };
 }
 
-function ChatMessages({ chatId, currentUserProfile }: { chatId: string, currentUserProfile: UserProfile }) {
+function ChatMessages({ chat, currentUserProfile }: { chat: Chat, currentUserProfile: UserProfile }) {
     const firestore = useFirestore();
     const scrollAreaRef = useRef<HTMLDivElement>(null);
 
     const messagesQuery = useMemoFirebase(() => 
-        query(collection(firestore, 'chats', chatId, 'messages'), orderBy('timestamp', 'asc'))
-    , [firestore, chatId]);
+        query(collection(firestore, 'chats', chat.id, 'messages'), orderBy('timestamp', 'asc'))
+    , [firestore, chat.id]);
     const { data: messages, isLoading } = useCollection<ChatMessage>(messagesQuery);
     
     useEffect(() => {
@@ -85,34 +88,67 @@ function ChatMessages({ chatId, currentUserProfile }: { chatId: string, currentU
     )
 }
 
-export function ChatDialog({ open, onOpenChange, currentUserProfile }: ChatDialogProps) {
+export function ChatDialog({ open, onOpenChange, currentUserProfile, initialPayload }: ChatDialogProps) {
   const firestore = useFirestore();
-  const [selectedUser, setSelectedUser] = useState<UserProfile | null>(null);
+  const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
+  const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
 
-  const usersQuery = useMemoFirebase(() => 
-    firestore ? query(collection(firestore, 'users'), where('orgId', '==', currentUserProfile.orgId)) : null
-  , [firestore, currentUserProfile.orgId]);
-  const { data: users, isLoading } = useCollection<UserProfile>(usersQuery);
+  const chatsQuery = useMemoFirebase(() => 
+    query(collection(firestore, 'chats'), where('participants', 'array-contains', currentUserProfile.id), orderBy('updatedAt', 'desc'))
+  , [firestore, currentUserProfile.id]);
+  const { data: chats, isLoading } = useCollection<Chat>(chatsQuery);
 
-  const chatId = useMemo(() => {
-    if (!selectedUser) return null;
-    return [currentUserProfile.id, selectedUser.id].sort().join('_');
-  }, [selectedUser, currentUserProfile.id]);
-
+  const { channels, directMessages } = useMemo(() => {
+    if (!chats) return { channels: [], directMessages: [] };
+    const ch: Chat[] = [];
+    const dm: Chat[] = [];
+    chats.forEach(c => c.type === 'CHANNEL' ? ch.push(c) : dm.push(c));
+    return { channels: ch, directMessages: dm };
+  }, [chats]);
+  
+  useEffect(() => {
+    if (open && initialPayload?.initialUserId) {
+        const userId = initialPayload.initialUserId;
+        const dmId = [currentUserProfile.id, userId].sort().join('_');
+        
+        const existingDM = directMessages.find(dm => dm.id === dmId);
+        if (existingDM) {
+            setSelectedChat(existingDM);
+        } else {
+            // Find the user profile to create a temporary chat object
+            const otherUser = directMessages.flatMap(dm => dm.participants)
+                .map(pId => chats?.find(c => c.participantProfiles[pId])?.participantProfiles[pId])
+                .find(p => p && p.fullName) // Simplistic way to find user data, better to query users collection
+            
+            // This is a temporary object. The doc is created on first message.
+            setSelectedChat({
+                id: dmId,
+                orgId: currentUserProfile.orgId,
+                type: 'DIRECT',
+                participants: [currentUserProfile.id, userId],
+                participantProfiles: {
+                    [currentUserProfile.id]: { fullName: currentUserProfile.fullName },
+                    [userId]: { fullName: "Loading..." } // Will be filled on first message
+                },
+                updatedAt: new Date().toISOString()
+            });
+        }
+    }
+  }, [open, initialPayload, directMessages, currentUserProfile]);
 
   const handleSendMessage = async () => {
-    if (!chatId || !selectedUser || !message.trim() || !firestore) return;
+    if (!selectedChat || !message.trim() || !firestore) return;
     setIsSending(true);
 
     const now = new Date().toISOString();
 
-    const chatRef = doc(firestore, 'chats', chatId);
-    const messageRef = collection(firestore, 'chats', chatId, 'messages');
+    const chatRef = doc(firestore, 'chats', selectedChat.id);
+    const messageRef = collection(firestore, 'chats', selectedChat.id, 'messages');
 
     const messageData: Omit<ChatMessage, 'id'> = {
-        chatId: chatId,
+        chatId: selectedChat.id,
         orgId: currentUserProfile.orgId,
         senderId: currentUserProfile.id,
         senderName: currentUserProfile.fullName,
@@ -122,16 +158,9 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile }: ChatDialo
     
     try {
         await addDocumentNonBlocking(messageRef, messageData);
-
-        const chatData: Chat = {
-            id: chatId,
-            orgId: currentUserProfile.orgId,
-            type: 'DIRECT',
-            participants: [currentUserProfile.id, selectedUser.id],
-            participantProfiles: {
-                [currentUserProfile.id]: { fullName: currentUserProfile.fullName },
-                [selectedUser.id]: { fullName: selectedUser.fullName },
-            },
+        
+        // Update last message on chat doc
+        const chatUpdateData = {
             lastMessage: {
                 text: messageData.content,
                 senderId: messageData.senderId,
@@ -139,8 +168,15 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile }: ChatDialo
                 timestamp: now,
             },
             updatedAt: now,
+            // If it was a temporary chat, fill in the full details
+            ...(!selectedChat.lastMessage && { 
+              participants: selectedChat.participants,
+              participantProfiles: selectedChat.participantProfiles,
+              orgId: selectedChat.orgId,
+              type: selectedChat.type,
+            })
         }
-        await setDocumentNonBlocking(chatRef, chatData, { merge: true });
+        await setDocumentNonBlocking(chatRef, chatUpdateData, { merge: true });
 
         setMessage('');
     } catch(e) {
@@ -149,50 +185,69 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile }: ChatDialo
         setIsSending(false);
     }
   }
+  
+  const getDirectMessageTitle = (chat: Chat) => {
+    const otherParticipantId = chat.participants.find(p => p !== currentUserProfile.id);
+    if (!otherParticipantId) return "Unknown User";
+    return chat.participantProfiles[otherParticipantId]?.fullName || "Unknown User";
+  }
 
 
   return (
+    <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
         <DialogHeader className="p-6 pb-0">
           <DialogTitle>Internal Chat</DialogTitle>
           <DialogDescription>
-            Communicate with your team members directly.
+            Communicate with your team via channels and direct messages.
           </DialogDescription>
         </DialogHeader>
         <div className="flex-1 grid grid-cols-3 overflow-hidden">
-            <div className="col-span-1 border-r">
-                <ScrollArea className="h-full">
-                    <div className="p-4 space-y-2">
-                        {isLoading && Array.from({length: 5}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
-                        {users?.filter(u => u.id !== currentUserProfile.id).map(user => (
-                            <div 
-                                key={user.id} 
-                                className={cn(
-                                    "flex items-center gap-3 p-2 rounded-lg cursor-pointer hover:bg-secondary",
-                                    selectedUser?.id === user.id && "bg-secondary"
-                                )}
-                                onClick={() => setSelectedUser(user)}
-                            >
-                                <Avatar>
-                                    <AvatarFallback>{user.fullName.split(' ').map(n=>n[0]).join('')}</AvatarFallback>
-                                </Avatar>
-                                <div>
-                                    <p className="font-semibold">{user.fullName}</p>
-                                    <p className="text-sm text-muted-foreground">{user.position}</p>
-                                </div>
-                            </div>
-                        ))}
+            <div className="col-span-1 border-r flex flex-col">
+                <ScrollArea className="flex-1">
+                    <div className="p-4 space-y-4">
+                        <div className="space-y-2">
+                           <div className="flex items-center justify-between px-2">
+                             <h4 className="font-semibold text-sm">Channels</h4>
+                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setIsCreateChannelOpen(true)}><PlusCircle className="h-4 w-4" /></Button>
+                           </div>
+                           {isLoading && Array.from({length: 2}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
+                           {channels.map(chat => (
+                               <div key={chat.id} onClick={() => setSelectedChat(chat)} className={cn("p-2 rounded-lg cursor-pointer hover:bg-secondary", selectedChat?.id === chat.id && "bg-secondary")}>
+                                   <div className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground"/> <p className="font-semibold truncate">{chat.name}</p></div>
+                                   <p className="text-xs text-muted-foreground truncate">{chat.lastMessage?.text}</p>
+                               </div>
+                           ))}
+                        </div>
+                        <Separator />
+                        <div className="space-y-2">
+                           <h4 className="font-semibold text-sm px-2">Direct Messages</h4>
+                           {isLoading && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-12 w-full" />)}
+                           {directMessages.map(chat => (
+                               <div key={chat.id} onClick={() => setSelectedChat(chat)} className={cn("p-2 rounded-lg cursor-pointer hover:bg-secondary", selectedChat?.id === chat.id && "bg-secondary")}>
+                                   <div className="flex items-center gap-2">
+                                       <Avatar className="h-8 w-8"><AvatarFallback>{getDirectMessageTitle(chat).split(' ').map(n=>n[0]).join('')}</AvatarFallback></Avatar>
+                                       <div>
+                                            <p className="font-semibold truncate">{getDirectMessageTitle(chat)}</p>
+                                            <p className="text-xs text-muted-foreground truncate">{chat.lastMessage?.text}</p>
+                                       </div>
+                                   </div>
+                               </div>
+                           ))}
+                        </div>
                     </div>
                 </ScrollArea>
             </div>
             <div className="col-span-2 flex flex-col">
-                {selectedUser && chatId ? (
+                {selectedChat ? (
                     <>
                         <div className="p-4 border-b">
-                            <h3 className="font-semibold">Chat with {selectedUser.fullName}</h3>
+                            <h3 className="font-semibold">
+                                {selectedChat.type === 'CHANNEL' ? `# ${selectedChat.name}` : getDirectMessageTitle(selectedChat)}
+                            </h3>
                         </div>
-                        <ChatMessages chatId={chatId} currentUserProfile={currentUserProfile} />
+                        <ChatMessages chat={selectedChat} currentUserProfile={currentUserProfile} />
                         <div className="p-4 border-t flex items-center gap-2">
                             <Input 
                                 placeholder="Type your message..." 
@@ -212,12 +267,19 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile }: ChatDialo
                     </>
                 ) : (
                     <div className="flex-1 flex items-center justify-center text-muted-foreground">
-                        <p>Select a user to start a conversation.</p>
+                        <p>Select a conversation to begin.</p>
                     </div>
                 )}
             </div>
         </div>
       </DialogContent>
     </Dialog>
+    
+    <CreateChannelDialog 
+        open={isCreateChannelOpen} 
+        onOpenChange={setIsCreateChannelOpen} 
+        currentUserProfile={currentUserProfile}
+    />
+    </>
   );
 }

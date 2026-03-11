@@ -49,6 +49,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isChatOpen, setIsChatOpen] = useState(false);
+  const [initialChatPayload, setInitialChatPayload] = useState<{ initialUserId?: string } | undefined>();
   const [isInviteUserOpen, setIsInviteUserOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
@@ -92,7 +93,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const openProfile = () => setIsProfileOpen(true);
     const openSettings = () => setIsSettingsOpen(true);
-    const openChat = () => setIsChatOpen(true);
+    const openChat = (payload?: { initialUserId?: string }) => {
+      if (payload) {
+        setInitialChatPayload(payload);
+      }
+      setIsChatOpen(true);
+    };
     const openTasks = () => setIsTasksOpen(true);
     const openWorkbooks = () => setIsWorkbookOpen(true);
     const openRequisitions = () => setIsRequisitionsOpen(true);
@@ -222,7 +228,19 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <ReportsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
       {userProfile && <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} userProfile={userProfile} />}
       {userProfile && <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} userProfile={userProfile} />}
-      {userProfile && <ChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} currentUserProfile={userProfile} />}
+      {userProfile && (
+        <ChatDialog
+          open={isChatOpen}
+          onOpenChange={(isOpen) => {
+            setIsChatOpen(isOpen);
+            if (!isOpen) {
+              setInitialChatPayload(undefined); // Clear payload on close
+            }
+          }}
+          currentUserProfile={userProfile}
+          initialPayload={initialChatPayload}
+        />
+      )}
 
       {/* Creation Dialogs */}
       {userProfile && (

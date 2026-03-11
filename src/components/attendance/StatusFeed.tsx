@@ -44,7 +44,7 @@ export function StatusFeed({ userProfile, permissions }: StatusFeedProps) {
   }, [users]);
   
   const handleChat = (userId: string) => {
-      uiEmitter.emit('open-chat-dialog');
+      uiEmitter.emit('open-chat-dialog', { initialUserId: userId });
   };
 
 

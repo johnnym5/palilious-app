@@ -3,7 +3,7 @@
 type AppEvents = {
   'open-profile-dialog': void;
   'open-settings-dialog': void;
-  'open-chat-dialog': void;
+  'open-chat-dialog': { initialUserId?: string } | void;
   'open-tasks-dialog': void;
   'open-workbooks-dialog': void;
   'open-requisitions-dialog': void;

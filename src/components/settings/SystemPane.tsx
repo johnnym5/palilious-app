@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Loader2 } from "lucide-react";
+import { Loader2, MapPin } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFirestore, updateDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -26,6 +26,8 @@ const formSchema = z.object({
   chat_enabled: z.boolean(),
   attendance_strict: z.boolean(),
   allow_self_edit: z.boolean(),
+  office_lat: z.coerce.number().optional().nullable(),
+  office_lng: z.coerce.number().optional().nullable(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -36,6 +38,7 @@ interface SystemPaneProps {
 
 export function SystemPane({ currentUserProfile }: SystemPaneProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isGettingLocation, setIsGettingLocation] = useState(false);
   const firestore = useFirestore();
   const { toast } = useToast();
   const { config, isLoading: isConfigLoading } = useSystemConfig(currentUserProfile.orgId);
@@ -60,9 +63,28 @@ export function SystemPane({ currentUserProfile }: SystemPaneProps) {
             chat_enabled: config.chat_enabled,
             attendance_strict: config.attendance_strict,
             allow_self_edit: config.allow_self_edit,
+            office_lat: config.office_coordinates?.lat,
+            office_lng: config.office_coordinates?.lng,
         });
     }
   }, [config, form]);
+
+
+  const handleGetCurrentLocation = () => {
+    setIsGettingLocation(true);
+    navigator.geolocation.getCurrentPosition(
+        (position) => {
+            form.setValue('office_lat', position.coords.latitude);
+            form.setValue('office_lng', position.coords.longitude);
+            toast({ title: 'Location captured!', description: 'Remember to save your changes.' });
+            setIsGettingLocation(false);
+        },
+        (error) => {
+            toast({ variant: 'destructive', title: 'Location Error', description: error.message });
+            setIsGettingLocation(false);
+        }
+    );
+  }
 
 
   async function onSubmit(values: FormData) {
@@ -70,11 +92,20 @@ export function SystemPane({ currentUserProfile }: SystemPaneProps) {
     setIsSubmitting(true);
     
     // Convert empty strings to null for colors
-    const updateData = {
+    const updateData: Partial<SystemConfig> & { office_coordinates?: any } = {
         ...values,
         branding_color: values.branding_color || null,
-        accent_color: values.accent_color || null
+        accent_color: values.accent_color || null,
+        office_coordinates: (values.office_lat != null && values.office_lng != null) 
+            ? { lat: values.office_lat, lng: values.office_lng } 
+            : null,
     };
+    
+    // @ts-ignore
+    delete updateData.office_lat;
+    // @ts-ignore
+    delete updateData.office_lng;
+
 
     try {
       const configRef = doc(firestore, 'system_configs', config.id);
@@ -121,7 +152,7 @@ export function SystemPane({ currentUserProfile }: SystemPaneProps) {
                             <FormControl>
                                 <div className="relative">
                                     <Input {...field} className="pl-12" />
-                                    <Input type="color" value={field.value} onChange={field.onChange} className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-10 p-1"/>
+                                    <Input type="color" value={field.value || '#000000'} onChange={field.onChange} className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-10 p-1"/>
                                 </div>
                             </FormControl>
                         <FormMessage /></FormItem>
@@ -131,7 +162,7 @@ export function SystemPane({ currentUserProfile }: SystemPaneProps) {
                              <FormControl>
                                 <div className="relative">
                                     <Input {...field} className="pl-12" />
-                                    <Input type="color" value={field.value} onChange={field.onChange} className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-10 p-1"/>
+                                    <Input type="color" value={field.value || '#000000'} onChange={field.onChange} className="absolute left-1 top-1/2 -translate-y-1/2 h-8 w-10 p-1"/>
                                 </div>
                             </FormControl>
                         <FormMessage /></FormItem>
@@ -175,6 +206,31 @@ export function SystemPane({ currentUserProfile }: SystemPaneProps) {
                         <FormControl><Switch checked={field.value} onCheckedChange={field.onChange} /></FormControl>
                     </FormItem>
                 )}/>
+            </CardContent>
+        </Card>
+
+        <Card>
+            <CardHeader>
+                <CardTitle>Geofencing</CardTitle>
+                <CardDescription>Set the office coordinates for strict attendance mode. This requires user location permission.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="office_lat" render={({ field }) => (
+                        <FormItem><FormLabel>Office Latitude</FormLabel>
+                        <FormControl><Input type="number" step="any" placeholder="e.g., 34.0522" {...field} value={field.value ?? ''} /></FormControl>
+                        <FormMessage /></FormItem>
+                    )}/>
+                    <FormField control={form.control} name="office_lng" render={({ field }) => (
+                        <FormItem><FormLabel>Office Longitude</FormLabel>
+                        <FormControl><Input type="number" step="any" placeholder="e.g., -118.2437" {...field} value={field.value ?? ''}/></FormControl>
+                        <FormMessage /></FormItem>
+                    )}/>
+                </div>
+                <Button type="button" variant="outline" onClick={handleGetCurrentLocation} disabled={isGettingLocation}>
+                    {isGettingLocation ? <Loader2 className="mr-2 h-4 w-4 animate-spin"/> : <MapPin className="mr-2 h-4 w-4" />}
+                    Get Current Location
+                </Button>
             </CardContent>
         </Card>
 
