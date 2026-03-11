@@ -16,7 +16,6 @@ import { RequisitionsDialog } from '@/components/requisitions/RequisitionsDialog
 import { TasksDialog } from '@/components/tasks/TasksDialog';
 import { AttendanceDialog } from '@/components/attendance/AttendanceDialog';
 import { LeaveDialog } from '@/components/leave/LeaveDialog';
-import { ReportsDialog } from '@/components/reports/ReportsDialog';
 import { uiEmitter } from '@/lib/ui-emitter';
 import { Button } from '@/components/ui/button';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -41,7 +40,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isTasksOpen, setIsTasksOpen] = useState(false);
   const [isAttendanceOpen, setIsAttendanceOpen] = useState(false);
   const [isLeaveOpen, setIsLeaveOpen] = useState(false);
-  const [isReportsOpen, setIsReportsOpen] = useState(false);
   const [isAssignTaskOpen, setIsAssignTaskOpen] = useState(false);
   const [isNewRequisitionOpen, setIsNewRequisitionOpen] = useState(false);
   const [isRequestLeaveOpen, setIsRequestLeaveOpen] = useState(false);
@@ -90,7 +88,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }, [config, theme]);
 
   useEffect(() => {
-    const openReports = () => setIsReportsOpen(true);
     const openProfile = () => setIsProfileOpen(true);
     const openSettings = () => setIsSettingsOpen(true);
     const openChat = () => setIsChatOpen(true);
@@ -105,7 +102,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const openInviteUser = () => setIsInviteUserOpen(true);
 
 
-    uiEmitter.on('open-reports-dialog', openReports);
     uiEmitter.on('open-profile-dialog', openProfile);
     uiEmitter.on('open-settings-dialog', openSettings);
     uiEmitter.on('open-chat-dialog', openChat);
@@ -120,7 +116,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     uiEmitter.on('open-invite-user-dialog', openInviteUser);
     
     return () => {
-      uiEmitter.off('open-reports-dialog', openReports);
       uiEmitter.off('open-profile-dialog', openProfile);
       uiEmitter.off('open-settings-dialog', openSettings);
       uiEmitter.off('open-chat-dialog', openChat);
@@ -151,7 +146,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     tasks: setIsTasksOpen,
     attendance: setIsAttendanceOpen,
     leave: setIsLeaveOpen,
-    reports: setIsReportsOpen,
     profile: setIsProfileOpen,
     newWorkbook: setIsNewWorkbookOpen,
     newRequisition: setIsNewRequisitionOpen,
@@ -219,7 +213,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <TasksDialog open={isTasksOpen} onOpenChange={setIsTasksOpen} />
       <AttendanceDialog open={isAttendanceOpen} onOpenChange={setIsAttendanceOpen} />
       <LeaveDialog open={isLeaveOpen} onOpenChange={setIsLeaveOpen} />
-      <ReportsDialog open={isReportsOpen} onOpenChange={setIsReportsOpen} />
       {userProfile && <ProfileDialog open={isProfileOpen} onOpenChange={setIsProfileOpen} userProfile={userProfile} />}
       {userProfile && <SettingsDialog open={isSettingsOpen} onOpenChange={setIsSettingsOpen} userProfile={userProfile} />}
       {userProfile && <ChatDialog open={isChatOpen} onOpenChange={setIsChatOpen} currentUserProfile={userProfile} />}

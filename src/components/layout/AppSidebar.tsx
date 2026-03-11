@@ -42,8 +42,6 @@ const mainNavItems = [
   { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
   { dialog: "requisitions", icon: ReceiptText, label: "Requisitions", permission: 'canAccessRequisitions' },
   { isSeparator: true },
-  { dialog: "reports", icon: BarChart, label: "Reports" },
-  { isSeparator: true },
   { dialog: "chat", icon: MessageSquare, label: "Chat", permission: "canAccessChat"},
   { dialog: "settings", icon: Settings, label: "Settings", permission: "canManageStaff"},
 ];
@@ -78,9 +76,6 @@ export default function AppSidebar({ isMobile = false }: { isMobile?: boolean })
         break;
       case 'settings':
         uiEmitter.emit('open-settings-dialog');
-        break;
-      case 'reports':
-        uiEmitter.emit('open-reports-dialog');
         break;
       case 'tasks':
         uiEmitter.emit('open-tasks-dialog');

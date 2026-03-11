@@ -29,7 +29,7 @@ const navItemsLeft = [
 
 const navItemsRight = [
   { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
-  { dialog: "reports", icon: BarChart, label: "Reports" },
+  { dialog: "leave", icon: CalendarPlus, label: "Leave" },
 ];
 
 const NavItem = ({ item, pathname, dialogManager }: { item: any, pathname: string, dialogManager: DialogManager }) => {
