@@ -15,6 +15,7 @@ import { StatCard } from "@/components/dashboard/StatCard";
 import { CheckCircle, Megaphone, BookOpenCheck, FilePlus2, ListTodo, UserPlus } from "lucide-react";
 import { ActiveTasks } from "@/components/dashboard/ActiveTasks";
 import { doc, collection, query, where, orderBy, limit } from "firebase/firestore";
+import type { User } from 'firebase/auth';
 import type { UserProfile, Requisition, Announcement, SystemConfig } from "@/lib/types";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Announcements } from "@/components/dashboard/Announcements";
@@ -40,14 +41,14 @@ const ClockInCard = ({ userProfile, permissions, systemConfig }: { userProfile: 
   );
 };
 
-const LatestAnnouncementCard = ({ userProfile, authUser }: { userProfile: UserProfile | null, authUser: any }) => {
+const LatestAnnouncementCard = ({ userProfile, authUser }: { userProfile: UserProfile | null, authUser: User | null }) => {
   const firestore = useFirestore();
   const announcementQuery = useMemoFirebase(() => {
     if (!firestore || !userProfile || !authUser) return null;
     return query(
       collection(firestore, 'announcements'),
       where('orgId', '==', userProfile.orgId),
-      where('visibleTo', 'array-contains-any', ['ALL', authUser.id]),
+      where('visibleTo', 'array-contains-any', ['ALL', authUser.uid]),
       orderBy('createdAt', 'desc'),
       limit(1)
     );
