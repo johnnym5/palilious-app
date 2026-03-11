@@ -15,7 +15,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useFirestore, updateDocumentNonBlocking, useUser } from "@/firebase";
+import { useFirestore, updateDocumentNonBlocking, useUser, useAuth } from "@/firebase";
 import { doc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "@/lib/types";
@@ -27,6 +27,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { sanitizeInput } from "@/lib/utils";
+import { Separator } from "@/components/ui/separator";
+import { sendPasswordResetEmail } from "firebase/auth";
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
@@ -45,6 +47,7 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
   const firestore = useFirestore();
   const { toast } = useToast();
   const { user } = useUser();
+  const auth = useAuth();
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -91,6 +94,27 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
     }
   }
 
+  const handlePasswordReset = async () => {
+    if (!auth || !userProfile.email) {
+      toast({ variant: 'destructive', title: 'Error', description: 'Could not send reset email. User email not found.' });
+      return;
+    }
+
+    try {
+      await sendPasswordResetEmail(auth, userProfile.email);
+      toast({
+        title: 'Password Reset Email Sent',
+        description: `An email has been sent to ${userProfile.email} with instructions to reset your password.`,
+      });
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to Send Email',
+        description: error.message,
+      });
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-md">
@@ -101,7 +125,7 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 pt-4">
             <FormField
               control={form.control}
               name="fullName"
@@ -139,6 +163,14 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
             </Button>
           </form>
         </Form>
+        <Separator className="my-4" />
+        <div className="space-y-2">
+            <h4 className="text-sm font-medium">Security</h4>
+            <Button variant="outline" className="w-full" onClick={handlePasswordReset}>
+                Send Password Reset Email
+            </Button>
+            <p className="text-xs text-muted-foreground text-center">You will receive a secure link to change your password.</p>
+        </div>
       </DialogContent>
     </Dialog>
   );

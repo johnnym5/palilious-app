@@ -4,7 +4,8 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { Button } from "@/components/ui/button";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
@@ -14,8 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 import type { UserProfile } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PREDEFINED_DEPARTMENTS, ROLES_BY_DEPARTMENT } from "@/lib/roles-and-departments";
+import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
+  username: z.string().min(3, "Username must be at least 3 characters."),
   position: z.string().min(1, "Position is required."),
   departmentName: z.string({ required_error: "Department is required." }),
 });
@@ -43,6 +46,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
   useEffect(() => {
     if (userToEdit) {
       form.reset({
+        username: userToEdit.username,
         position: userToEdit.position,
         departmentName: userToEdit.departmentName,
       });
@@ -81,6 +85,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
     try {
       const userRef = doc(firestore, 'users', userToEdit.id);
       await updateDocumentNonBlocking(userRef, {
+        username: sanitizeInput(values.username.toLowerCase()),
         position: values.position,
         departmentName: values.departmentName,
       });
@@ -110,6 +115,18 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
+            <FormField control={form.control} name="username" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Username</FormLabel>
+                    <FormControl><Input placeholder="e.g., jdoe" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}/>
+             <FormItem>
+                <FormLabel>Email</FormLabel>
+                <FormControl><Input value={userToEdit.email} disabled /></FormControl>
+                <FormDescription className="text-xs">User email cannot be changed from the admin console for security reasons.</FormDescription>
+             </FormItem>
             <FormField control={form.control} name="departmentName" render={({ field }) => (
               <FormItem><FormLabel>Department</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>
