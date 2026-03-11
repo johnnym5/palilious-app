@@ -3,7 +3,7 @@
 import React, { DependencyList, createContext, useContext, ReactNode, useMemo, useState, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
-import { Auth, User } from 'firebase/auth';
+import { Auth, User, onAuthStateChanged } from 'firebase/auth';
 import { FirebaseErrorListener } from '@/components/FirebaseErrorListener'
 import { type Storage } from 'firebase/storage';
 import { type Database } from 'firebase/database';
@@ -60,26 +60,6 @@ export interface UserHookResult { // Renamed from UserAuthHookResult for consist
 // React Context
 export const FirebaseContext = createContext<FirebaseContextState | undefined>(undefined);
 
-// A mock user to simulate being logged in without Firebase Auth
-const mockUser = {
-  uid: 'mock-admin-user-id-001',
-  email: 'admin@example.com',
-  displayName: 'Admin (Offline Mode)',
-  emailVerified: true,
-  isAnonymous: false,
-  metadata: {},
-  providerData: [],
-  providerId: 'password',
-  tenantId: null,
-  delete: async () => {},
-  getIdToken: async () => 'mock-token',
-  getIdTokenResult: async () => ({ token: 'mock-token', expirationTime: '', authTime: '', issuedAtTime: '', signInProvider: null, signInSecondFactor: null, claims: {} }),
-  reload: async () => {},
-  toJSON: () => ({}),
-  phoneNumber: null,
-  photoURL: null,
-} as unknown as User;
-
 /**
  * FirebaseProvider manages and provides Firebase services and user authentication state.
  */
@@ -91,12 +71,30 @@ export const FirebaseProvider: React.FC<FirebaseProviderProps> = ({
   storage,
   database,
 }) => {
-  // Directly use a mock user, bypassing Firebase Auth.
-  const userAuthState: UserAuthState = {
-    user: mockUser,
-    isUserLoading: false, // No loading needed for mock user
+  const [userAuthState, setUserAuthState] = useState<UserAuthState>({
+    user: null,
+    isUserLoading: true, // Start as true while we check auth status
     userError: null,
-  };
+  });
+
+  useEffect(() => {
+    if (!auth) {
+      setUserAuthState({ user: null, isUserLoading: false, userError: null });
+      return;
+    }
+
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      (user) => {
+        setUserAuthState({ user, isUserLoading: false, userError: null });
+      },
+      (error) => {
+        setUserAuthState({ user: null, isUserLoading: false, userError: error });
+      }
+    );
+
+    return () => unsubscribe();
+  }, [auth]); // Dependency on auth service
   
   // Memoize the context value
   const contextValue = useMemo((): FirebaseContextState => {
