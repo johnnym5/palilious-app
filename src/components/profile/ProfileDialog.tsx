@@ -106,8 +106,13 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
       return;
     }
 
+    const actionCodeSettings = {
+      url: `${window.location.origin}/login`,
+      handleCodeInApp: true,
+    };
+
     try {
-      await sendPasswordResetEmail(auth, userProfile.email);
+      await sendPasswordResetEmail(auth, userProfile.email, actionCodeSettings);
       toast({
         title: 'Password Reset Email Sent',
         description: `An email has been sent to ${userProfile.email} with instructions to reset your password.`,
