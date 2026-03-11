@@ -164,7 +164,8 @@ export interface Announcement {
   authorId: string; // userId
   authorName: string;
   createdAt: string; // ISO String for timestamp
-  viewedBy?: string[]; // Array of userIds
+  viewedBy: string[]; // Array of userIds
+  visibleTo: string[]; // `['ALL']` for all users, or `['userId1', 'userId2']` for specific users
 }
 
 export type ChatType = 'DIRECT' | 'CHANNEL';

@@ -32,14 +32,15 @@ export function Announcements() {
     const permissions = usePermissions(userProfile);
 
     const announcementsQuery = useMemoFirebase(() => {
-        if (!firestore || !userProfile) return null;
+        if (!firestore || !userProfile || !authUser) return null;
         return query(
             collection(firestore, 'announcements'),
             where('orgId', '==', userProfile.orgId),
+            where('visibleTo', 'array-contains-any', ['ALL', authUser.uid]),
             orderBy('createdAt', 'desc'),
             limit(5)
         );
-    }, [firestore, userProfile]);
+    }, [firestore, userProfile, authUser]);
 
     const { data: announcements, isLoading } = useCollection<Announcement>(announcementsQuery);
 
@@ -166,6 +167,7 @@ export function Announcements() {
                 announcement={annToEdit} 
                 open={!!annToEdit} 
                 onOpenChange={(isOpen) => !isOpen && setAnnToEdit(null)}
+                userProfile={userProfile}
             />
         )}
         

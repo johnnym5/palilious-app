@@ -40,17 +40,18 @@ const ClockInCard = ({ userProfile, permissions, systemConfig }: { userProfile: 
   );
 };
 
-const LatestAnnouncementCard = ({ userProfile }: { userProfile: UserProfile | null }) => {
+const LatestAnnouncementCard = ({ userProfile, authUser }: { userProfile: UserProfile | null, authUser: any }) => {
   const firestore = useFirestore();
   const announcementQuery = useMemoFirebase(() => {
-    if (!firestore || !userProfile) return null;
+    if (!firestore || !userProfile || !authUser) return null;
     return query(
       collection(firestore, 'announcements'),
       where('orgId', '==', userProfile.orgId),
+      where('visibleTo', 'array-contains-any', ['ALL', authUser.id]),
       orderBy('createdAt', 'desc'),
       limit(1)
     );
-  }, [firestore, userProfile]);
+  }, [firestore, userProfile, authUser]);
 
   const { data: announcements, isLoading } = useCollection<Announcement>(announcementQuery);
   const latestAnnouncement = announcements?.[0];
@@ -166,7 +167,7 @@ function DashboardContent() {
                             <ClockInCard userProfile={userProfile} permissions={permissions} systemConfig={systemConfig} />
                         </CarouselItem>
                          <CarouselItem className="pl-4">
-                            <LatestAnnouncementCard userProfile={userProfile} />
+                            <LatestAnnouncementCard userProfile={userProfile} authUser={authUser} />
                         </CarouselItem>
                         <CarouselItem className="pl-4">
                             <QuickActionsCard permissions={permissions} />

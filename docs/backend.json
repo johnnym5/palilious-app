@@ -411,9 +411,14 @@
             "type": "array",
             "description": "List of user IDs who have viewed this announcement.",
             "items": { "type": "string" }
+        },
+        "visibleTo": {
+            "type": "array",
+            "description": "List of user IDs who can see the announcement. Contains 'ALL' for public.",
+            "items": { "type": "string" }
         }
       },
-      "required": ["orgId", "title", "content", "isPinned", "authorId", "authorName", "createdAt"]
+      "required": ["orgId", "title", "content", "isPinned", "authorId", "authorName", "createdAt", "viewedBy", "visibleTo"]
     },
     "Workbook": {
       "title": "Workbook",
