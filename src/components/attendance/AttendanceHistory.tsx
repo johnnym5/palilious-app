@@ -28,6 +28,14 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
 
   const { data: attendanceHistory, isLoading } = useCollection<Attendance>(attendanceQuery);
 
+  const formatDuration = (totalSeconds: number | undefined): string => {
+    if (totalSeconds == null || totalSeconds < 0) return '00:00:00';
+    const h = Math.floor(totalSeconds / 3600).toString().padStart(2, '0');
+    const m = Math.floor((totalSeconds % 3600) / 60).toString().padStart(2, '0');
+    const s = (totalSeconds % 60).toString().padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
+
   const calculateDuration = (clockIn: string, clockOut?: string): string => {
     if (!clockOut) {
       return "In Progress";
@@ -38,10 +46,7 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
     
     if (diffSeconds < 0) return "Invalid";
 
-    const h = Math.floor(diffSeconds / 3600).toString().padStart(2, '0');
-    const m = Math.floor((diffSeconds % 3600) / 60).toString().padStart(2, '0');
-    const s = (diffSeconds % 60).toString().padStart(2, '0');
-    return `${h}:${m}:${s}`;
+    return formatDuration(diffSeconds);
   };
 
   return (
@@ -57,8 +62,8 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
               <TableHead>Date</TableHead>
               <TableHead>Clock In</TableHead>
               <TableHead>Clock Out</TableHead>
-              <TableHead>Duration</TableHead>
-              <TableHead>Location</TableHead>
+              <TableHead>Work Time</TableHead>
+              <TableHead>Break</TableHead>
               <TableHead className="text-right">Remarks</TableHead>
             </TableRow>
           </TableHeader>
@@ -80,10 +85,8 @@ export function AttendanceHistory({ userProfile }: AttendanceHistoryProps) {
                 <TableCell className="font-medium">{format(new Date(record.clockIn), 'PPP')}</TableCell>
                 <TableCell>{format(new Date(record.clockIn), 'p')}</TableCell>
                 <TableCell>{record.clockOut ? format(new Date(record.clockOut), 'p') : '—'}</TableCell>
-                <TableCell className="font-mono">{calculateDuration(record.clockIn, record.clockOut)}</TableCell>
-                <TableCell>
-                  <Badge variant="outline" className="capitalize">{record.location?.toLowerCase()}</Badge>
-                </TableCell>
+                <TableCell className="font-mono">{formatDuration(record.duration)}</TableCell>
+                <TableCell className="font-mono">{formatDuration(record.totalBreak)}</TableCell>
                 <TableCell className="text-right space-x-1">
                     {record.remarks?.map(remark => (
                         <Badge key={remark} variant="secondary" className={cn(

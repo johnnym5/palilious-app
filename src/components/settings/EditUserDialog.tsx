@@ -18,6 +18,7 @@ import { PREDEFINED_DEPARTMENTS, ROLES_BY_DEPARTMENT } from "@/lib/roles-and-dep
 import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
+  email: z.string().email("Invalid email format."),
   username: z.string().min(3, "Username must be at least 3 characters."),
   phoneNumber: z.string().optional(),
   position: z.string().min(1, "Position is required."),
@@ -47,6 +48,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
   useEffect(() => {
     if (userToEdit) {
       form.reset({
+        email: userToEdit.email,
         username: userToEdit.username,
         phoneNumber: userToEdit.phoneNumber || '',
         position: userToEdit.position,
@@ -87,6 +89,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
     try {
       const userRef = doc(firestore, 'users', userToEdit.id);
       await updateDocumentNonBlocking(userRef, {
+        email: sanitizeInput(values.email.toLowerCase()),
         username: sanitizeInput(values.username.toLowerCase()),
         phoneNumber: sanitizeInput(values.phoneNumber) || null,
         position: values.position,
@@ -95,7 +98,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
 
       toast({
         title: "User Updated",
-        description: `${userToEdit.fullName}'s profile has been updated.`,
+        description: `${userToEdit.fullName}'s profile has been updated. The user must use their old email to log in and confirm the change.`,
       });
       onOpenChange(false);
     } catch (error: any) {
@@ -125,11 +128,14 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
                     <FormMessage />
                 </FormItem>
             )}/>
-             <FormItem>
-                <FormLabel>Email</FormLabel>
-                <FormControl><Input value={userToEdit.email} disabled /></FormControl>
-                <FormDescription className="text-xs">User email cannot be changed from the admin console for security reasons.</FormDescription>
-             </FormItem>
+             <FormField control={form.control} name="email" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl><Input type="email" {...field} /></FormControl>
+                     <FormDescription className="text-xs">Changing this does not change the user's login credential. They must confirm the change after logging in.</FormDescription>
+                    <FormMessage />
+                </FormItem>
+            )}/>
              <FormField control={form.control} name="phoneNumber" render={({ field }) => (
                 <FormItem>
                     <FormLabel>Phone Number</FormLabel>

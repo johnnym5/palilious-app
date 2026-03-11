@@ -18,6 +18,7 @@ import {
   ShieldQuestion,
   Building,
   Briefcase,
+  Coffee,
 } from 'lucide-react';
 import type {
   UserProfile,
@@ -33,13 +34,14 @@ import {
   updateDocumentNonBlocking,
   useMemoFirebase,
 } from '@/firebase';
-import { collection, query, where, limit, doc } from 'firebase/firestore';
+import { collection, query, where, limit, doc, arrayUnion } from 'firebase/firestore';
 import { useToast } from '@/hooks/use-toast';
 import { Skeleton } from '../ui/skeleton';
 import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
 import { getDistanceInMeters } from '@/lib/utils';
 import { cn } from '@/lib/utils';
+import { Separator } from '../ui/separator';
 
 interface ClockControlProps {
   userProfile: UserProfile | null;
@@ -98,15 +100,29 @@ export function ClockControl({
   const isClockedIn = !!attendanceRecord && !attendanceRecord.clockOut;
   const isPending = isClockedIn && attendanceRecord.status === 'PENDING';
   const isApproved = isClockedIn && attendanceRecord.status === 'APPROVED';
+  const onBreak = isApproved && !!attendanceRecord?.onBreak;
 
   useEffect(() => {
     let timer: NodeJS.Timeout | undefined;
-    // Only run the timer if the user's clock-in is approved
     if (isApproved && attendanceRecord?.clockIn) {
       timer = setInterval(() => {
         const now = new Date();
         const clockInTime = new Date(attendanceRecord.clockIn);
-        const seconds = differenceInSeconds(now, clockInTime);
+
+        const totalBreakSeconds = (attendanceRecord.breaks || []).reduce((acc, br) => {
+            if (br.start && br.end) {
+                return acc + differenceInSeconds(new Date(br.end), new Date(br.start));
+            }
+            // For an active break, calculate duration up to now
+            if (br.start && !br.end) {
+                return acc + differenceInSeconds(now, new Date(br.start));
+            }
+            return acc;
+        }, 0);
+        
+        const rawTotalSeconds = differenceInSeconds(now, clockInTime);
+        const seconds = rawTotalSeconds - totalBreakSeconds;
+
         const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
         const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
         const s = String(seconds % 60).padStart(2, '0');
@@ -114,7 +130,8 @@ export function ClockControl({
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isApproved, attendanceRecord?.clockIn]);
+  }, [isApproved, attendanceRecord]);
+
 
   const handleClockIn = async () => {
     if (!userProfile) return;
@@ -227,6 +244,31 @@ export function ClockControl({
       setIsSubmitting(false);
     }
   };
+  
+  const handleStartBreak = () => {
+    if (!attendanceRecord) return;
+    const breakEntry = { start: new Date().toISOString() };
+    const attendanceRef = doc(firestore, 'attendance', attendanceRecord.id);
+    updateDocumentNonBlocking(attendanceRef, {
+        onBreak: true,
+        breaks: arrayUnion(breakEntry),
+    });
+  };
+
+  const handleEndBreak = () => {
+      if (!attendanceRecord || !attendanceRecord.breaks) return;
+      const currentBreaks = [...attendanceRecord.breaks];
+      const lastBreakIndex = currentBreaks.length - 1;
+      
+      if(lastBreakIndex >= 0 && !currentBreaks[lastBreakIndex].end) {
+          currentBreaks[lastBreakIndex].end = new Date().toISOString();
+          const attendanceRef = doc(firestore, 'attendance', attendanceRecord.id);
+          updateDocumentNonBlocking(attendanceRef, {
+              onBreak: false,
+              breaks: currentBreaks,
+          });
+      }
+  };
 
   const handleClockOut = async () => {
     if (!userProfile || !attendanceRecord) return;
@@ -243,7 +285,22 @@ export function ClockControl({
       const attendanceRef = doc(firestore, 'attendance', attendanceRecord.id);
 
       const clockInTime = new Date(attendanceRecord.clockIn);
-      const durationInSeconds = differenceInSeconds(clockOutTime, clockInTime);
+      
+      const breaks = [...(attendanceRecord.breaks || [])];
+      const lastBreak = breaks[breaks.length - 1];
+      if (attendanceRecord.onBreak && lastBreak && !lastBreak.end) {
+          lastBreak.end = clockOutTime.toISOString();
+      }
+
+      const totalBreakSeconds = breaks.reduce((acc, br) => {
+        if (br.start && br.end) {
+            return acc + differenceInSeconds(new Date(br.end), new Date(br.start));
+        }
+        return acc;
+      }, 0);
+      
+      const totalShiftSeconds = differenceInSeconds(clockOutTime, clockInTime);
+      const durationInSeconds = totalShiftSeconds - totalBreakSeconds;
 
       let overtime = 0;
       let undertime = 0;
@@ -283,9 +340,12 @@ export function ClockControl({
       const updateData = {
         clockOut: clockOutTime.toISOString(),
         duration: durationInSeconds,
+        totalBreak: totalBreakSeconds,
         overtime,
         undertime,
         remarks,
+        onBreak: false,
+        breaks: breaks,
       };
 
       updateDocumentNonBlocking(attendanceRef, updateData);
@@ -338,23 +398,37 @@ export function ClockControl({
       <CardContent className="space-y-4 text-center">
         {isClockedIn ? (
           <>
-            <Button
-              size="lg"
-              variant="destructive"
-              className="w-full h-20 text-lg flex-col gap-1"
-              disabled={isSubmitting}
-              onClick={handleClockOut}
-            >
-              <div className="flex items-center gap-2">
-                {isSubmitting ? <Loader2 className="animate-spin" /> : <LogOut />}
-                Clock Out
-              </div>
-              {isApproved && (
-                <p className="font-mono text-xl tracking-widest">
+            <div className="grid grid-cols-2 gap-2">
+                 <Button
+                  size="lg"
+                  variant={onBreak ? 'default' : 'outline'}
+                  className="w-full h-20 text-lg flex-col gap-1"
+                  disabled={isSubmitting || !isApproved}
+                  onClick={onBreak ? handleEndBreak : handleStartBreak}
+                >
+                  <div className="flex items-center gap-2">
+                    <Coffee />
+                    {onBreak ? 'End Break' : 'Start Break'}
+                  </div>
+                </Button>
+                <Button
+                  size="lg"
+                  variant="destructive"
+                  className="w-full h-20 text-lg flex-col gap-1"
+                  disabled={isSubmitting || onBreak}
+                  onClick={handleClockOut}
+                >
+                  <div className="flex items-center gap-2">
+                    {isSubmitting ? <Loader2 className="animate-spin" /> : <LogOut />}
+                    Clock Out
+                  </div>
+                </Button>
+            </div>
+            {isApproved && (
+                <p className="font-mono text-xl tracking-widest pt-2">
                   {shiftDuration}
                 </p>
-              )}
-            </Button>
+            )}
             {isPending && (
               <div className="flex items-center justify-center gap-2 text-sm text-amber-500 animate-pulse">
                 <ShieldQuestion className="h-4 w-4" />

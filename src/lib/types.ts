@@ -82,7 +82,13 @@ export interface Attendance {
     remarks?: Array<'EARLY' | 'LATE' | 'OVERTIME' | 'UNDERTIME'>;
     duration?: number; // seconds
     overtime?: number; // seconds
-    undertime?: number; // seconds
+    undertime?: number; // seconds;
+    onBreak?: boolean;
+    breaks?: {
+        start: string;
+        end?: string;
+    }[];
+    totalBreak?: number; // seconds
 }
 
 export type RequisitionStatus = "PENDING_HR" | "PENDING_FINANCE" | "PENDING_MD" | "APPROVED" | "PAID" | "REJECTED";

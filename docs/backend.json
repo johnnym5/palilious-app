@@ -181,6 +181,26 @@
         "undertime": {
             "type": "number",
             "description": "Calculated undertime in seconds."
+        },
+        "onBreak": {
+            "type": "boolean",
+            "description": "Whether the user is currently on a break."
+        },
+        "breaks": {
+            "type": "array",
+            "description": "A log of break intervals taken during the shift.",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "start": { "type": "string", "format": "date-time" },
+                    "end": { "type": "string", "format": "date-time" }
+                },
+                "required": ["start"]
+            }
+        },
+        "totalBreak": {
+            "type": "number",
+            "description": "Total duration of breaks in seconds."
         }
       },
       "required": [
