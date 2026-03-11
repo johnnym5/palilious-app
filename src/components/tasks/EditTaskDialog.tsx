@@ -24,7 +24,6 @@ const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
   description: z.string().optional(),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
-  dueDate: z.date().optional(),
   workbookId: z.string().optional(),
   sheetId: z.string().optional(),
 });
@@ -64,7 +63,6 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
       title: task.title,
       description: task.description || "",
       priority: task.priority,
-      dueDate: task.dueDate ? new Date(task.dueDate) : undefined,
       workbookId: task.workbookId,
       sheetId: task.sheetId,
     });
@@ -80,7 +78,6 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
             title: sanitizeInput(values.title),
             description: sanitizeInput(values.description),
             priority: values.priority,
-            dueDate: values.dueDate?.toISOString(),
             workbookId: values.workbookId || null,
             sheetId: values.sheetId || null,
         }
@@ -136,7 +133,7 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
                     )}
                  </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 gap-4">
                     <FormField control={form.control} name="priority" render={({ field }) => (
                          <FormItem><FormLabel>Priority</FormLabel>
                          <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -148,23 +145,6 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
                             </SelectContent>
                          </Select>
                          <FormMessage /></FormItem>
-                    )} />
-                    <FormField control={form.control} name="dueDate" render={({ field }) => (
-                        <FormItem className="flex flex-col"><FormLabel>Due Date (Optional)</FormLabel>
-                            <Popover>
-                                <PopoverTrigger asChild>
-                                    <FormControl>
-                                    <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                        {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                        <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                    </Button>
-                                    </FormControl>
-                                </PopoverTrigger>
-                                <PopoverContent className="w-auto p-0" align="start">
-                                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date() || date < new Date("1900-01-01")} initialFocus />
-                                </PopoverContent>
-                            </Popover>
-                        <FormMessage /></FormItem>
                     )} />
                 </div>
 

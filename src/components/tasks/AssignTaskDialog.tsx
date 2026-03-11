@@ -25,7 +25,6 @@ const formSchema = z.object({
   description: z.string().optional(),
   assignedTo: z.string().optional(),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
-  dueDate: z.date().optional(),
   workbookId: z.string().optional(),
   sheetId: z.string().optional(),
 });
@@ -91,7 +90,6 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
             description: initialData?.description || "",
             priority: initialData?.priority || "LEVEL_1",
             assignedTo: undefined,
-            dueDate: initialData?.dueDate,
             workbookId: initialData?.workbookId,
             sheetId: initialData?.sheetId,
         });
@@ -166,7 +164,7 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
             assignedToName: assignedUser.fullName,
             priority: values.priority,
             status: 'QUEUED',
-            dueDate: values.dueDate?.toISOString() || null,
+            dueDate: null,
             createdBy: currentUserProfile.id,
             activity: [initialActivity],
             createdAt: now,
@@ -266,23 +264,6 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
                          <FormMessage /></FormItem>
                     )} />
                 </div>
-                 <FormField control={form.control} name="dueDate" render={({ field }) => (
-                    <FormItem className="flex flex-col"><FormLabel>Due Date (Optional)</FormLabel>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <FormControl>
-                                <Button variant={"outline"} className={cn("pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                                    {field.value ? format(field.value, "PPP") : <span>Pick a date</span>}
-                                    <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                                </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                                <Calendar mode="single" selected={field.value} onSelect={field.onChange} disabled={(date) => date < new Date() || date < new Date("1900-01-01")} initialFocus />
-                            </PopoverContent>
-                        </Popover>
-                    <FormMessage /></FormItem>
-                 )} />
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

@@ -36,9 +36,6 @@ export function TaskCard({ task, userProfile, onSelect }: TaskCardProps) {
                 <p className="font-semibold text-foreground leading-snug">{task.title}</p>
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                     <span>{task.id.substring(0,6).toUpperCase()}</span>
-                    <span>
-                        {task.dueDate ? `Due ${formatDistanceToNow(new Date(task.dueDate), { addSuffix: true })}` : 'No due date'}
-                    </span>
                 </div>
             </CardContent>
         </Card>

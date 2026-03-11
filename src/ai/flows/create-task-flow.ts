@@ -19,7 +19,6 @@ export const CreateTaskOutputSchema = z.object({
   title: z.string().describe('A concise title for the task.'),
   description: z.string().optional().describe('A detailed description for the task if available.'),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]).optional().describe('The priority of the task. LEVEL_1 is Low, LEVEL_2 is Medium, LEVEL_3 is High. Default to LEVEL_1 if not specified.'),
-  dueDate: z.string().optional().describe('The due date and time for the task in ISO 8601 format. If a time is not specified, default to the end of the specified day.'),
 });
 export type CreateTaskOutput = z.infer<typeof CreateTaskOutputSchema>;
 
@@ -39,9 +38,9 @@ const createTaskPrompt = ai.definePrompt({
 
   Current Date/Time for reference: {{{currentDateTime}}}
 
-  Analyze the following text and determine the title, description, priority, and due date.
+  Analyze the following text and determine the title, description, and priority.
   - If no priority is mentioned, default to LEVEL_1 (Low). Use context like "urgent" or "asap" for LEVEL_3 (High).
-  - If a due date or time is mentioned (e.g., "tomorrow", "end of week", "next Friday at 2pm"), convert it to a precise ISO 8601 string.
+  - Do not extract or calculate a due date.
   - The title should be a concise action item.
   - Use the description for any extra details.
 
