@@ -19,6 +19,7 @@ import { sanitizeInput } from "@/lib/utils";
 
 const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
+  phoneNumber: z.string().optional(),
   position: z.string().min(1, "Position is required."),
   departmentName: z.string({ required_error: "Department is required." }),
 });
@@ -47,6 +48,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
     if (userToEdit) {
       form.reset({
         username: userToEdit.username,
+        phoneNumber: userToEdit.phoneNumber || '',
         position: userToEdit.position,
         departmentName: userToEdit.departmentName,
       });
@@ -86,6 +88,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
       const userRef = doc(firestore, 'users', userToEdit.id);
       await updateDocumentNonBlocking(userRef, {
         username: sanitizeInput(values.username.toLowerCase()),
+        phoneNumber: sanitizeInput(values.phoneNumber) || null,
         position: values.position,
         departmentName: values.departmentName,
       });
@@ -127,6 +130,13 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
                 <FormControl><Input value={userToEdit.email} disabled /></FormControl>
                 <FormDescription className="text-xs">User email cannot be changed from the admin console for security reasons.</FormDescription>
              </FormItem>
+             <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                <FormItem>
+                    <FormLabel>Phone Number</FormLabel>
+                    <FormControl><Input type="tel" {...field} /></FormControl>
+                    <FormMessage />
+                </FormItem>
+            )}/>
             <FormField control={form.control} name="departmentName" render={({ field }) => (
               <FormItem><FormLabel>Department</FormLabel>
                 <Select onValueChange={field.onChange} value={field.value}>

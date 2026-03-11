@@ -28,6 +28,7 @@ const formSchema = z.object({
   username: z.string().min(3, { message: "Username must be at least 3 characters." }),
   email: z.string().email({ message: "Please enter a valid email." }),
   password: z.string().min(8, { message: "Password must be at least 8 characters." }),
+  phoneNumber: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -46,6 +47,7 @@ export function RegisterForm() {
       username: "",
       email: "",
       password: "",
+      phoneNumber: "",
     },
   });
 
@@ -93,6 +95,7 @@ export function RegisterForm() {
         email: values.email.toLowerCase(),
         username: sanitizeInput(values.username.toLowerCase()),
         fullName: sanitizeInput(values.fullName),
+        phoneNumber: sanitizeInput(values.phoneNumber) || null,
         position: "Organization Administrator",
         joinedDate: new Date().toISOString(),
         status: 'OFFLINE',
@@ -174,6 +177,19 @@ export function RegisterForm() {
               <FormLabel>Administrator Email</FormLabel>
               <FormControl>
                 <Input type="email" placeholder="admin@yourcompany.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="phoneNumber"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Phone Number (Optional)</FormLabel>
+              <FormControl>
+                <Input type="tel" placeholder="+1 234 567 8900" {...field} />
               </FormControl>
               <FormMessage />
             </FormItem>

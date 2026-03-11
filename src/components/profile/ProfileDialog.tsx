@@ -32,6 +32,7 @@ import { sendPasswordResetEmail } from "firebase/auth";
 
 const formSchema = z.object({
   fullName: z.string().min(1, { message: "Full name is required." }),
+  phoneNumber: z.string().optional(),
 });
 
 type FormData = z.infer<typeof formSchema>;
@@ -53,12 +54,16 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: userProfile.fullName,
+      phoneNumber: userProfile.phoneNumber || "",
     },
   });
   
   useEffect(() => {
     if(userProfile){
-        form.reset({fullName: userProfile.fullName})
+        form.reset({
+          fullName: userProfile.fullName,
+          phoneNumber: userProfile.phoneNumber || "",
+        })
     }
   }, [userProfile, form]);
 
@@ -73,11 +78,12 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
       const userRef = doc(firestore, 'users', user.uid);
       await updateDocumentNonBlocking(userRef, {
         fullName: sanitizeInput(values.fullName),
+        phoneNumber: sanitizeInput(values.phoneNumber) || null,
       });
 
       toast({
         title: "Profile Updated",
-        description: "Your full name has been updated.",
+        description: "Your information has been updated.",
       });
 
       onOpenChange(false);
@@ -134,6 +140,19 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
                   <FormLabel>Full Name</FormLabel>
                   <FormControl>
                     <Input {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="phoneNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Phone Number</FormLabel>
+                  <FormControl>
+                    <Input type="tel" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

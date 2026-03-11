@@ -43,6 +43,7 @@ export interface UserProfile {
   email: string;
   username: string;
   fullName: string;
+  phoneNumber?: string | null;
   position: UserPosition;
   departmentId?: string;
   departmentName?: string;

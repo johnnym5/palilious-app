@@ -26,6 +26,7 @@ const formSchema = z.object({
   username: z.string().min(3, "Username must be at least 3 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
+  phoneNumber: z.string().optional(),
   departmentName: z.string({ required_error: "Please select a department."}),
   position: z.string().min(1, "Position is required."),
 });
@@ -50,6 +51,7 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
       username: "",
       email: "",
       password: "",
+      phoneNumber: "",
     },
   });
   
@@ -100,6 +102,7 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
         email: values.email.toLowerCase(),
         username: sanitizeInput(values.username.toLowerCase()),
         fullName: sanitizeInput(values.fullName),
+        phoneNumber: sanitizeInput(values.phoneNumber) || null,
         position: values.position as UserProfile['position'],
         departmentName: values.departmentName,
         joinedDate: new Date().toISOString(),
@@ -159,6 +162,9 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
             )}/>
              <FormField control={form.control} name="password" render={({ field }) => (
                 <FormItem><FormLabel>Password</FormLabel><FormControl><Input type="password" placeholder="Min. 8 characters" {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+             <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                <FormItem><FormLabel>Phone Number (Optional)</FormLabel><FormControl><Input type="tel" {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="departmentName" render={({ field }) => (
                 <FormItem><FormLabel>Department</FormLabel>

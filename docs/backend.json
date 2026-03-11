@@ -37,6 +37,10 @@
           "type": "string",
           "description": "User's full name."
         },
+        "phoneNumber": {
+            "type": "string",
+            "description": "User's phone number."
+        },
         "departmentId": {
           "type": "string",
           "description": "The ID of the department the user belongs to."
