@@ -109,6 +109,7 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
     const actionCodeSettings = {
       url: `${window.location.origin}/login`,
       handleCodeInApp: true,
+      dynamicLinkDomain: process.env.NEXT_PUBLIC_FIREBASE_DYNAMIC_LINK_DOMAIN
     };
 
     try {
