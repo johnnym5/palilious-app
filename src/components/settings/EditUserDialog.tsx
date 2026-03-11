@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from "react-hook-form";
@@ -7,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, KeyRound } from "lucide-react";
 import { useState, useEffect, useMemo, useRef } from "react";
 import { useFirestore, updateDocumentNonBlocking } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -16,10 +17,12 @@ import type { UserProfile } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { PREDEFINED_DEPARTMENTS, ROLES_BY_DEPARTMENT } from "@/lib/roles-and-departments";
 import { sanitizeInput } from "@/lib/utils";
+import { Separator } from "../ui/separator";
 
 const formSchema = z.object({
-  email: z.string().email("Invalid email format."),
+  fullName: z.string().min(1, "Identity name is required."),
   username: z.string().min(3, "Username must be at least 3 characters."),
+  email: z.string().email("Invalid email format."),
   phoneNumber: z.string().optional(),
   position: z.string().min(1, "Position is required."),
   departmentName: z.string({ required_error: "Department is required." }),
@@ -48,6 +51,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
   useEffect(() => {
     if (userToEdit) {
       form.reset({
+        fullName: userToEdit.fullName,
         email: userToEdit.email,
         username: userToEdit.username,
         phoneNumber: userToEdit.phoneNumber || '',
@@ -70,10 +74,8 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
     if (!selectedDepartment) return [];
     const departmentRoles = ROLES_BY_DEPARTMENT[selectedDepartment as keyof typeof ROLES_BY_DEPARTMENT] || [];
     
-    // Always include "Staff" as a generic option
     const rolesToShow = [...new Set(['Staff', ...departmentRoles])];
     
-    // Ensure the user's current position is in the list, especially for roles like 'Organization Administrator'
     if (userToEdit && !rolesToShow.includes(userToEdit.position)) {
         rolesToShow.push(userToEdit.position);
     }
@@ -89,6 +91,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
     try {
       const userRef = doc(firestore, 'users', userToEdit.id);
       await updateDocumentNonBlocking(userRef, {
+        fullName: sanitizeInput(values.fullName),
         email: sanitizeInput(values.email.toLowerCase()),
         username: sanitizeInput(values.username.toLowerCase()),
         phoneNumber: sanitizeInput(values.phoneNumber) || null,
@@ -98,7 +101,7 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
 
       toast({
         title: "User Updated",
-        description: `${userToEdit.fullName}'s profile has been updated. The user must use their old email to log in and confirm the change.`,
+        description: `${userToEdit.fullName}'s profile has been updated.`,
       });
       onOpenChange(false);
     } catch (error: any) {
@@ -114,55 +117,86 @@ export function EditUserDialog({ open, onOpenChange, userToEdit }: EditUserDialo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-2xl">
         <DialogHeader>
-          <DialogTitle>Edit User: {userToEdit.fullName}</DialogTitle>
-          <DialogDescription>Update the user's role and department.</DialogDescription>
+          <DialogTitle className="text-2xl font-bold font-headline uppercase tracking-wider">Security Clearance</DialogTitle>
+          <DialogDescription>Personnel Authorization for {userToEdit.fullName}</DialogDescription>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
-            <FormField control={form.control} name="username" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Username</FormLabel>
-                    <FormControl><Input placeholder="e.g., jdoe" {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-            )}/>
-             <FormField control={form.control} name="email" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl><Input type="email" {...field} /></FormControl>
-                     <FormDescription className="text-xs">Changing this does not change the user's login credential. They must confirm the change after logging in.</FormDescription>
-                    <FormMessage />
-                </FormItem>
-            )}/>
-             <FormField control={form.control} name="phoneNumber" render={({ field }) => (
-                <FormItem>
-                    <FormLabel>Phone Number</FormLabel>
-                    <FormControl><Input type="tel" {...field} /></FormControl>
-                    <FormMessage />
-                </FormItem>
-            )}/>
-            <FormField control={form.control} name="departmentName" render={({ field }) => (
-              <FormItem><FormLabel>Department</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {PREDEFINED_DEPARTMENTS.map(dep => <SelectItem key={dep} value={dep}>{dep}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              <FormMessage /></FormItem>
-            )}/>
-            <FormField control={form.control} name="position" render={({ field }) => (
-              <FormItem><FormLabel>Position</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value} disabled={userToEdit.position === 'Organization Administrator' || !selectedDepartment}>
-                  <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
-                  <SelectContent>
-                    {rolesForSelectedDepartment.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
-                  </SelectContent>
-                </Select>
-              <FormMessage /></FormItem>
-            )}/>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 pt-4">
+             <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-primary/80 mb-4">Credential Control</h3>
+                <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <FormField control={form.control} name="fullName" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Identity Name</FormLabel>
+                                <FormControl><Input {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={form.control} name="username" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Username</FormLabel>
+                                <FormControl><Input placeholder="e.g., jdoe" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={form.control} name="email" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Contact Email</FormLabel>
+                                <FormControl><Input type="email" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                        <FormField control={form.control} name="phoneNumber" render={({ field }) => (
+                            <FormItem>
+                                <FormLabel>Contact Phone</FormLabel>
+                                <FormControl><Input type="tel" {...field} /></FormControl>
+                                <FormMessage />
+                            </FormItem>
+                        )}/>
+                    </div>
+                     <FormItem>
+                        <FormLabel className="flex items-center gap-2"><KeyRound className="h-4 w-4" /> Terminal Password</FormLabel>
+                        <FormControl>
+                            <Input type="password" value="••••••••••••••••" disabled />
+                        </FormControl>
+                        <FormDescription className="text-xs">
+                            For security, passwords are encrypted and cannot be viewed. To reset a user's password, use the "Reset Pass" button on the main team page.
+                        </FormDescription>
+                    </FormItem>
+                </div>
+             </div>
+            
+            <Separator />
+
+             <div>
+                <h3 className="text-sm font-semibold uppercase tracking-wider text-primary/80 mb-4">Role Assignment</h3>
+                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField control={form.control} name="departmentName" render={({ field }) => (
+                        <FormItem><FormLabel>Department</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select a department" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                {PREDEFINED_DEPARTMENTS.map(dep => <SelectItem key={dep} value={dep}>{dep}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                        <FormMessage /></FormItem>
+                    )}/>
+                    <FormField control={form.control} name="position" render={({ field }) => (
+                        <FormItem><FormLabel>Position</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value} disabled={userToEdit.position === 'Organization Administrator' || !selectedDepartment}>
+                            <FormControl><SelectTrigger><SelectValue placeholder="Select a role" /></SelectTrigger></FormControl>
+                            <SelectContent>
+                                {rolesForSelectedDepartment.map(role => <SelectItem key={role} value={role}>{role}</SelectItem>)}
+                            </SelectContent>
+                            </Select>
+                        <FormMessage /></FormItem>
+                    )}/>
+                </div>
+            </div>
+
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : "Save Changes"}
             </Button>
