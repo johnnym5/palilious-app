@@ -23,6 +23,7 @@ import { firebaseConfig } from "@/firebase/config";
 
 const formSchema = z.object({
   fullName: z.string().min(1, "Full name is required."),
+  username: z.string().min(3, "Username must be at least 3 characters."),
   email: z.string().email("Invalid email address."),
   password: z.string().min(8, "Password must be at least 8 characters."),
   departmentName: z.string({ required_error: "Please select a department."}),
@@ -46,6 +47,7 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
     resolver: zodResolver(formSchema),
     defaultValues: {
       fullName: "",
+      username: "",
       email: "",
       password: "",
     },
@@ -96,7 +98,7 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
       const newUserProfile: Omit<UserProfile, 'id'> = {
         orgId: currentUserProfile.orgId,
         email: values.email.toLowerCase(),
-        username: values.email.split('@')[0].toLowerCase(), // default username
+        username: sanitizeInput(values.username.toLowerCase()),
         fullName: sanitizeInput(values.fullName),
         position: values.position as UserProfile['position'],
         departmentName: values.departmentName,
@@ -148,6 +150,9 @@ export function InviteUserDialog({ open, onOpenChange, currentUserProfile }: Inv
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 py-4">
             <FormField control={form.control} name="fullName" render={({ field }) => (
                 <FormItem><FormLabel>Full Name</FormLabel><FormControl><Input {...field} /></FormControl><FormMessage /></FormItem>
+            )}/>
+            <FormField control={form.control} name="username" render={({ field }) => (
+                <FormItem><FormLabel>Username</FormLabel><FormControl><Input placeholder="e.g., jdoe" {...field} /></FormControl><FormMessage /></FormItem>
             )}/>
             <FormField control={form.control} name="email" render={({ field }) => (
                 <FormItem><FormLabel>Email</FormLabel><FormControl><Input type="email" {...field} /></FormControl><FormMessage /></FormItem>
