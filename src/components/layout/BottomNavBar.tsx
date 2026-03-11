@@ -23,7 +23,7 @@ type DialogManager = {
 };
 
 const navItemsLeft = [
-  { href: "/overview", icon: Home, label: "Home" },
+  { href: "/", icon: Home, label: "Home" },
   { dialog: "tasks", icon: ListTodo, label: "Tasks" },
 ];
 

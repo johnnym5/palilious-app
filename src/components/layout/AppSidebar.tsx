@@ -33,7 +33,7 @@ type DialogManager = {
 };
 
 const mainNavItems = [
-  { href: "/overview", icon: LayoutDashboard, label: "Overview" },
+  { href: "/", icon: LayoutDashboard, label: "Overview" },
   { isSeparator: true },
   { dialog: "attendance", icon: CalendarCheck2, label: "Attendance" },
   { dialog: "leave", icon: CalendarPlus, label: "Leave" },
@@ -125,7 +125,7 @@ export default function AppSidebar({ isMobile = false }: { isMobile?: boolean })
                         href={item.href}
                         className={cn(
                         "flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary",
-                        pathname.startsWith(item.href) && "bg-secondary text-primary",
+                        pathname === item.href && "bg-secondary text-primary",
                         isMobile && "text-lg"
                         )}
                     >
