@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFirestore, updateDocumentNonBlocking, useCollection, useMemoFirebase } from "@/firebase";
 import { doc, collection, query, where } from "firebase/firestore";
@@ -18,12 +16,22 @@ import { useToast } from "@/hooks/use-toast";
 import type { Task, UserProfile, Workbook, Sheet } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn, sanitizeInput } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
   description: z.string().optional(),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
+  dueDate: z.string().optional().refine((val) => {
+    if (!val) return true; // Allow empty string
+    try {
+      const parsedDate = parse(val, 'dd/MM/yyyy', new Date());
+      // Check if the parsed date is valid and the year is reasonable
+      return !isNaN(parsedDate.getTime()) && parsedDate.getFullYear() > 1900;
+    } catch (e) {
+      return false;
+    }
+  }, { message: "Invalid date. Please use DD/MM/YYYY format." }),
   workbookId: z.string().optional(),
   sheetId: z.string().optional(),
 });
@@ -63,6 +71,7 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
       title: task.title,
       description: task.description || "",
       priority: task.priority,
+      dueDate: task.dueDate ? format(new Date(task.dueDate), 'dd/MM/yyyy') : '',
       workbookId: task.workbookId,
       sheetId: task.sheetId,
     });
@@ -73,11 +82,23 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
     if (!firestore) return;
     setIsLoading(true);
 
+    let dueDateISO: string | null = null;
+    if (values.dueDate) {
+        try {
+            const dateObj = parse(values.dueDate, 'dd/MM/yyyy', new Date());
+            dueDateISO = dateObj.toISOString();
+        } catch (e) {
+            form.setError('dueDate', { type: 'manual', message: 'Invalid date format' });
+            return;
+        }
+    }
+
     try {
         const updateData = {
             title: sanitizeInput(values.title),
             description: sanitizeInput(values.description),
             priority: values.priority,
+            dueDate: dueDateISO,
             workbookId: values.workbookId || null,
             sheetId: values.sheetId || null,
         }
@@ -133,7 +154,7 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
                     )}
                  </div>
 
-                <div className="grid grid-cols-1 gap-4">
+                <div className="grid grid-cols-2 gap-4">
                     <FormField control={form.control} name="priority" render={({ field }) => (
                          <FormItem><FormLabel>Priority</FormLabel>
                          <Select onValueChange={field.onChange} defaultValue={field.value}>
@@ -145,6 +166,15 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
                             </SelectContent>
                          </Select>
                          <FormMessage /></FormItem>
+                    )} />
+                    <FormField control={form.control} name="dueDate" render={({ field }) => (
+                        <FormItem>
+                            <FormLabel>Due Date</FormLabel>
+                            <FormControl>
+                                <Input placeholder="DD/MM/YYYY" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
                     )} />
                 </div>
 

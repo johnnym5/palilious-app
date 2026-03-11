@@ -7,10 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { Calendar } from "@/components/ui/calendar";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFirestore, useCollection, addDocumentNonBlocking, useMemoFirebase } from "@/firebase";
 import { collection, query, where, doc, getDocs } from "firebase/firestore";
@@ -18,16 +16,27 @@ import { useToast } from "@/hooks/use-toast";
 import type { Task, UserProfile, ActivityEntry, Permissions, Notification, Workbook, Sheet, TaskPriority } from "@/lib/types";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { cn, sanitizeInput } from "@/lib/utils";
-import { format } from "date-fns";
+import { format, parse } from "date-fns";
 
 const formSchema = z.object({
   title: z.string().min(5, { message: "Title must be at least 5 characters." }),
   description: z.string().optional(),
   assignedTo: z.string().optional(),
   priority: z.enum(["LEVEL_1", "LEVEL_2", "LEVEL_3"]),
+  dueDate: z.string().optional().refine((val) => {
+    if (!val) return true; // Allow empty string
+    try {
+      const parsedDate = parse(val, 'dd/MM/yyyy', new Date());
+      // Check if the parsed date is valid and the year is reasonable
+      return !isNaN(parsedDate.getTime()) && parsedDate.getFullYear() > 1900;
+    } catch (e) {
+      return false;
+    }
+  }, { message: "Invalid date. Please use DD/MM/YYYY format." }),
   workbookId: z.string().optional(),
   sheetId: z.string().optional(),
 });
+
 
 type FormData = z.infer<typeof formSchema>;
 
@@ -67,6 +76,7 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
       title: "",
       description: "",
       priority: "LEVEL_1",
+      dueDate: "",
     },
   });
 
@@ -90,6 +100,7 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
             description: initialData?.description || "",
             priority: initialData?.priority || "LEVEL_1",
             assignedTo: undefined,
+            dueDate: initialData?.dueDate ? format(initialData.dueDate, 'dd/MM/yyyy') : '',
             workbookId: initialData?.workbookId,
             sheetId: initialData?.sheetId,
         });
@@ -104,6 +115,17 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
     if (!assignedUser) {
         toast({ variant: "destructive", title: "Error", description: "Selected user not found." });
         return;
+    }
+
+    let dueDateISO: string | null = null;
+    if (values.dueDate) {
+        try {
+            const dateObj = parse(values.dueDate, 'dd/MM/yyyy', new Date());
+            dueDateISO = dateObj.toISOString();
+        } catch (e) {
+            form.setError('dueDate', { type: 'manual', message: 'Invalid date format' });
+            return;
+        }
     }
     
     if (values.priority === 'LEVEL_3' || values.priority === 'LEVEL_2') {
@@ -164,7 +186,7 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
             assignedToName: assignedUser.fullName,
             priority: values.priority,
             status: 'QUEUED',
-            dueDate: null,
+            dueDate: dueDateISO,
             createdBy: currentUserProfile.id,
             activity: [initialActivity],
             createdAt: now,
@@ -264,6 +286,16 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
                          <FormMessage /></FormItem>
                     )} />
                 </div>
+
+                <FormField control={form.control} name="dueDate" render={({ field }) => (
+                    <FormItem>
+                        <FormLabel>Due Date (Optional)</FormLabel>
+                        <FormControl>
+                            <Input placeholder="DD/MM/YYYY" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                    </FormItem>
+                )} />
 
                 <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}

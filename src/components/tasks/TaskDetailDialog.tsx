@@ -187,6 +187,14 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                 </span>
                 <span className="font-medium">{task.assignedToName}</span>
               </div>
+              <div className="flex items-center justify-between">
+                <span className="flex items-center gap-2 text-muted-foreground">
+                  <Calendar className="h-4 w-4" /> Due Date
+                </span>
+                <span className="font-medium">
+                  {task.dueDate ? format(new Date(task.dueDate), 'PPP') : 'Not set'}
+                </span>
+              </div>
                {task.workbookId && (
                  <div className="flex items-center justify-between">
                     <span className="flex items-center gap-2 text-muted-foreground">
