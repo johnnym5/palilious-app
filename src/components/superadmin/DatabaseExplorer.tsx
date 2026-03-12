@@ -51,6 +51,8 @@ export function DatabaseExplorer() {
     const [viewedDocument, setViewedDocument] = useState<any | null>(null);
     const [editedDocument, setEditedDocument] = useState<any | null>(null);
     const [viewedSchema, setViewedSchema] = useState<any | null>(null);
+    const [jsonStringValues, setJsonStringValues] = useState<Record<string, string>>({});
+
 
     const [isLoadingDoc, setIsLoadingDoc] = useState(false);
     const [isSaving, setIsSaving] = useState(false);
@@ -99,6 +101,7 @@ export function DatabaseExplorer() {
         setIsLoadingDoc(true);
         setViewedDocument(null);
         setEditedDocument(null);
+        setJsonStringValues({});
         try {
             const docRef = doc(firestore, selectedCollection, docId);
             const docSnap = await getDoc(docRef);
@@ -245,8 +248,17 @@ export function DatabaseExplorer() {
                     <Label htmlFor={key} className="text-right pt-2 truncate">{key}</Label>
                     <Textarea 
                         id={key}
-                        value={JSON.stringify(value, null, 2)}
-                        disabled
+                        value={jsonStringValues[key] ?? JSON.stringify(value, null, 2)}
+                        disabled={isLocked}
+                        onChange={(e) => {
+                            setJsonStringValues(prev => ({...prev, [key]: e.target.value}));
+                            try {
+                                const parsed = JSON.parse(e.target.value);
+                                handleFieldChange(key, parsed);
+                            } catch (err) {
+                               // Invalid JSON, do nothing to main state, user can continue typing
+                            }
+                        }}
                         className="col-span-2 font-mono text-xs bg-input"
                         rows={Object.keys(value).length > 5 ? 10 : 5}
                     />
@@ -302,7 +314,7 @@ export function DatabaseExplorer() {
     }
 
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 border rounded-lg h-[70vh] overflow-hidden">
+        <div className="grid grid-cols-1 md:grid-cols-3 border rounded-lg h-[600px] overflow-hidden">
             <div className={cn("flex flex-col border-r", mobileView !== 'collections' && "hidden md:flex")}>
                  <div className="p-3 border-b font-semibold text-sm flex items-center justify-between">
                      <div className="flex items-center gap-2">
@@ -371,10 +383,11 @@ export function DatabaseExplorer() {
                                 )}
                             >
                                 <Checkbox checked={selectedDocIds.includes(d.id)} onCheckedChange={(checked) => handleSingleSelect(d.id, !!checked)} onClick={e => e.stopPropagation()} />
-                                <div className="truncate">
+                                <div className="flex-1 truncate">
                                     <p className="font-medium">{getDisplayName(d)}</p>
                                     <p className="text-xs text-muted-foreground font-mono">{d.id}</p>
                                 </div>
+                                 <ChevronRight className="h-4 w-4 text-muted-foreground ml-auto" />
                             </div>
                         ))
                     ) : (

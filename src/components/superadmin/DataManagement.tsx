@@ -706,7 +706,7 @@ export function DataManagement() {
                         <CardHeader>
                             <CardTitle>Database Explorer</CardTitle>
                             <CardDescription>
-                                A live, read-only view of your Firestore database. Editing capabilities will be added in a future step.
+                                A live, read-write view of your Firestore database. Exercise caution with edits.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
