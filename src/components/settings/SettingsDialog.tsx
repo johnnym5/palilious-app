@@ -13,12 +13,16 @@ import { useRouter } from 'next/navigation';
 interface SettingsDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  userProfile: UserProfile;
+  userProfile: UserProfile | null;
 }
 
 export function SettingsDialog({ open, onOpenChange, userProfile }: SettingsDialogProps) {
   const permissions = usePermissions(userProfile);
   const router = useRouter();
+
+  if (!userProfile) {
+    return null;
+  }
 
   if (!permissions.canManageStaff) {
     return (

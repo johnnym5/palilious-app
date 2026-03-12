@@ -2,11 +2,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { useUser, useFirestore, useCollection, useMemoFirebase, useAuth } from '@/firebase';
+import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, useAuth } from '@/firebase';
 import { useSuperAdmin } from '@/hooks/useSuperAdmin';
 import { Loader2, Building, Users, LogOut, Bell, Settings } from 'lucide-react';
 import { signOut } from 'firebase/auth';
-import { collection, getDocs, query, where } from 'firebase/firestore';
+import { collection, getDocs, query, where, doc } from 'firebase/firestore';
 import type { Organization, UserProfile, Feedback } from '@/lib/types';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ export default function SuperAdminPage() {
     }, [firestore]);
     const { data: newFeedback } = useCollection<Feedback>(newFeedbackQuery);
 
-    const {data: orgToManageProfile } = useDoc<UserProfile>(useMemoFirebase(() => orgToManage ? doc(firestore, 'users', orgToManage.ownerId) : null, [firestore, orgToManage]))
+    const {data: orgToManageProfile } = useDoc<UserProfile>(useMemoFirebase(() => orgToManage && firestore ? doc(firestore, 'users', orgToManage.ownerId) : null, [firestore, orgToManage]))
 
     useEffect(() => {
         if (!isUserLoading && user && !isSuperAdmin) {
