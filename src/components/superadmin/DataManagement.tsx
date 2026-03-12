@@ -88,6 +88,7 @@ export function DataManagement() {
     const [onlineBackupPreview, setOnlineBackupPreview] = useState<Record<string, number> | null>(null);
     const [collectionsToRestore, setCollectionsToRestore] = useState<string[]>([]);
     const [restoreTargetOrg, setRestoreTargetOrg] = useState<string>('__ALL__');
+    const [backupToDelete, setBackupToDelete] = useState<string | null>(null);
 
 
     // Destructive actions state
@@ -477,27 +478,61 @@ export function DataManagement() {
         }
     };
     
+    const handleDeleteBackup = async () => {
+        if (!database || !backupToDelete) return;
+        setLoading(`delete-backup-${backupToDelete}`);
+        try {
+            const backupRef = ref(database, `backups/${backupToDelete}`);
+            await set(backupRef, null); // Deletes the data at that location
+            toast({ title: 'Backup Deleted', description: 'The cloud snapshot has been removed.' });
+            if(selectedOnlineBackup === backupToDelete) {
+                setSelectedOnlineBackup(null);
+                setOnlineBackupPreview(null);
+                setCollectionsToRestore([]);
+            }
+        } catch (e: any) {
+            toast({ variant: 'destructive', title: 'Delete Failed', description: e.message });
+        } finally {
+            setLoading(null);
+            setBackupToDelete(null);
+        }
+    };
+
     const formatBackupKey = (key: string) => {
         const timestamp = key.substring(key.indexOf('_') + 1);
-        return new Date(timestamp.replace(/_/g, '.').replace(/-/g, ':')).toLocaleString();
+        try {
+            const date = new Date(timestamp.replace(/_/g, '.').replace(/-/g, ':'));
+            if(isNaN(date.getTime())) return key;
+            return date.toLocaleString();
+        } catch (e) {
+            return key;
+        }
     };
 
     const anyLoading = !!loading || areOrgsLoading;
 
-    const renderBackupList = (keys: string[]) => {
+    const renderBackupList = (keys: string[], type: 'manual' | 'auto') => {
         if (keys.length === 0) {
-            return <p className="text-sm text-muted-foreground text-center py-4">No backups found.</p>;
+            return <p className="text-sm text-muted-foreground text-center py-4">No {type} backups found.</p>;
         }
         return (
             <ScrollArea className="max-h-40">
                 <div className="space-y-2 pr-2">
                     {keys.map(key => (
-                        <div key={key} onClick={() => handleSelectOnlineBackup(key)} className="flex items-center justify-between p-2 border rounded-md cursor-pointer hover:bg-accent">
-                            <div className="flex items-center gap-2">
+                        <div key={key} className="flex items-center justify-between p-2 border rounded-md">
+                            <div 
+                                onClick={() => handleSelectOnlineBackup(key)}
+                                className="flex-1 flex items-center gap-2 cursor-pointer hover:bg-accent -m-2 p-2 rounded-l-md"
+                            >
                                 <Server className="h-4 w-4 text-muted-foreground" />
                                 <span className="font-mono text-xs">{formatBackupKey(key)}</span>
                             </div>
-                            {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin" />}
+                            {loading === 'preview-online' && selectedOnlineBackup === key && <Loader2 className="animate-spin mx-2" />}
+                            {type === 'manual' && (
+                                 <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive shrink-0" onClick={() => setBackupToDelete(key)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            )}
                         </div>
                     ))}
                 </div>
@@ -654,12 +689,12 @@ export function DataManagement() {
                                     <Separator />
                                      <div className='space-y-2'>
                                         <h3 className="font-semibold text-sm">Available Manual Snapshots</h3>
-                                        {renderBackupList(manualOnlineBackups)}
+                                        {renderBackupList(manualOnlineBackups, 'manual')}
                                     </div>
                                      <div className='space-y-2'>
-                                        <h3 className="font-semibold text-sm">Automated Nightly Backups</h3>
-                                        <p className='text-xs text-muted-foreground'>Automated backups run daily at midnight. This functionality is configured on the backend.</p>
-                                        {renderBackupList(autoOnlineBackups)}
+                                        <h3 className="font-semibold text-sm">Automated Backups</h3>
+                                        <p className='text-xs text-muted-foreground'>This section is a placeholder for automated backups. Setting up daily automated backups requires a backend process (like a Cloud Function) which cannot be configured from here.</p>
+                                        {renderBackupList(autoOnlineBackups, 'auto')}
                                     </div>
                                     {onlineBackupPreview && (
                                         <Card>
@@ -802,6 +837,23 @@ export function DataManagement() {
                     </Card>
                 </TabsContent>
             </Tabs>
+            <AlertDialog open={!!backupToDelete} onOpenChange={(isOpen) => !isOpen && setBackupToDelete(null)}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Delete Backup?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Are you sure you want to delete the manual backup from {backupToDelete && formatBackupKey(backupToDelete)}? This action cannot be undone.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancel</AlertDialogCancel>
+                        <AlertDialogAction onClick={handleDeleteBackup} disabled={!!loading} className="bg-destructive hover:bg-destructive/90">
+                             {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Delete
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
         </div>
     );
 }
