@@ -5,17 +5,14 @@ import { useCollection, useFirestore, useMemoFirebase, useAuth } from '@/firebas
 import { collection, query, where, doc, deleteDoc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { Button } from '@/components/ui/button';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Badge } from '@/components/ui/badge';
-import { PlusCircle, Trash2, Edit, Loader2, KeyRound, MoreVertical } from 'lucide-react';
+import { PlusCircle, Trash2, Edit, Loader2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { InviteUserDialog } from './InviteUserDialog';
 import { EditUserDialog } from './EditUserDialog';
 import { useToast } from '@/hooks/use-toast';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Avatar, AvatarFallback } from '../ui/avatar';
 
 
 interface TeamPaneProps {
@@ -29,7 +26,6 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
     const [isInviteOpen, setIsInviteOpen] = useState(false);
     const [userToEdit, setUserToEdit] = useState<UserProfile | null>(null);
     const [userToDelete, setUserToDelete] = useState<UserProfile | null>(null);
-    const [isResetting, setIsResetting] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState(false);
 
     const usersQuery = useMemoFirebase(() =>
@@ -49,10 +45,6 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
         setIsDeleting(true);
         try {
             // STEP 1 (BACKEND SIMULATION): Delete from Firebase Authentication
-            // This action cannot be done safely from the client-side. It requires a backend
-            // environment (like a Cloud Function) with the Firebase Admin SDK.
-            // We are SIMULATING this step here. In a real app, a developer would
-            // replace this console log with a call to their backend function.
             console.warn(`[SIMULATION] Deleting user from Firebase Auth: ${userToDelete.email} (${userToDelete.id}). Implement a backend function for this.`);
 
             // STEP 2 (CLIENT): Delete user profile from Firestore Database
@@ -73,40 +65,11 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
             setIsDeleting(false);
         }
     };
-
-    const handlePasswordReset = async (user: UserProfile) => {
-        if (!auth) {
-            toast({ variant: 'destructive', title: 'Error', description: 'Authentication service is not available.' });
-            return;
-        }
-        setIsResetting(user.id);
-
-        const actionCodeSettings = {
-            url: `${window.location.origin}/login`,
-            handleCodeInApp: true,
-        };
-
-        try {
-            await sendPasswordResetEmail(auth, user.email, actionCodeSettings);
-            toast({
-                title: 'Password Reset Email Sent',
-                description: `An email has been sent to ${user.email} with instructions.`,
-            });
-        } catch (error: any) {
-            toast({
-                variant: 'destructive',
-                title: 'Failed to Send Reset Email',
-                description: error.message || 'An unexpected error occurred.',
-            });
-        } finally {
-            setIsResetting(null);
-        }
-    };
-
+    
     return (
         <>
             <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold font-headline">Team Members</h3>
+                <h3 className="text-xl font-bold font-headline">Security</h3>
                 <InviteUserDialog open={isInviteOpen} onOpenChange={setIsInviteOpen} currentUserProfile={currentUserProfile}>
                     <Button onClick={() => setIsInviteOpen(true)}>
                         <PlusCircle className="mr-2 h-4 w-4" />
@@ -115,107 +78,57 @@ export function TeamPane({ currentUserProfile }: TeamPaneProps) {
                 </InviteUserDialog>
             </div>
 
-            {/* Mobile View */}
-            <div className="md:hidden space-y-4">
-                {isLoading && Array.from({length: 3}).map((_, i) => <Skeleton key={i} className="h-40 w-full" />)}
-                {!isLoading && users?.map(user => (
-                    <Card key={user.id}>
-                        <CardHeader>
-                            <div className="flex items-start justify-between">
-                                <div>
-                                    <CardTitle>{user.fullName}</CardTitle>
-                                    <CardDescription>{user.email}</CardDescription>
-                                </div>
-                                <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 -mr-2 -mt-2">
-                                            <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                        <DropdownMenuItem onSelect={() => setUserToEdit(user)}>
-                                            <Edit className="mr-2 h-4 w-4" /> Edit
-                                        </DropdownMenuItem>
-                                        <DropdownMenuItem onSelect={() => handlePasswordReset(user)} disabled={isResetting === user.id}>
-                                            {isResetting === user.id ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <KeyRound className="mr-2 h-4 w-4" />}
-                                            Reset Pass
-                                        </DropdownMenuItem>
-                                        {canBeDeleted(user) && (
-                                            <DropdownMenuItem onSelect={() => setUserToDelete(user)} className="text-destructive focus:text-destructive">
-                                                <Trash2 className="mr-2 h-4 w-4" /> Delete
-                                            </DropdownMenuItem>
-                                        )}
-                                    </DropdownMenuContent>
-                                </DropdownMenu>
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="flex items-center gap-2 flex-wrap">
-                                <Badge variant="secondary">{user.position}</Badge>
-                                <Badge variant="outline">{user.departmentName || 'N/A'}</Badge>
-                            </div>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+            <div className="border rounded-lg bg-card text-card-foreground shadow-sm">
+                <div className="grid grid-cols-11 gap-4 p-4 border-b bg-muted/20 rounded-t-lg">
+                    <div className="col-span-3 text-sm font-semibold text-muted-foreground">IDENTITY</div>
+                    <div className="col-span-2 text-sm font-semibold text-muted-foreground">ROLE</div>
+                    <div className="col-span-2 text-sm font-semibold text-muted-foreground">USERNAME</div>
+                    <div className="col-span-2 text-sm font-semibold text-muted-foreground">PASSWORD</div>
+                    <div className="col-span-2 text-sm font-semibold text-muted-foreground text-right">ACTIONS</div>
+                </div>
 
-            {/* Desktop View */}
-            <div className="hidden md:block border rounded-lg">
-                <Table>
-                    <TableHeader>
-                        <TableRow>
-                            <TableHead>Name</TableHead>
-                            <TableHead>Position</TableHead>
-                            <TableHead>Department</TableHead>
-                            <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                        {isLoading && Array.from({length: 3}).map((_, i) => (
-                            <TableRow key={i}>
-                                <TableCell colSpan={4}><Skeleton className="h-8 w-full" /></TableCell>
-                            </TableRow>
-                        ))}
-                        {!isLoading && users?.map(user => (
-                            <TableRow key={user.id}>
-                                <TableCell>
-                                    <div className="font-medium">{user.fullName}</div>
-                                    <div className="text-sm text-muted-foreground">{user.email}</div>
-                                </TableCell>
-                                <TableCell><Badge variant="secondary">{user.position}</Badge></TableCell>
-                                <TableCell>{user.departmentName || 'N/A'}</TableCell>
-                                <TableCell className="text-right">
-                                    <div className="flex items-center justify-end gap-2 flex-wrap">
-                                        <Button variant="outline" size="sm" onClick={() => setUserToEdit(user)}>
-                                            <Edit className="mr-2 h-4 w-4" />
-                                            Edit
-                                        </Button>
-                                         <Button
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => handlePasswordReset(user)}
-                                            disabled={isResetting === user.id}
-                                        >
-                                            {isResetting === user.id ? (
-                                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                            ) : (
-                                                <KeyRound className="mr-2 h-4 w-4" />
-                                            )}
-                                            Reset Pass
-                                        </Button>
-                                        {canBeDeleted(user) && (
-                                            <Button variant="destructive" size="sm" onClick={() => setUserToDelete(user)}>
-                                                <Trash2 className="mr-2 h-4 w-4" />
-                                                Delete
-                                            </Button>
-                                        )}
-                                    </div>
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+                <div className="divide-y divide-border">
+                    {isLoading && Array.from({length: 3}).map((_, i) => (
+                        <div key={i} className="p-4"><Skeleton className="h-10 w-full" /></div>
+                    ))}
+                    {!isLoading && users?.map(user => (
+                        <div key={user.id} className="grid grid-cols-11 gap-4 p-3 items-center">
+                            <div className="col-span-3 flex items-center gap-3 truncate">
+                                <Avatar className="h-8 w-8">
+                                    <AvatarFallback>{user.fullName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                                </Avatar>
+                                <div className="truncate">
+                                    <div className="font-medium truncate">{user.fullName}</div>
+                                    <div className="text-xs text-muted-foreground truncate">{user.email}</div>
+                                </div>
+                            </div>
+                            <div className="col-span-2">
+                                <Badge variant="secondary" className="text-xs uppercase">{user.position}</Badge>
+                            </div>
+                            <div className="col-span-2 font-mono text-sm text-muted-foreground truncate">{user.username}</div>
+                            <div className="col-span-2 font-mono text-sm text-muted-foreground">••••••••</div>
+                            <div className="col-span-2 flex items-center justify-end gap-1">
+                                <Button variant="ghost" size="icon" className="h-8 w-8 text-primary/70 hover:text-primary" onClick={() => setUserToEdit(user)}>
+                                    <Edit className="h-4 w-4" />
+                                </Button>
+                                {canBeDeleted(user) && (
+                                     <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive/70 hover:text-destructive" onClick={() => setUserToDelete(user)}>
+                                        <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                )}
+                            </div>
+                        </div>
+                    ))}
+                </div>
+                 {!isLoading && users?.length === 0 && (
+                    <div className="text-center text-sm text-muted-foreground py-16">
+                        No users found in this organization.
+                    </div>
+                )}
             </div>
+             <p className="text-xs text-muted-foreground mt-2">
+                Passwords are shown as •••••••• for security. Actual passwords are encrypted and cannot be viewed. Use the "Reset Pass" button inside the user's edit dialog.
+            </p>
 
             {userToEdit && (
                 <EditUserDialog 
