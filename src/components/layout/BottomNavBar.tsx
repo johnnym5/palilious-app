@@ -38,7 +38,7 @@ export function BottomNavBar() {
   const navItems = mainNavItems.filter(item => !item.isSeparator);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 h-20 border-t bg-background/80 backdrop-blur-lg md:hidden">
+    <div className="fixed bottom-0 left-0 right-0 z-40 h-20 border-t bg-background/80 backdrop-blur md:hidden">
       <ScrollArea className="w-full h-full whitespace-nowrap">
         <div className="flex w-max items-center h-full px-4">
           {navItems.map(item => {
