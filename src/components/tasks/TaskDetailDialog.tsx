@@ -153,7 +153,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-4xl h-[90vh] w-full">
+      <DialogContent className="sm:max-w-4xl h-[90vh] w-full flex flex-col">
         <DialogHeader>
           <div className="flex items-start justify-between">
              <DialogTitle className='max-w-md'>{task.title}</DialogTitle>
@@ -265,7 +265,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
           </div>
         </div>
 
-        <DialogFooter className="sm:justify-between">
+        <DialogFooter className="sm:justify-between flex-shrink-0">
              <div className='flex justify-start w-full items-center'>
                 <div className='flex gap-2'>
                     {permissions.canManageStaff && (
@@ -357,7 +357,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                 isOpen={isCompletionBriefOpen}
                 onOpenChange={setIsCompletionBriefOpen}
                 task={task}
-                userProfile={currentUserProfile}
+                userProfile={userProfile}
             />
         )}
 
