@@ -15,8 +15,8 @@ import { Calendar, CheckSquare, History, Info, BookOpenCheck, User, Plus, Trash2
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
-import { useState } from 'react';
-import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
+import { useState, useEffect } from 'react';
+import { useFirestore, updateDocumentNonBlocking, deleteDocumentNonBlocking, useDoc, useMemoFirebase } from '@/firebase';
 import { doc, arrayUnion } from 'firebase/firestore';
 import { Checkbox } from '../ui/checkbox';
 import { Input } from '../ui/input';
@@ -47,8 +47,17 @@ interface TaskDetailDialogProps {
   permissions: Permissions;
 }
 
-export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfile, permissions }: TaskDetailDialogProps) {
+export function TaskDetailDialog({ task: initialTask, isOpen, onOpenChange, currentUserProfile, permissions }: TaskDetailDialogProps) {
   const firestore = useFirestore();
+
+  const taskRef = useMemoFirebase(() =>
+    (firestore && initialTask) ? doc(firestore, 'tasks', initialTask.id) : null,
+    [firestore, initialTask?.id]
+  );
+  const { data: liveTask } = useDoc<Task>(taskRef);
+
+  const task = liveTask || initialTask;
+
   const [subTasks, setSubTasks] = useState<SubTask[]>(task.subTasks || []);
   const [newSubTask, setNewSubTask] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -56,6 +65,13 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [isCompletionBriefOpen, setIsCompletionBriefOpen] = useState(false);
+
+  useEffect(() => {
+    if (task) {
+        setSubTasks(task.subTasks || []);
+    }
+  }, [task]);
+
 
   const handleSubTaskToggle = (subTaskId: string) => {
     const updatedSubTasks = subTasks.map(st => 
