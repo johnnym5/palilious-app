@@ -1,12 +1,12 @@
 'use client';
 
 import { useState, useMemo, useEffect } from 'react';
-import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection, deleteDocumentNonBlocking } from '@/firebase';
-import { doc, collection, query, where, orderBy, limit } from 'firebase/firestore';
+import { useUser, useDoc, useFirestore, useMemoFirebase, useCollection } from '@/firebase';
+import { doc, collection, query, where, getDocs, writeBatch } from 'firebase/firestore';
 import type { UserProfile, Workbook, Sheet } from '@/lib/types';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Button } from '@/components/ui/button';
-import { ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search, PlusCircle, ArrowRight } from 'lucide-react';
+import { ShieldAlert, BookCopy, MoreHorizontal, Edit, Trash2, Share2, Search, PlusCircle, ArrowRight, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { EditWorkbookDialog } from '@/components/workbook/EditWorkbookDialog';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
@@ -40,7 +40,7 @@ function WorkbookCard({
     onDelete: (workbook: Workbook) => void,
 }) {
     const firestore = useFirestore();
-    const sheetsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `workbooks/${workbook.id}/sheets`), limit(1)) : null, [firestore, workbook.id]);
+    const sheetsQuery = useMemoFirebase(() => firestore ? query(collection(firestore, `workbooks/${workbook.id}/sheets`), where('__name__', '!=', '')) : null, [firestore, workbook.id]);
     const { data: sheets, isLoading } = useCollection<Sheet>(sheetsQuery);
 
     const recordCount = sheets?.[0]?.data?.length ?? 0;
@@ -118,6 +118,7 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
     const [workbookToShare, setWorkbookToShare] = useState<Workbook | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
     const permissions = usePermissions(userProfile);
+    const [isDeleting, setIsDeleting] = useState(false);
 
     const workbooksQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -138,12 +139,39 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
         );
     }, [workbooks, searchTerm]);
 
-    const handleDelete = () => {
-        if (!workbookToDelete) return;
+    const handleDelete = async () => {
+        if (!workbookToDelete || !firestore) return;
+        setIsDeleting(true);
+
         const workbookRef = doc(firestore, 'workbooks', workbookToDelete.id);
-        deleteDocumentNonBlocking(workbookRef);
-        toast({ title: "Workbook Deleted", description: `"${workbookToDelete.title}" has been removed.` });
-        setWorkbookToDelete(null);
+        const sheetsRef = collection(firestore, `workbooks/${workbookToDelete.id}/sheets`);
+
+        try {
+            // Get all sheets to delete them in a batch
+            const sheetsSnapshot = await getDocs(sheetsRef);
+            const batch = writeBatch(firestore);
+
+            sheetsSnapshot.forEach(sheetDoc => {
+                batch.delete(sheetDoc.ref);
+            });
+            
+            // Delete the main workbook document
+            batch.delete(workbookRef);
+
+            await batch.commit();
+
+            toast({ title: "Workbook Deleted", description: `"${workbookToDelete.title}" and all its sheets have been removed.` });
+
+        } catch (error: any) {
+             toast({
+                variant: 'destructive',
+                title: 'Deletion Failed',
+                description: `Could not delete workbook. Error: ${error.message}`,
+            });
+        } finally {
+            setIsDeleting(false);
+            setWorkbookToDelete(null);
+        }
     };
 
     if (isLoading) {
@@ -215,12 +243,15 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
                         <AlertDialogHeader>
                             <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                             <AlertDialogDescription>
-                                This action cannot be undone. This will permanently delete the workbook "{workbookToDelete.title}".
+                                This action cannot be undone. This will permanently delete the workbook "{workbookToDelete.title}" and all of its sheets.
                             </AlertDialogDescription>
                         </AlertDialogHeader>
                         <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction onClick={handleDelete} className="bg-destructive hover:bg-destructive/90">Delete</AlertDialogAction>
+                            <AlertDialogAction onClick={handleDelete} disabled={isDeleting} className="bg-destructive hover:bg-destructive/90">
+                                {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                Delete
+                            </AlertDialogAction>
                         </AlertDialogFooter>
                     </AlertDialogContent>
                 </AlertDialog>
