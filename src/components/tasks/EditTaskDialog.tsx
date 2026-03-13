@@ -72,8 +72,8 @@ export function EditTaskDialog({ task, open, onOpenChange, currentUserProfile }:
       description: task.description || "",
       priority: task.priority,
       dueDate: task.dueDate ? format(new Date(task.dueDate), 'dd/MM/yyyy') : '',
-      workbookId: task.workbookId,
-      sheetId: task.sheetId,
+      workbookId: task.workbookId || undefined,
+      sheetId: task.sheetId || undefined,
     });
   }, [task, form]);
 

@@ -101,8 +101,8 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
             priority: initialData?.priority || "LEVEL_1",
             assignedTo: undefined,
             dueDate: initialData?.dueDate ? format(initialData.dueDate, 'dd/MM/yyyy') : '',
-            workbookId: initialData?.workbookId,
-            sheetId: initialData?.sheetId,
+            workbookId: initialData?.workbookId || undefined,
+            sheetId: initialData?.sheetId || undefined,
         });
     }
   }, [initialData, open, form]);

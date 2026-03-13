@@ -20,10 +20,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { VisuallyHidden } from '@radix-ui/react-visually-hidden';
 import { Progress } from '@/components/ui/progress';
+import { usePermissions, type Permissions } from '@/hooks/usePermissions';
 
 function WorkbookCard({ 
     workbook, 
     userProfile, 
+    permissions,
     onSelectSheet,
     onEdit,
     onShare,
@@ -31,6 +33,7 @@ function WorkbookCard({
  }: { 
     workbook: Workbook, 
     userProfile: UserProfile, 
+    permissions: Permissions,
     onSelectSheet: (workbookId: string, sheetId: string | null) => void,
     onEdit: (workbook: Workbook) => void,
     onShare: (workbook: Workbook) => void,
@@ -48,6 +51,7 @@ function WorkbookCard({
     };
     
     const canManage = (workbook: Workbook) => {
+        if (permissions.canManageStaff) return true;
         if (workbook.createdBy === userProfile.id) return true;
         const sharingInfo = workbook.sharedWith?.find(s => s.userId === userProfile.id);
         return sharingInfo?.role === 'MANAGER';
@@ -113,6 +117,7 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
     const [workbookToDelete, setWorkbookToDelete] = useState<Workbook | null>(null);
     const [workbookToShare, setWorkbookToShare] = useState<Workbook | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const permissions = usePermissions(userProfile);
 
     const workbooksQuery = useMemoFirebase(() => {
         if (!firestore) return null;
@@ -178,6 +183,7 @@ function WorkbookList({ userProfile, onSelectSheet }: { userProfile: UserProfile
                             key={workbook.id}
                             workbook={workbook}
                             userProfile={userProfile}
+                            permissions={permissions}
                             onSelectSheet={onSelectSheet}
                             onEdit={setWorkbookToEdit}
                             onShare={setWorkbookToShare}
