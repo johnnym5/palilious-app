@@ -41,7 +41,7 @@ import { RadioGroup, RadioGroupItem } from '../ui/radio-group';
 import { Label } from '../ui/label';
 import { getDistanceInMeters } from '@/lib/utils';
 import { cn } from '@/lib/utils';
-import { Separator } from '../ui/separator';
+import { Progress } from '../ui/progress';
 
 interface ClockControlProps {
   userProfile: UserProfile | null;
@@ -67,6 +67,8 @@ export function ClockControl({
   const [today, setToday] = useState<string>('');
   const [dateDisplay, setDateDisplay] = useState('');
   const [location, setLocation] = useState<AttendanceLocation>('OFFICE');
+  const [shiftProgress, setShiftProgress] = useState(0);
+  const [timeRemaining, setTimeRemaining] = useState<string | null>(null);
 
   useEffect(() => {
     // Set date on client side to avoid hydration mismatch
@@ -102,6 +104,14 @@ export function ClockControl({
   const isApproved = isClockedIn && attendanceRecord.status === 'APPROVED';
   const onBreak = isApproved && !!attendanceRecord?.onBreak;
 
+  const formatDuration = (totalSeconds: number): string => {
+    if (totalSeconds < 0) totalSeconds = 0;
+    const h = String(Math.floor(totalSeconds / 3600)).padStart(2, '0');
+    const m = String(Math.floor((totalSeconds % 3600) / 60)).padStart(2, '0');
+    const s = String(Math.floor(totalSeconds % 60)).padStart(2, '0');
+    return `${h}:${m}:${s}`;
+  };
+
   useEffect(() => {
     let timer: NodeJS.Timeout | undefined;
     if (isApproved && attendanceRecord?.clockIn) {
@@ -113,7 +123,6 @@ export function ClockControl({
             if (br.start && br.end) {
                 return acc + differenceInSeconds(new Date(br.end), new Date(br.start));
             }
-            // For an active break, calculate duration up to now
             if (br.start && !br.end) {
                 return acc + differenceInSeconds(now, new Date(br.start));
             }
@@ -121,16 +130,32 @@ export function ClockControl({
         }, 0);
         
         const rawTotalSeconds = differenceInSeconds(now, clockInTime);
-        const seconds = rawTotalSeconds - totalBreakSeconds;
+        const secondsWorked = Math.max(0, rawTotalSeconds - totalBreakSeconds);
+        setShiftDuration(formatDuration(secondsWorked));
 
-        const h = String(Math.floor(seconds / 3600)).padStart(2, '0');
-        const m = String(Math.floor((seconds % 3600) / 60)).padStart(2, '0');
-        const s = String(seconds % 60).padStart(2, '0');
-        setShiftDuration(`${h}:${m}:${s}`);
+        if (systemConfig?.work_hours?.start && systemConfig.work_hours.end) {
+            const [startHour, startMinute] = systemConfig.work_hours.start.split(':').map(Number);
+            const officeStartTime = new Date(clockInTime);
+            officeStartTime.setHours(startHour, startMinute, 0, 0);
+
+            const [endHour, endMinute] = systemConfig.work_hours.end.split(':').map(Number);
+            const officeEndTime = new Date(clockInTime);
+            officeEndTime.setHours(endHour, endMinute, 0, 0);
+
+            const totalShiftDurationSeconds = differenceInSeconds(officeEndTime, officeStartTime);
+
+            if (totalShiftDurationSeconds > 0) {
+                const secondsUntilEnd = differenceInSeconds(officeEndTime, now);
+                setTimeRemaining(formatDuration(secondsUntilEnd));
+
+                const progress = Math.min(100, (secondsWorked / totalShiftDurationSeconds) * 100);
+                setShiftProgress(progress);
+            }
+        }
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isApproved, attendanceRecord]);
+  }, [isApproved, attendanceRecord, systemConfig]);
 
 
   const handleClockIn = async () => {
@@ -425,9 +450,21 @@ export function ClockControl({
                 </Button>
             </div>
             {isApproved && (
-                <p className="font-mono text-xl tracking-widest pt-2">
-                  {shiftDuration}
-                </p>
+              <div className="space-y-3 pt-2">
+                <div className="text-center">
+                    <p className="font-mono text-xl tracking-widest">{shiftDuration}</p>
+                    <p className="text-xs text-muted-foreground">TIME ELAPSED</p>
+                </div>
+                {timeRemaining !== null && (
+                    <div>
+                        <Progress value={shiftProgress} className="h-2" />
+                        <div className="mt-1 flex justify-between text-xs text-muted-foreground">
+                            <span>Shift Progress ({Math.round(shiftProgress)}%)</span>
+                            <span>{timeRemaining} remaining</span>
+                        </div>
+                    </div>
+                )}
+              </div>
             )}
             {isPending && (
               <div className="flex items-center justify-center gap-2 text-sm text-amber-500 animate-pulse">
