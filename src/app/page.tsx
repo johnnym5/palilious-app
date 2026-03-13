@@ -20,12 +20,10 @@ import type { UserProfile, Requisition, Announcement, SystemConfig } from "@/lib
 import { Skeleton } from "@/components/ui/skeleton";
 import { Announcements } from "@/components/dashboard/Announcements";
 import { usePermissions, type Permissions } from "@/hooks/usePermissions";
-import { NewAnnouncementDialog } from "@/components/dashboard/NewAnnouncementDialog";
 import { Carousel, CarouselContent, CarouselItem, type CarouselApi } from "@/components/ui/carousel";
 import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription } from "@/components/ui/card";
 import { ClockControl } from "@/components/attendance/ClockControl";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
-import Link from 'next/link';
 import { uiEmitter } from '@/lib/ui-emitter';
 
 const ClockInCard = ({ userProfile, permissions, systemConfig }: { userProfile: UserProfile | null; permissions: Permissions; systemConfig: SystemConfig | null }) => {
@@ -115,7 +113,6 @@ const QuickActionsCard = ({ permissions }: { permissions: Permissions }) => {
 function DashboardContent() {
     const { user: authUser } = useUser();
     const firestore = useFirestore();
-    const [isNewAnnouncementOpen, setIsNewAnnouncementOpen] = useState(false);
     const [api, setApi] = useState<CarouselApi>()
 
     const userProfileRef = useMemoFirebase(() => 
@@ -183,16 +180,10 @@ function DashboardContent() {
                  <div className="flex items-center justify-between">
                     <h2 className="text-xl font-bold font-headline">Recent Updates</h2>
                     {userProfile && permissions.canManageAnnouncements && (
-                        <NewAnnouncementDialog 
-                            open={isNewAnnouncementOpen}
-                            onOpenChange={setIsNewAnnouncementOpen}
-                            userProfile={userProfile}
-                        >
-                            <Button variant="outline" size="sm" onClick={() => setIsNewAnnouncementOpen(true)}>
-                                <Megaphone className="mr-2 h-4 w-4"/>
-                                New Announcement
-                            </Button>
-                        </NewAnnouncementDialog>
+                        <Button variant="outline" size="sm" onClick={() => uiEmitter.emit('open-new-announcement-dialog')}>
+                            <Megaphone className="mr-2 h-4 w-4"/>
+                            New Announcement
+                        </Button>
                     )}
                  </div>
                 <div className="grid grid-cols-1 gap-4">

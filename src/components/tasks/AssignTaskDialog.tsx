@@ -1,4 +1,4 @@
-"use client";
+'use client';
 
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -291,7 +291,7 @@ export function AssignTaskDialog({ open, onOpenChange, initialData, currentUserP
                     <FormItem>
                         <FormLabel>Due Date (Optional)</FormLabel>
                         <FormControl>
-                            <Input placeholder="DD/MM/YYYY" {...field} />
+                            <Input placeholder="DD/MM/YYYY (e.g., 01/02/2026)" {...field} />
                         </FormControl>
                         <FormMessage />
                     </FormItem>

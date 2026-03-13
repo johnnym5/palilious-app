@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { Home, ListTodo, Plus, FileText, CalendarPlus, BookOpenCheck, BarChart, UserPlus } from "lucide-react";
+import { Home, ListTodo, Plus, FileText, CalendarPlus, BookOpenCheck, BarChart, UserPlus, Megaphone, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "../ui/button";
 import { useState } from "react";
@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/sheet";
 
 type DialogManager = {
-  [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave' | 'chat' | 'settings' | 'inviteUser']: (open: boolean) => void;
+  [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave' | 'chat' | 'settings' | 'inviteUser' | 'newAnnouncement']: (open: boolean) => void;
 };
 
 const navItemsLeft = [
@@ -123,6 +123,18 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
                             <BookOpenCheck className="h-6 w-6" />
                             New Workbook
                         </Button>
+                        {permissions.canManageAnnouncements && (
+                             <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.newAnnouncement(true); setIsCreateSheetOpen(false); }}>
+                                <Megaphone className="h-6 w-6" />
+                                New Announcement
+                            </Button>
+                        )}
+                        {permissions.canAccessChat && (
+                            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.chat(true); setIsCreateSheetOpen(false); }}>
+                                <MessageSquare className="h-6 w-6" />
+                                New Chat
+                            </Button>
+                        )}
                     </div>
                 </SheetContent>
             </Sheet>

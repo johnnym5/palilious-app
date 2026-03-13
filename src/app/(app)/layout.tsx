@@ -2,7 +2,7 @@
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
-import { Loader2, ListTodo, FileText, CalendarPlus, BookOpenCheck, Plus, UserPlus, Eye } from 'lucide-react';
+import { Loader2, ListTodo, FileText, CalendarPlus, BookOpenCheck, Plus, UserPlus, Eye, MessageSquare, Megaphone } from 'lucide-react';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
@@ -30,6 +30,7 @@ import { SettingsDialog } from '@/components/settings/SettingsDialog';
 import { ChatDialog } from '@/components/chat/ChatDialog';
 import { InviteUserDialog } from '@/components/settings/InviteUserDialog';
 import { useImpersonation } from '@/context/ImpersonationProvider';
+import { NewAnnouncementDialog } from '@/components/dashboard/NewAnnouncementDialog';
 
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
@@ -53,6 +54,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [initialChatPayload, setInitialChatPayload] = useState<{ initialUserId?: string } | undefined>();
   const [isInviteUserOpen, setIsInviteUserOpen] = useState(false);
+  const [isNewAnnouncementOpen, setIsNewAnnouncementOpen] = useState(false);
   const { isImpersonating } = useImpersonation();
 
   const userProfileRef = useMemoFirebase(() => 
@@ -117,6 +119,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const openNewRequisition = () => setIsNewRequisitionOpen(true);
     const openNewWorkbook = () => setIsNewWorkbookOpen(true);
     const openInviteUser = () => setIsInviteUserOpen(true);
+    const openNewAnnouncement = () => setIsNewAnnouncementOpen(true);
 
 
     uiEmitter.on('open-profile-dialog', openProfile);
@@ -129,8 +132,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     uiEmitter.on('open-leave-dialog', openLeave);
     uiEmitter.on('open-reports-dialog', openReports);
     uiEmitter.on('open-assign-task-dialog', openAssignTask);
-    uiEmitter.on('open-new-requisition-dialog', openNewWorkbook);
+    uiEmitter.on('open-new-requisition-dialog', openNewRequisition);
+    uiEmitter.on('open-new-workbook-dialog', openNewWorkbook);
     uiEmitter.on('open-invite-user-dialog', openInviteUser);
+    uiEmitter.on('open-new-announcement-dialog', openNewAnnouncement);
     
     return () => {
       uiEmitter.off('open-profile-dialog', openProfile);
@@ -143,8 +148,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       uiEmitter.off('open-leave-dialog', openLeave);
       uiEmitter.off('open-reports-dialog', openReports);
       uiEmitter.off('open-assign-task-dialog', openAssignTask);
-      uiEmitter.off('open-new-requisition-dialog', openNewWorkbook);
+      uiEmitter.off('open-new-requisition-dialog', openNewRequisition);
+      uiEmitter.off('open-new-workbook-dialog', openNewWorkbook);
       uiEmitter.off('open-invite-user-dialog', openInviteUser);
+      uiEmitter.off('open-new-announcement-dialog', openNewAnnouncement);
     };
   }, []);
 
@@ -172,6 +179,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     chat: setIsChatOpen,
     settings: setIsSettingsOpen,
     inviteUser: setIsInviteUserOpen,
+    newAnnouncement: setIsNewAnnouncementOpen,
   };
 
 
@@ -230,6 +238,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                     <BookOpenCheck className="mr-2 h-4 w-4" />
                     <span>New Workbook</span>
                 </DropdownMenuItem>
+                {permissions.canManageAnnouncements && (
+                    <DropdownMenuItem onSelect={() => setIsNewAnnouncementOpen(true)}>
+                        <Megaphone className="mr-2 h-4 w-4" />
+                        <span>New Announcement</span>
+                    </DropdownMenuItem>
+                )}
+                {permissions.canAccessChat && (
+                    <DropdownMenuItem onSelect={() => setIsChatOpen(true)}>
+                        <MessageSquare className="mr-2 h-4 w-4" />
+                        <span>New Chat</span>
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
       </div>
@@ -274,6 +294,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             <RequestLeaveDialog open={isRequestLeaveOpen} onOpenChange={setIsRequestLeaveOpen} userProfile={userProfile} />
             <NewWorkbookDialog open={isNewWorkbookOpen} onOpenChange={setIsNewWorkbookOpen} userProfile={userProfile} />
             <InviteUserDialog open={isInviteUserOpen} onOpenChange={setIsInviteUserOpen} currentUserProfile={userProfile} />
+            {permissions.canManageAnnouncements && (
+                <NewAnnouncementDialog 
+                    open={isNewAnnouncementOpen}
+                    onOpenChange={setIsNewAnnouncementOpen}
+                    userProfile={userProfile}
+                />
+            )}
         </>
       )}
     </>

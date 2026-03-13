@@ -8,10 +8,10 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import type { Task, UserProfile, ActivityEntry, SubTask } from '@/lib/types';
+import type { Task, UserProfile, ActivityEntry, SubTask, TaskStatus } from '@/lib/types';
 import type { Permissions } from '@/hooks/usePermissions';
 import { format } from 'date-fns';
-import { Calendar, CheckSquare, History, Info, BookOpenCheck, User, Plus, Trash2, Share2, Pencil } from 'lucide-react';
+import { Calendar, CheckSquare, History, Info, BookOpenCheck, User, Plus, Trash2, Share2, Pencil, Check, Loader2 } from 'lucide-react';
 import { TaskPriorityBadge } from './TaskPriorityBadge';
 import { Badge } from '../ui/badge';
 import Link from 'next/link';
@@ -31,12 +31,12 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@/components/ui/alert-dialog'
 import { ActivityFeed } from '../shared/ActivityFeed';
 import { ShareTaskDialog } from './ShareTaskDialog';
 import { EditTaskDialog } from './EditTaskDialog';
 import { uiEmitter } from '@/lib/ui-emitter';
+import { CompletionBriefDialog } from './CompletionBriefDialog';
 
 interface TaskDetailDialogProps {
   task: Task;
@@ -54,6 +54,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [showShareDialog, setShowShareDialog] = useState(false);
   const [showEditDialog, setShowEditDialog] = useState(false);
+  const [isCompletionBriefOpen, setIsCompletionBriefOpen] = useState(false);
 
   const handleSubTaskToggle = (subTaskId: string) => {
     const updatedSubTasks = subTasks.map(st => 
@@ -100,6 +101,53 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
         activity: arrayUnion(commentEntry),
     });
   }
+
+  const handleStatusChange = (newStatus: TaskStatus, comment?: string) => {
+    setIsSubmitting(true);
+    const taskRef = doc(firestore, 'tasks', task.id);
+    const now = new Date().toISOString();
+    let logText = '';
+
+    switch (newStatus) {
+        case 'ACTIVE':
+            logText = `activated the mission.`;
+            break;
+        case 'ARCHIVED':
+            logText = `approved and archived the mission.`;
+            break;
+        default:
+            logText = `changed status to ${newStatus}.`;
+    }
+
+    const activityEntry: ActivityEntry = {
+        type: 'LOG',
+        actorId: currentUserProfile.id,
+        actorName: currentUserProfile.fullName,
+        timestamp: now,
+        text: logText,
+        fromStatus: task.status,
+        toStatus: newStatus,
+    };
+
+    const activity: ActivityEntry[] = [activityEntry];
+    if (comment) {
+        activity.push({
+            type: 'COMMENT',
+            actorId: currentUserProfile.id,
+            actorName: currentUserProfile.fullName,
+            timestamp: now,
+            text: comment,
+        });
+    }
+    
+    updateDocumentNonBlocking(taskRef, {
+        status: newStatus,
+        activity: arrayUnion(...activity)
+    });
+    
+    onOpenChange(false); // Close dialog on status change
+    setIsSubmitting(false);
+  };
 
 
   return (
@@ -216,7 +264,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
           </div>
         </div>
 
-        <DialogFooter>
+        <DialogFooter className="sm:justify-between">
              <div className='flex justify-start w-full items-center'>
                 <div className='flex gap-2'>
                     {permissions.canManageStaff && (
@@ -260,6 +308,29 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                     )}
                 </div>
             </div>
+            <div className="ml-auto flex gap-2">
+                {/* For Assignee */}
+                {task.assignedTo === currentUserProfile.id && task.status === 'QUEUED' && (
+                    <Button onClick={() => handleStatusChange('ACTIVE')} disabled={isSubmitting}>
+                        {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+                        Start Mission
+                    </Button>
+                )}
+                {task.assignedTo === currentUserProfile.id && task.status === 'ACTIVE' && (
+                    <Button onClick={() => setIsCompletionBriefOpen(true)}>Submit for Review</Button>
+                )}
+                
+                {/* For Manager */}
+                {permissions.canManageStaff && task.status === 'AWAITING_REVIEW' && (
+                    <>
+                        <Button variant="outline" onClick={() => handleStatusChange('ACTIVE', 'Revisions requested.')} disabled={isSubmitting}>Request Revisions</Button>
+                        <Button className="bg-emerald-600 hover:bg-emerald-700" onClick={() => handleStatusChange('ARCHIVED')} disabled={isSubmitting}>
+                            {isSubmitting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Check className="mr-2 h-4 w-4" />}
+                            Approve & Archive
+                        </Button>
+                    </>
+                )}
+            </div>
         </DialogFooter>
         
         {showEditDialog && (
@@ -277,6 +348,15 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                 open={showShareDialog}
                 onOpenChange={setShowShareDialog}
                 currentUserProfile={currentUserProfile}
+            />
+        )}
+        
+        {isOpen && (
+            <CompletionBriefDialog
+                isOpen={isCompletionBriefOpen}
+                onOpenChange={setIsCompletionBriefOpen}
+                task={task}
+                userProfile={currentUserProfile}
             />
         )}
 
