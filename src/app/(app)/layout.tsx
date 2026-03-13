@@ -6,7 +6,7 @@ import { Loader2, ListTodo, FileText, CalendarPlus, BookOpenCheck, Plus, UserPlu
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { useSystemConfig } from '@/hooks/useSystemConfig';
-import { hexToHslString } from '@/lib/utils';
+import { hexToHslString, cn } from '@/lib/utils';
 import { useTheme } from 'next-themes';
 import { BottomNavBar } from '@/components/layout/BottomNavBar';
 import AppSidebar from '@/components/layout/AppSidebar';
@@ -56,6 +56,23 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [isInviteUserOpen, setIsInviteUserOpen] = useState(false);
   const [isNewAnnouncementOpen, setIsNewAnnouncementOpen] = useState(false);
   const { isImpersonating } = useImpersonation();
+
+  const isAnyDialogOpen =
+    isWorkbookOpen ||
+    isRequisitionsOpen ||
+    isTasksOpen ||
+    isAttendanceOpen ||
+    isLeaveOpen ||
+    isReportsOpen ||
+    isAssignTaskOpen ||
+    isNewRequisitionOpen ||
+    isRequestLeaveOpen ||
+    isNewWorkbookOpen ||
+    isProfileOpen ||
+    isSettingsOpen ||
+    isChatOpen ||
+    isInviteUserOpen ||
+    isNewAnnouncementOpen;
 
   const userProfileRef = useMemoFirebase(() => 
     firestore && user ? doc(firestore, 'users', user.uid) : null
@@ -187,9 +204,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     <>
       <div className="flex min-h-screen w-full bg-muted/40">
           <AppSidebar />
-          <div className="flex flex-1 flex-col">
+           <div className={cn(
+              "flex flex-1 flex-col bg-background transition-all duration-300 ease-in-out origin-center",
+              isAnyDialogOpen ? "scale-[0.97] rounded-2xl overflow-hidden shadow-2xl" : "scale-100 rounded-none"
+          )}>
               <AppHeader />
-              <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6 bg-background">
+              <main className="flex-1 overflow-y-auto p-4 sm:p-6 pb-24 md:pb-6">
                   {children}
               </main>
           </div>
