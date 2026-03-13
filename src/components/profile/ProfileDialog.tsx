@@ -13,7 +13,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Bell, BellOff, BellRing, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useFirestore, updateDocumentNonBlocking, useUser, useAuth } from "@/firebase";
 import { doc } from "firebase/firestore";
@@ -49,6 +49,15 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
   const { toast } = useToast();
   const { user } = useUser();
   const auth = useAuth();
+  const [notificationPermission, setNotificationPermission] = useState<NotificationPermission>(
+    typeof window !== 'undefined' && 'Notification' in window ? Notification.permission : 'default'
+  );
+
+  useEffect(() => {
+    if (open && typeof window !== 'undefined' && 'Notification' in window) {
+      setNotificationPermission(Notification.permission);
+    }
+  }, [open]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -109,7 +118,6 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
     const actionCodeSettings = {
       url: `${window.location.origin}/login`,
       handleCodeInApp: true,
-      dynamicLinkDomain: process.env.NEXT_PUBLIC_FIREBASE_DYNAMIC_LINK_DOMAIN
     };
 
     try {
@@ -124,6 +132,44 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
         title: 'Failed to Send Email',
         description: error.message,
       });
+    }
+  };
+  
+  const handleRequestNotificationPermission = async () => {
+    if (typeof window === 'undefined' || !('Notification' in window)) {
+      toast({
+        variant: 'destructive',
+        title: 'Unsupported',
+        description: 'Your browser does not support desktop notifications.',
+      });
+      return;
+    }
+    
+    const permission = await Notification.requestPermission();
+    setNotificationPermission(permission);
+
+    if (permission === 'granted') {
+      toast({
+        title: 'Notifications Enabled',
+        description: 'You will now receive desktop notifications.',
+      });
+    } else if (permission === 'denied') {
+      toast({
+        variant: 'destructive',
+        title: 'Notifications Blocked',
+        description: 'You may need to change this in your browser settings.',
+      });
+    }
+  };
+  
+  const renderNotificationStatus = () => {
+    switch (notificationPermission) {
+      case 'granted':
+        return <div className="flex items-center gap-2 text-sm text-emerald-500"><BellRing className="h-4 w-4"/> Enabled</div>;
+      case 'denied':
+        return <div className="flex items-center gap-2 text-sm text-destructive"><BellOff className="h-4 w-4"/> Denied</div>;
+      default:
+        return <div className="flex items-center gap-2 text-sm text-muted-foreground"><Bell className="h-4 w-4"/> Not Enabled</div>;
     }
   };
 
@@ -188,6 +234,22 @@ export function ProfileDialog({ open, onOpenChange, userProfile }: ProfileDialog
             </Button>
           </form>
         </Form>
+        <Separator className="my-4" />
+        <div className="space-y-4">
+            <h4 className="text-sm font-medium">Notifications</h4>
+            <div className="flex items-center justify-between rounded-lg border p-3">
+                 <p className="text-sm text-muted-foreground">Desktop Notifications</p>
+                 {renderNotificationStatus()}
+            </div>
+            {notificationPermission === 'default' && (
+              <Button variant="outline" className="w-full" onClick={handleRequestNotificationPermission}>
+                Enable Desktop Notifications
+              </Button>
+            )}
+             {notificationPermission === 'denied' && (
+              <p className="text-xs text-muted-foreground text-center">You must enable notifications in your browser settings to receive alerts.</p>
+            )}
+        </div>
         <Separator className="my-4" />
         <div className="space-y-2">
             <h4 className="text-sm font-medium">Security</h4>

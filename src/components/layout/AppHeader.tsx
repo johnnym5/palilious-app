@@ -16,6 +16,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from "@/lib/utils";
+import { showBrowserNotification } from '@/lib/notifications';
 
 
 export default function AppHeader() {
@@ -25,6 +26,7 @@ export default function AppHeader() {
   const firestore = useFirestore();
   const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [shownNotificationIds, setShownNotificationIds] = useState<Set<string>>(new Set());
 
   // Get user profile and permissions
   const userProfileRef = useMemoFirebase(() => 
@@ -49,6 +51,38 @@ export default function AppHeader() {
   }, [firestore, user]);
 
   const { data: notifications, isLoading: areNotificationsLoading } = useCollection<Notification>(notificationsQuery);
+
+  useEffect(() => {
+    if (areNotificationsLoading || !notifications || typeof window === 'undefined' || !('Notification' in window) || Notification.permission !== 'granted') {
+      return;
+    }
+    
+    // Filter for notifications that are new and unread
+    const newUnreadNotifications = notifications.filter(
+      n => !n.isRead && !shownNotificationIds.has(n.id)
+    );
+  
+    if (newUnreadNotifications.length > 0) {
+      // Show notification for the most recent new one
+      const latestNotification = newUnreadNotifications[0];
+      
+      showBrowserNotification(
+        latestNotification.title,
+        {
+          body: latestNotification.description,
+          tag: latestNotification.id, // Using tag to prevent multiple popups for the same notification
+        },
+        latestNotification.id
+      );
+
+      // Add all new notifications to the shown set
+      setShownNotificationIds(prev => {
+        const newSet = new Set(prev);
+        newUnreadNotifications.forEach(n => newSet.add(n.id));
+        return newSet;
+      });
+    }
+  }, [notifications, areNotificationsLoading, shownNotificationIds]);
 
   const unreadCount = notifications?.filter(n => !n.isRead).length || 0;
 
