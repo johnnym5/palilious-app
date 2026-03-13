@@ -1,26 +1,50 @@
 
 "use client";
 
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { UserProfile, Chat, ChatMessage } from '@/lib/types';
-import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking } from '@/firebase';
+import { useCollection, useFirestore, useMemoFirebase, addDocumentNonBlocking, setDocumentNonBlocking, deleteDocumentNonBlocking } from '@/firebase';
 import { collection, query, where, orderBy, doc } from 'firebase/firestore';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { useState, useMemo, useRef, useEffect } from 'react';
 import { Input } from '../ui/input';
 import { Button } from '../ui/button';
-import { Send, Loader2, PlusCircle, Hash, MessageSquare } from 'lucide-react';
+import { Send, Loader2, PlusCircle, Hash, MessageSquare, MoreVertical, Trash2 } from 'lucide-react';
 import { Skeleton } from '../ui/skeleton';
 import { cn, sanitizeInput } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 import { CreateChannelDialog } from './CreateChannelDialog';
 import { Separator } from '../ui/separator';
+import { type Permissions } from '@/hooks/usePermissions';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from '../ui/dropdown-menu';
+import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../ui/alert-dialog';
+import { useToast } from '@/hooks/use-toast';
+
+const useMediaQuery = (query: string) => {
+    const [value, setValue] = React.useState(false)
+
+    React.useEffect(() => {
+    function onChange(event: MediaQueryListEvent) {
+        setValue(event.matches)
+    }
+
+    const result = window.matchMedia(query)
+    result.addEventListener("change", onChange)
+    setValue(result.matches)
+
+    return () => result.removeEventListener("change", onChange)
+    }, [query])
+
+    return value
+}
+
 
 interface ChatDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   currentUserProfile: UserProfile;
+  permissions: Permissions;
   initialPayload?: { initialUserId?: string };
 }
 
@@ -88,12 +112,15 @@ function ChatMessages({ chat, currentUserProfile }: { chat: Chat, currentUserPro
     )
 }
 
-export function ChatDialog({ open, onOpenChange, currentUserProfile, initialPayload }: ChatDialogProps) {
+export function ChatDialog({ open, onOpenChange, currentUserProfile, permissions, initialPayload }: ChatDialogProps) {
   const firestore = useFirestore();
+  const { toast } = useToast();
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
+  const [channelToDelete, setChannelToDelete] = useState<Chat | null>(null);
+  const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const chatsQuery = useMemoFirebase(() => 
     query(collection(firestore, 'chats'), where('participants', 'array-contains', currentUserProfile.id), orderBy('updatedAt', 'desc'))
@@ -192,17 +219,27 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile, initialPayl
     return chat.participantProfiles[otherParticipantId]?.fullName || "Unknown User";
   }
 
+  const handleDeleteChannel = () => {
+    if (!channelToDelete || !firestore) return;
+    deleteDocumentNonBlocking(doc(firestore, 'chats', channelToDelete.id));
+    toast({ title: "Channel Deleted", description: `#${channelToDelete.name} has been removed.` });
+    if (selectedChat?.id === channelToDelete.id) {
+        setSelectedChat(null);
+    }
+    setChannelToDelete(null);
+  }
+
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[80vh] flex flex-col p-0">
-        <DialogHeader className="p-6 pb-0">
-          <DialogTitle>Internal Chat</DialogTitle>
-          <DialogDescription>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side={isDesktop ? 'right' : 'bottom'} className="sm:max-w-2xl w-full p-0 flex flex-col">
+        <SheetHeader className="p-6 pb-0">
+          <SheetTitle>Internal Chat</SheetTitle>
+          <SheetDescription>
             Communicate with your team via channels and direct messages.
-          </DialogDescription>
-        </DialogHeader>
+          </SheetDescription>
+        </SheetHeader>
         <div className="flex-1 grid grid-cols-3 overflow-hidden">
             <div className="col-span-1 border-r flex flex-col">
                 <ScrollArea className="flex-1">
@@ -214,9 +251,23 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile, initialPayl
                            </div>
                            {isLoading && Array.from({length: 2}).map((_, i) => <Skeleton key={i} className="h-10 w-full" />)}
                            {channels.map(chat => (
-                               <div key={chat.id} onClick={() => setSelectedChat(chat)} className={cn("p-2 rounded-lg cursor-pointer hover:bg-secondary", selectedChat?.id === chat.id && "bg-secondary")}>
-                                   <div className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground"/> <p className="font-semibold truncate">{chat.name}</p></div>
-                                   <p className="text-xs text-muted-foreground truncate">{chat.lastMessage?.text}</p>
+                               <div key={chat.id} onClick={() => setSelectedChat(chat)} className={cn("p-2 rounded-lg cursor-pointer flex justify-between items-start", selectedChat?.id === chat.id ? "bg-secondary" : "hover:bg-secondary")}>
+                                   <div className="flex-1 overflow-hidden">
+                                        <div className="flex items-center gap-2"><Hash className="h-4 w-4 text-muted-foreground"/> <p className="font-semibold truncate">{chat.name}</p></div>
+                                        <p className="text-xs text-muted-foreground truncate">{chat.lastMessage?.text}</p>
+                                   </div>
+                                    {(permissions.canManageAnnouncements || chat.createdBy === currentUserProfile.id) && (
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild>
+                                                <Button variant="ghost" size="icon" className="h-7 w-7 flex-shrink-0" onClick={e => e.stopPropagation()}><MoreVertical className="h-4 w-4"/></Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent onClick={e => e.stopPropagation()}>
+                                                <DropdownMenuItem className="text-destructive focus:text-destructive" onSelect={() => setChannelToDelete(chat)}>
+                                                    <Trash2 className="mr-2 h-4 w-4" /> Delete Channel
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    )}
                                </div>
                            ))}
                         </div>
@@ -272,14 +323,31 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile, initialPayl
                 )}
             </div>
         </div>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
     
     <CreateChannelDialog 
         open={isCreateChannelOpen} 
         onOpenChange={setIsCreateChannelOpen} 
         currentUserProfile={currentUserProfile}
     />
+    
+    {channelToDelete && (
+        <AlertDialog open={!!channelToDelete} onOpenChange={(isOpen) => !isOpen && setChannelToDelete(null)}>
+            <AlertDialogContent>
+                <AlertDialogHeader>
+                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                        This will permanently delete the channel #{channelToDelete.name}. This action cannot be undone.
+                    </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction onClick={handleDeleteChannel} className="bg-destructive hover:bg-destructive/90">Delete Channel</AlertDialogAction>
+                </AlertDialogFooter>
+            </AlertDialogContent>
+        </AlertDialog>
+    )}
     </>
   );
 }

@@ -282,6 +282,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             }
           }}
           currentUserProfile={userProfile}
+          permissions={permissions}
           initialPayload={initialChatPayload}
         />
       )}
