@@ -357,7 +357,7 @@ export function TaskDetailDialog({ task, isOpen, onOpenChange, currentUserProfil
                 isOpen={isCompletionBriefOpen}
                 onOpenChange={setIsCompletionBriefOpen}
                 task={task}
-                userProfile={userProfile}
+                userProfile={currentUserProfile}
             />
         )}
 
