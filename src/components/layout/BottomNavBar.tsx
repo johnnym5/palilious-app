@@ -1,75 +1,20 @@
 'use client';
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
-import { Home, ListTodo, Plus, FileText, CalendarPlus, BookOpenCheck, BarChart, UserPlus, Megaphone, MessageSquare } from "lucide-react";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { Button } from "../ui/button";
-import { useState } from "react";
 import { useUser, useDoc, useFirestore, useMemoFirebase } from '@/firebase';
 import { doc } from 'firebase/firestore';
 import type { UserProfile } from '@/lib/types';
 import { usePermissions } from "@/hooks/usePermissions";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
+import { mainNavItems } from "@/lib/nav-items";
+import { uiEmitter } from "@/lib/ui-emitter";
 
-type DialogManager = {
-  [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'profile' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave' | 'chat' | 'settings' | 'inviteUser' | 'newAnnouncement']: (open: boolean) => void;
-};
-
-const navItemsLeft = [
-  { href: "/", icon: Home, label: "Home" },
-  { dialog: "tasks", icon: ListTodo, label: "Tasks" },
-];
-
-const navItemsRight = [
-  { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
-  { dialog: "leave", icon: CalendarPlus, label: "Leave" },
-];
-
-const NavItem = ({ item, pathname, dialogManager }: { item: any, pathname: string, dialogManager: DialogManager }) => {
-    if ('href' in item) {
-        return (
-            <Link
-                href={item.href}
-                key={item.label}
-                className={cn(
-                "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors flex-1",
-                pathname === item.href ? "text-primary" : "text-muted-foreground hover:text-foreground"
-                )}
-            >
-                <item.icon className="h-6 w-6" />
-                <span className="text-xs font-medium">{item.label}</span>
-            </Link>
-        );
-    }
-    return (
-        <button
-            key={item.label}
-            onClick={() => dialogManager[item.dialog as keyof DialogManager](true)}
-            className={cn(
-            "flex flex-col items-center gap-1 p-2 rounded-lg transition-colors flex-1",
-            "text-muted-foreground hover:text-foreground"
-            )}
-        >
-            <item.icon className="h-6 w-6" />
-            <span className="text-xs font-medium">{item.label}</span>
-        </button>
-    )
-};
-
-
-export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }) {
+export function BottomNavBar() {
   const pathname = usePathname();
   const { user: authUser } = useUser();
   const firestore = useFirestore();
-
-  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
 
   const userProfileRef = useMemoFirebase(() => 
     firestore && authUser ? doc(firestore, 'users', authUser.uid) : null
@@ -77,76 +22,59 @@ export function BottomNavBar({ dialogManager }: { dialogManager: DialogManager }
   const { data: userProfile } = useDoc<UserProfile>(userProfileRef);
   const permissions = usePermissions(userProfile);
 
-  return (
-    <>
-      <div className="fixed bottom-0 left-0 right-0 z-40 h-16 border-t bg-background/80 backdrop-blur-lg md:hidden">
-        <div className="flex h-full items-center justify-around">
-          <div className="flex flex-1 justify-around">
-            {navItemsLeft.map(item => (
-                <NavItem key={item.label} item={item} pathname={pathname} dialogManager={dialogManager} />
-            ))}
-          </div>
+  const handleDialogClick = (dialog: string) => {
+    switch(dialog) {
+      case 'chat': uiEmitter.emit('open-chat-dialog'); break;
+      case 'settings': uiEmitter.emit('open-settings-dialog'); break;
+      case 'tasks': uiEmitter.emit('open-tasks-dialog'); break;
+      case 'workbooks': uiEmitter.emit('open-workbooks-dialog'); break;
+      case 'requisitions': uiEmitter.emit('open-requisitions-dialog'); break;
+      case 'attendance': uiEmitter.emit('open-attendance-dialog'); break;
+      case 'leave': uiEmitter.emit('open-leave-dialog'); break;
+      case 'reports': uiEmitter.emit('open-reports-dialog'); break;
+    }
+  };
 
-          <div className="relative -top-6">
-             <Sheet open={isCreateSheetOpen} onOpenChange={setIsCreateSheetOpen}>
-                <SheetTrigger asChild>
-                    <Button className="h-16 w-16 rounded-full shadow-lg shadow-primary/40 flex items-center justify-center">
-                      <Plus className="h-8 w-8" />
-                    </Button>
-                </SheetTrigger>
-                <SheetContent side="bottom" className="rounded-t-xl">
-                    <SheetHeader>
-                        <SheetTitle>Create New</SheetTitle>
-                    </SheetHeader>
-                    <div className="grid grid-cols-2 gap-4 py-4">
-                        {permissions.canManageStaff && (
-                            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.inviteUser(true); setIsCreateSheetOpen(false); }}>
-                                <UserPlus className="h-6 w-6" />
-                                Add Member
-                            </Button>
-                        )}
-                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.assignTask(true); setIsCreateSheetOpen(false); }}>
-                            <ListTodo className="h-6 w-6" />
-                            New Task
-                        </Button>
-                        {permissions.canAccessRequisitions && (
-                            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.newRequisition(true); setIsCreateSheetOpen(false); }}>
-                                <FileText className="h-6 w-6" />
-                                New Requisition
-                            </Button>
-                        )}
-                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.requestLeave(true); setIsCreateSheetOpen(false); }}>
-                            <CalendarPlus className="h-6 w-6" />
-                            Request Leave
-                        </Button>
-                        <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.newWorkbook(true); setIsCreateSheetOpen(false); }}>
-                            <BookOpenCheck className="h-6 w-6" />
-                            New Workbook
-                        </Button>
-                        {permissions.canManageAnnouncements && (
-                             <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.newAnnouncement(true); setIsCreateSheetOpen(false); }}>
-                                <Megaphone className="h-6 w-6" />
-                                New Announcement
-                            </Button>
-                        )}
-                        {permissions.canAccessChat && (
-                            <Button variant="outline" className="h-24 flex-col gap-2" onClick={() => { dialogManager.chat(true); setIsCreateSheetOpen(false); }}>
-                                <MessageSquare className="h-6 w-6" />
-                                New Chat
-                            </Button>
-                        )}
-                    </div>
-                </SheetContent>
-            </Sheet>
-          </div>
-          
-          <div className="flex flex-1 justify-around">
-             {navItemsRight.map(item => (
-                <NavItem key={item.label} item={item} pathname={pathname} dialogManager={dialogManager} />
-            ))}
-          </div>
+  const navItems = mainNavItems.filter(item => !item.isSeparator);
+
+  return (
+    <div className="fixed bottom-0 left-0 right-0 z-40 h-20 border-t bg-background/80 backdrop-blur-lg md:hidden">
+      <ScrollArea className="w-full h-full whitespace-nowrap">
+        <div className="flex w-max items-center h-full px-4">
+          {navItems.map(item => {
+              if ('permission' in item && !permissions[item.permission as keyof typeof permissions]) {
+                return null;
+              }
+
+              if ('href' in item) {
+                return (
+                  <Link href={item.href} key={item.label} className={cn(
+                    "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-colors h-full w-20",
+                    pathname === item.href ? "text-primary" : "text-muted-foreground hover:text-foreground"
+                  )}>
+                    <item.icon className="h-6 w-6" />
+                    <span className="text-xs font-medium truncate">{item.label}</span>
+                  </Link>
+                );
+              }
+              
+              if ('dialog' in item) {
+                  return (
+                    <button key={item.label} onClick={() => handleDialogClick(item.dialog)} className={cn(
+                      "flex flex-col items-center justify-center gap-1 p-2 rounded-lg transition-colors h-full w-20",
+                      "text-muted-foreground hover:text-foreground"
+                    )}>
+                      <item.icon className="h-6 w-6" />
+                      <span className="text-xs font-medium truncate">{item.label}</span>
+                    </button>
+                  );
+              }
+              
+              return null;
+          })}
         </div>
-      </div>
-    </>
+        <ScrollBar orientation="horizontal" />
+      </ScrollArea>
+    </div>
   );
 }

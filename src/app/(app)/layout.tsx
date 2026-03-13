@@ -181,25 +181,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     );
   }
 
-  const dialogManager = {
-    workbooks: setIsWorkbookOpen,
-    requisitions: setIsRequisitionsOpen,
-    tasks: setIsTasksOpen,
-    attendance: setIsAttendanceOpen,
-    leave: setIsLeaveOpen,
-    reports: setIsReportsOpen,
-    profile: setIsProfileOpen,
-    newWorkbook: setIsNewWorkbookOpen,
-    newRequisition: setIsNewRequisitionOpen,
-    assignTask: setIsAssignTaskOpen,
-    requestLeave: setIsRequestLeaveOpen,
-    chat: setIsChatOpen,
-    settings: setIsSettingsOpen,
-    inviteUser: setIsInviteUserOpen,
-    newAnnouncement: setIsNewAnnouncementOpen,
-  };
-
-
   return (
     <>
       <div className="flex min-h-screen w-full bg-muted/40">
@@ -213,7 +194,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                   {children}
               </main>
           </div>
-          <BottomNavBar dialogManager={dialogManager}/>
+          <BottomNavBar />
       </div>
 
        {/* Impersonation Banner */}

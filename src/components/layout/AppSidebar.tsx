@@ -2,19 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  LayoutDashboard,
-  CalendarCheck2,
-  ReceiptText,
-  ListTodo,
-  LogOut,
-  BarChart,
-  CalendarPlus,
-  BookOpenCheck,
-  MessageSquare,
-  Settings,
-} from "lucide-react";
-
+import { LogOut } from "lucide-react";
+import { mainNavItems } from "@/lib/nav-items";
 import { cn } from "@/lib/utils";
 import { Avatar, AvatarFallback } from "../ui/avatar";
 import { useAuth, useDoc, useMemoFirebase, useFirestore } from "@/firebase";
@@ -27,26 +16,6 @@ import { usePermissions } from "@/hooks/usePermissions";
 import { Badge } from "../ui/badge";
 import { Separator } from "../ui/separator";
 import { uiEmitter } from "@/lib/ui-emitter";
-
-type DialogManager = {
-  [key in 'workbooks' | 'requisitions' | 'tasks' | 'attendance' | 'leave' | 'reports' | 'newWorkbook' | 'newRequisition' | 'assignTask' | 'requestLeave' | 'chat' | 'settings' | 'profile']: (open: boolean) => void;
-};
-
-const mainNavItems = [
-  { href: "/", icon: LayoutDashboard, label: "Overview" },
-  { isSeparator: true },
-  { dialog: "attendance", icon: CalendarCheck2, label: "Attendance" },
-  { dialog: "leave", icon: CalendarPlus, label: "Leave" },
-  { isSeparator: true },
-  { dialog: "tasks", icon: ListTodo, label: "Tasks" },
-  { dialog: "workbooks", icon: BookOpenCheck, label: "Workbooks" },
-  { dialog: "requisitions", icon: ReceiptText, label: "Requisitions", permission: 'canAccessRequisitions' },
-  { dialog: "reports", icon: BarChart, label: "Reports" },
-  { isSeparator: true },
-  { dialog: "chat", icon: MessageSquare, label: "Chat", permission: "canAccessChat"},
-  { dialog: "settings", icon: Settings, label: "Settings", permission: "canManageStaff"},
-];
-
 
 export default function AppSidebar({ isMobile = false }: { isMobile?: boolean }) {
   const pathname = usePathname();
