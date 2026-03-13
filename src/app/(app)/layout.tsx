@@ -206,12 +206,12 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       )}
 
 
-       {/* Desktop FAB */}
-      <div className="hidden md:block">
+       {/* FAB for Desktop and Mobile */}
+       <div className="block">
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
-                <Button className="fixed bottom-8 right-8 h-16 w-16 rounded-full shadow-lg z-40">
-                    <Plus className="h-8 w-8" />
+                <Button className="fixed bottom-24 right-4 h-14 w-14 rounded-full shadow-lg z-40 md:bottom-8 md:right-8 md:h-16 md:w-16">
+                    <Plus className="h-7 w-7 md:h-8 md:w-8" />
                 </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent className="w-56 mb-2" align="end">
