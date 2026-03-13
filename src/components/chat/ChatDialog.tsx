@@ -22,24 +22,6 @@ import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuIte
 import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogCancel, AlertDialogAction } from '../ui/alert-dialog';
 import { useToast } from '@/hooks/use-toast';
 
-const useMediaQuery = (query: string) => {
-    const [value, setValue] = useState(false)
-
-    useEffect(() => {
-    function onChange(event: MediaQueryListEvent) {
-        setValue(event.matches)
-    }
-
-    const result = window.matchMedia(query)
-    result.addEventListener("change", onChange)
-    setValue(result.matches)
-
-    return () => result.removeEventListener("change", onChange)
-    }, [query])
-
-    return value
-}
-
 
 interface ChatDialogProps {
   open: boolean;
@@ -121,7 +103,6 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile, permissions
   const [isSending, setIsSending] = useState(false);
   const [isCreateChannelOpen, setIsCreateChannelOpen] = useState(false);
   const [channelToDelete, setChannelToDelete] = useState<Chat | null>(null);
-  const isDesktop = useMediaQuery('(min-width: 768px)');
 
   const chatsQuery = useMemoFirebase(() => 
     query(collection(firestore, 'chats'), where('participants', 'array-contains', currentUserProfile.id), orderBy('updatedAt', 'desc'))
@@ -234,7 +215,7 @@ export function ChatDialog({ open, onOpenChange, currentUserProfile, permissions
   return (
     <>
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side={isDesktop ? 'right' : 'bottom'} className="sm:max-w-2xl w-full p-0 flex flex-col">
+      <SheetContent side="left" className="sm:max-w-2xl w-full p-0 flex flex-col">
         <SheetHeader className="p-6 pb-0">
           <SheetTitle>Internal Chat</SheetTitle>
           <SheetDescription>
