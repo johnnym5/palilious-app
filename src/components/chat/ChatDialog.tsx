@@ -1,4 +1,5 @@
 
+
 "use client";
 
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
@@ -22,9 +23,9 @@ import { AlertDialog, AlertDialogTrigger, AlertDialogContent, AlertDialogHeader,
 import { useToast } from '@/hooks/use-toast';
 
 const useMediaQuery = (query: string) => {
-    const [value, setValue] = React.useState(false)
+    const [value, setValue] = useState(false)
 
-    React.useEffect(() => {
+    useEffect(() => {
     function onChange(event: MediaQueryListEvent) {
         setValue(event.matches)
     }
