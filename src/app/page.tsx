@@ -25,6 +25,7 @@ import { Card, CardHeader, CardTitle, CardContent, CardFooter, CardDescription }
 import { ClockControl } from "@/components/attendance/ClockControl";
 import { useSystemConfig } from "@/hooks/useSystemConfig";
 import { uiEmitter } from '@/lib/ui-emitter';
+import { PerformanceCard } from '@/components/dashboard/PerformanceCard';
 
 const ClockInCard = ({ userProfile, permissions, systemConfig }: { userProfile: UserProfile | null; permissions: Permissions; systemConfig: SystemConfig | null }) => {
   return (
@@ -164,6 +165,11 @@ function DashboardContent() {
                         <CarouselItem className="pl-4">
                             <ClockInCard userProfile={userProfile} permissions={permissions} systemConfig={systemConfig} />
                         </CarouselItem>
+                         {userProfile && (
+                          <CarouselItem className="pl-4">
+                            <PerformanceCard userProfile={userProfile} />
+                          </CarouselItem>
+                        )}
                          <CarouselItem className="pl-4">
                             <LatestAnnouncementCard userProfile={userProfile} authUser={authUser} />
                         </CarouselItem>

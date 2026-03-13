@@ -228,7 +228,9 @@ export function ClockControl({
         const officeStartTime = new Date(now);
         officeStartTime.setHours(startHour, startMinute, 0, 0);
 
-        if (now < officeStartTime) {
+        // Only mark as 'EARLY' if more than 30 minutes before start time
+        const secondsUntilStart = differenceInSeconds(officeStartTime, now);
+        if (secondsUntilStart > 1800) { // 30 minutes * 60 seconds
           remarks.push('EARLY');
         }
 
@@ -350,13 +352,12 @@ export function ClockControl({
           officeStartTime
         );
         const diff = durationInSeconds - expectedDurationInSeconds;
+        const gracePeriodSeconds = 1800; // 30 minutes
 
-        if (diff > 60) {
-          // Over 1 minute of overtime
+        if (diff > gracePeriodSeconds) {
           overtime = diff;
           if (!remarks.includes('OVERTIME')) remarks.push('OVERTIME');
-        } else if (diff < -60) {
-          // Over 1 minute of undertime
+        } else if (diff < -gracePeriodSeconds) {
           undertime = Math.abs(diff);
           if (!remarks.includes('UNDERTIME')) remarks.push('UNDERTIME');
         }
